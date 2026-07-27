@@ -133,6 +133,15 @@ def build_tspans(attrs, value, font_map):
     anchor = {"left": "start", "center": "middle", "right": "end"}[align]
     line_px = int(chosen * lh)
 
+    # Optional bottom anchoring: pin the LAST line's baseline to data-anchor-bottom, so the
+    # gap *below* the text (e.g. between a close slide's takeaway and its Follow button)
+    # stays constant no matter whether the text wrapped to 1, 2, or 3 lines. Without this
+    # the text is top-anchored and a longer body creeps down into whatever sits beneath it.
+    anchor_bottom = attrs.get("data-anchor-bottom")
+    if anchor_bottom is not None:
+        y_top = float(anchor_bottom) - (len(lines) - 1) * line_px
+        attrs = dict(attrs, y=str(int(round(y_top))))
+
     # Rebuild the <text> element with clean presentation attrs + tspans.
     keep = ["x", "y", "fill", "font-family", "font-weight", "letter-spacing", "opacity"]
     parts = [f'{k}="{attrs[k]}"' for k in keep if k in attrs]
