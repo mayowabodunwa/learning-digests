@@ -62,6 +62,17 @@ BOUNDARIES = [r"\busually\b", r"\btypically\b", r"\bmost\b", r"\bby default\b", 
 
 CHROME_FIELDS = {"terminal", "counter", "handle", "tags"}
 
+# Glyphs the display headline font (Bricolage Grotesque) can't render, so they show as
+# tofu boxes in title/heading: arrows, box-drawing, block elements, geometric shapes,
+# dingbat + supplemental arrows. Body (Inter) and mono (JetBrains) fields handle them.
+DISPLAY_UNSAFE = re.compile(
+    "[←-⇿"   # arrows  (-> <-> etc.)
+    "─-╿"    # box drawing
+    "▀-▟"    # block elements
+    "■-◿"    # geometric shapes (triangles, squares)
+    "➔-➿"    # dingbat arrows
+    "⬀-⯿]")  # misc symbols and arrows
+
 
 def hits(patterns, text):
     return sorted({m.group(0) for p in patterns for m in re.finditer(p, text, re.I)})
@@ -137,6 +148,14 @@ def lint_deck(path, root, errors, warnings):
             soft = hits(SOFT_TELLS, val)
             if soft:
                 warnings.append((rel, f"slide {i} `{field}`: possible tell {soft}"))
+            # The display headline font (Bricolage Grotesque) has no arrows or box-drawing,
+            # so they render as missing-glyph boxes in `title`/`heading`. Body (Inter) and
+            # mono (JetBrains) fields render them fine. Require ASCII in the headline fields.
+            if field in ("title", "heading"):
+                bad = sorted({c for c in val if DISPLAY_UNSAFE.match(c)})
+                if bad:
+                    errors.append((rel, f"slide {i} `{field}`: glyph(s) {bad} aren't in the "
+                                        f"headline font - use ASCII (-> , <-> , x) instead"))
             if field == "code":
                 continue  # schematic art, not prose
             abs_found = hits(ABSOLUTES, val)

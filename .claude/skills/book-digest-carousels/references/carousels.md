@@ -54,6 +54,11 @@ One bounding word ("usually", "by default", "in a common pattern") is normally e
 Bound the claim once, clearly, then get on with the story — **never bury the deck in
 caveats**. Full rule: see "Bounded claims" in the skill's Content guardrails.
 
+**ASCII only for arrows and diagram glyphs.** Write `->`, `<->`, `x` (not `→`, `↔`, `▶`),
+and draw panels with `| + [ ] v ^ #` (not box-drawing `┌ ─ │ ▓`). The headline font
+(Bricolage Grotesque) has no arrows or box-drawing, so they render as missing-glyph boxes
+in a `title` or `heading` (the lint blocks that). Keep it ASCII everywhere to be safe.
+
 ## Length
 
 **7–10 slides.** Never ship a scanty carousel. **7 is the floor** — the best idea gets
@@ -112,7 +117,9 @@ Every deck includes **exactly one** `code`-template slide whose job is to *show*
 idea, not tell it. The `code` template is a terminal-window panel with a monospace body
 (JetBrains Mono, line breaks preserved), so a small ASCII/box schematic renders crisply
 and on-brand. Keep it **≤ 13 lines and ≤ ~40 characters wide** so it never shrinks to
-unreadable. Safe glyphs: `-> | + [ ] :` and the arrows/box-drawing `→ ▶ ┌ ┐ └ ┘ ├ ┤ │ ─`.
+unreadable. **Draw it in ASCII only:** `-> <- | + [ ] : v ^ #`. Do NOT use Unicode arrows
+or box-drawing (`→ ▶ ┌ ┐ └ ┘ ├ ┤ │ ─ ▓`) anywhere on a slide; depending on the font they
+render as missing-glyph boxes (this is exactly what broke a heading once).
 Put a short `kicker` (e.g. `SEE IT`), a `filename` label, the schematic in `code`
 (`data-pre` keeps your line breaks), and a one-line `caption` under the panel. If a value
 is illustrative (a probability, an ID), keep it obviously rounded/example — per the
@@ -121,17 +128,17 @@ guardrails, don't pass invented numbers off as real.
 One per track, matched to the chapter's crux:
 
 ```
-AWS — route table (filename: route-table)        DDIA — fault vs failure (fault-model)
-Destination    Target                            fault ──▶ [ caught in time? ]
-10.0.0.0/16    local                                         │yes        │no
-0.0.0.0/0      igw-0abc   ← public                           ▼           ▼
-                                                          contained    FAILURE
+AWS - route table (filename: route-table)        DDIA - fault vs failure (fault-model)
+Destination    Target                            fault -> [ caught in time? ]
+10.0.0.0/16    local                                        |yes        |no
+0.0.0.0/0      igw-0abc   <- public                         v           v
+                                                         contained    FAILURE
 
-MySQL/DDIA — replication (replication)           AI Engineering — next token (predict)
+MySQL/DDIA - replication (replication)           AI Engineering - next token (predict)
           writes                                 "the cat sat on the ___"
-Primary ──┬──▶ Replica A  (reads)                  mat    ▓▓▓▓▓▓▓  0.71
-          └──▶ Replica B  (reads)                  floor  ▓        0.09
-   async, may lag                                  roof   ▓        0.04
+Primary --+--> Replica A  (reads)                  mat    #######  0.71
+          +--> Replica B  (reads)                  floor  #        0.09
+   async, may lag                                  roof   #        0.04
 ```
 
 These are the *shape*, not gospel: adapt the schematic to whatever the unit's crux is
