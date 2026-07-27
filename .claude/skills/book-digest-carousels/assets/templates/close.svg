@@ -30,7 +30,7 @@
 <text data-field="heading" x="80" y="430" data-box-w="920" data-box-h="330" data-max-lines="4"
   data-size="82" data-min-size="52" data-line-height="1.08" data-align="left"
   font-family="Bricolage Grotesque" font-weight="800" fill="#F2EFE9">{{heading}}</text>
-<text data-field="body" x="80" y="880" data-box-w="880" data-box-h="150" data-max-lines="3"
+<text data-field="body" x="80" y="880" data-anchor-bottom="934" data-box-w="880" data-box-h="150" data-max-lines="3"
   data-size="40" data-min-size="30" data-line-height="1.35" data-align="left"
   font-family="Inter" font-weight="400" fill="#D8D5CD">{{body}}</text>
 <rect x="80" y="1000" width="600" height="84" rx="42" fill="none" stroke="#C8453A" stroke-width="2"/>
