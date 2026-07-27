@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Engineering, Ch.2 (Part 1 of 2): Understanding Foundation Models — Training Data, Architecture, and Scale</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0A0B; --panel:#0E0E10; --panel2:#131316; --hairline:rgba(242,239,233,0.10);
+    --ink:#F2EFE9; --body:#C9C7C1; --muted:#7A7A80; --red:#C8453A; --green:#6FCF97; --mutedfooter:#D8D5CD;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--body);font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;line-height:1.6}
+  .wrap{max-width:660px;margin:0 auto;padding:48px 22px 64px}
+  .eyebrow{font-family:'JetBrains Mono',monospace;color:var(--red);font-size:13px;letter-spacing:3px;text-transform:uppercase}
+  h1{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;color:var(--ink);font-size:34px;line-height:1.15;margin:10px 0 10px}
+  .lead{color:var(--body);font-size:17px;margin:0 0 34px}
+  h2{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;color:var(--ink);font-size:22px;margin:40px 0 12px;border-top:1px solid var(--hairline);padding-top:28px}
+  section:first-of-type h2{border-top:none;padding-top:0}
+  h3{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;color:var(--ink);font-size:17px;margin:22px 0 8px}
+  p{font-size:15.5px;margin:0 0 14px}
+  ul{margin:0 0 14px;padding-left:20px}
+  li{font-size:15.5px;margin:0 0 8px}
+  .key-terms li{margin:0 0 10px}
+  .key-terms b{color:var(--ink);font-weight:600}
+  .note{background:var(--panel2);border:1px solid var(--hairline);border-radius:8px;padding:14px 16px;margin:0 0 16px;font-size:14.5px;color:var(--body)}
+  .note b{color:var(--ink)}
+  figure.schematic{background:var(--panel);border:1px solid var(--hairline);border-radius:10px;padding:18px 16px 14px;margin:18px 0}
+  figure.schematic svg{width:100%;height:auto;display:block}
+  figcaption{font-family:'JetBrains Mono',monospace;color:var(--muted);font-size:12px;margin-top:10px;line-height:1.5}
+  .remember{border-left:3px solid var(--red);background:var(--panel);border-radius:0 8px 8px 0;padding:18px 20px;margin:20px 0}
+  .remember h2{margin:0 0 10px;border:none;padding:0;font-size:18px}
+  .try{border-left:3px solid var(--green);background:var(--panel);border-radius:0 8px 8px 0;padding:18px 20px;margin:20px 0}
+  .try h2{margin:0 0 10px;border:none;padding:0;font-size:18px}
+  .try li{margin:0 0 12px}
+  .try b{color:var(--ink)}
+  .go-deeper{background:var(--panel2);border:1px solid var(--hairline);border-radius:8px;padding:16px 18px;margin:18px 0}
+  .sources{font-size:14px;color:var(--muted)}
+  .sources li{font-size:14px;color:var(--muted)}
+  table.datatable{width:100%;border-collapse:collapse;margin:10px 0 16px;font-size:13.5px}
+  table.datatable th, table.datatable td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--hairline)}
+  table.datatable th{color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted)}
+  code, .mono{font-family:'JetBrains Mono',monospace}
+  footer{margin-top:56px;padding-top:28px;border-top:1px solid var(--hairline);display:flex;align-items:center;gap:14px}
+  footer img{width:52px;height:52px;border-radius:50%;object-fit:cover;border:1px solid var(--hairline)}
+  footer .who{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--mutedfooter)}
+  footer .name{color:var(--ink);font-weight:500;margin-bottom:4px}
+  footer .socials span{display:inline-block;margin-right:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">AI · CH.2 DIGEST (PART 1 OF 2)</div>
+  <h1>Understanding Foundation Models: Training Data, Architecture, and Scale</h1>
+  <p class="lead">What actually goes into a foundation model before it ever answers a prompt: the data it read, the transformer architecture that almost every current model runs on, and the size decisions that turn a compute budget into an actual model. Part 2 picks up with how a model gets aligned to be useful and safe to talk to.</p>
+
+  <section>
+    <h2>In one line</h2>
+    <p>Three decisions quietly shape everything a foundation model can and can't do: what data it was trained on, what architecture processes that data (almost always a transformer, built around attention), and how big it is, and none of those decisions are as simple as "more is better."</p>
+  </section>
+
+  <section>
+    <h2>The big idea</h2>
+    <p>A foundation model is a large, general-purpose model trained once and then adapted for lots of different jobs. What determines whether one is good at your particular job usually comes down to three levers: the training data (what the model actually read), the model architecture (how it processes that data internally), and the model size (how much capacity and compute went into it). This part walks through the first two levers in depth, plus everything that goes into the third one, size, including a surprising twist: bigger doesn't always mean better, and there are real limits on how much bigger models can keep getting.</p>
+  </section>
+
+  <section>
+    <h2>Key terms</h2>
+    <ul class="key-terms">
+      <li><b>Foundation model</b> — a large, general-purpose model trained once on broad data and meant to be adapted for many different applications, rather than built for one narrow job.</li>
+      <li><b>Training data</b> — the actual examples (text, images, and so on) a model learns from. A model can only be as good as what it saw during training.</li>
+      <li><b>Common Crawl / C4</b> — Common Crawl is a nonprofit's ongoing scrape of the public web (roughly 2 to 3 billion pages a month in 2022 and 2023); C4 (Colossal Clean Crawled Corpus) is Google's cleaned-up subset of it. Variations of one or the other show up in most foundation models that disclose their training sources.</li>
+      <li><b>Low-resource language</b> — a language that's underrepresented in typical training datasets like Common Crawl, which usually means a model handles it worse, and more expensively, than a well-represented language like English.</li>
+      <li><b>Domain-specific model</b> — a model built or adapted for one specialized area (protein structures, medical scans) rather than general, everyday use.</li>
+      <li><b>Embedding model</b> — a model that turns raw data into vectors (embeddings) capturing its meaning, without necessarily generating new content itself. CLIP, which learns to represent images and text together, is the example used here.</li>
+      <li><b>Transformer architecture</b> — the dominant architecture behind nearly every current language-based foundation model, built around the attention mechanism instead of processing text strictly one step at a time.</li>
+      <li><b>Seq2seq</b> — the encoder-decoder architecture (built on RNNs, recurrent neural networks) that came before the transformer and was the go-to choice for translation-style tasks from about 2014 to 2018.</li>
+      <li><b>Attention mechanism</b> — the part of a transformer that decides how much weight to give each previous token when generating the next one, instead of relying on a single summary of everything that came before.</li>
+      <li><b>Query, key, and value vectors (Q, K, V)</b> — the three vectors attention computes for each token. Roughly: query is what the model is currently looking for, key is a label on a previous token, value is that token's actual content.</li>
+      <li><b>Multi-head attention</b> — splitting the query, key, and value vectors into several smaller slices ("heads") so a model can attend to several different relationships between tokens at the same time.</li>
+      <li><b>MLP module (feedforward layer)</b> — the part of a transformer block that applies weight matrices (linear layers) plus a nonlinear activation function (like ReLU or GELU), which is what lets the model learn patterns that aren't just straight lines.</li>
+      <li><b>Transformer block / layer</b> — one repeating unit inside a transformer (an attention module plus an MLP module). The number of these blocks stacked on top of each other is usually called the model's number of layers.</li>
+      <li><b>Embedding module</b> — the part of the model, before the transformer blocks, that turns tokens and their positions into vectors, using a token embedding matrix and a positional embedding matrix.</li>
+      <li><b>Context length</b> — roughly, how many previous tokens a model can keep track of at once. In a simple setup this is tied to how many position indices the embedding module supports.</li>
+      <li><b>Output layer (unembedding layer / model head)</b> — the final module that turns the model's internal vectors into token probabilities, which is what gets used to pick the actual next token.</li>
+      <li><b>Parameter</b> — a value inside the model that gets learned during training.</li>
+      <li><b>Hyperparameter</b> — a setting a person chooses before or during training (number of layers, batch size, learning rate) rather than something the model learns on its own.</li>
+      <li><b>Sparsity / mixture-of-experts (MoE)</b> — sparsity means a large share of a model's parameters are zero-valued (effectively switched off); MoE is a specific sparse design where the model is split into "expert" groups of parameters and only a few experts turn on for any given token.</li>
+      <li><b>FLOP vs. FLOP/s</b> — a FLOP (floating point operation) is a unit of compute a task requires in total; FLOP/s is a machine's speed, operations per second. Easy to mix up, and the mix-up matters when estimating training cost.</li>
+      <li><b>Compute-optimal / scaling law</b> — a scaling law is a rule that predicts the best model size and training data size for a given compute budget. "Compute-optimal" means a model got the best performance that budget could realistically buy.</li>
+      <li><b>Inverse scaling</b> — when a bigger model does worse on some specific task instead of better.</li>
+      <li><b>Scaling extrapolation</b> — trying to predict good training settings (hyperparameters) for a large, expensive-to-train model by studying much smaller, cheaper models first.</li>
+      <li><b>Emergent ability</b> — a capability that only shows up once a model is large enough, and isn't visible at all in smaller versions trained the same way.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <p>Zoom out and every foundation model is the product of three separate decisions someone made before training even started: what data to train it on, what architecture to build it with, and how big to make it (a fourth decision, how to align it with what people actually want from it, is what part 2 covers). None of these three are settled questions with one right answer. They're trade-offs, and understanding them is what lets you look at a model card and actually predict what a model will be good or bad at, rather than just trusting a benchmark score.</p>
+
+    <h3>What actually goes into training data</h3>
+    <p>A model is only as good as the data it was trained on. If a language model's training data has no Vietnamese in it, it won't translate into Vietnamese. If an image model only ever saw animal photos, it won't do well on photos of plants. That sounds obvious stated plainly, but it has a less obvious consequence: collecting exactly the training data you'd want for a specific goal is hard and expensive, so in practice, model developers often lean on whatever large-scale data is actually available, even when it isn't a perfect fit.</p>
+    <p>The most common source is Common Crawl, a nonprofit's rolling scrape of the public web (about 2 to 3 billion pages a month in 2022 and 2023). Google publishes a cleaned-up subset of it called C4. Both are known to be uneven in quality: one analysis (reported by the Washington Post) found that the 1,000 most common websites feeding this kind of dataset include several outlets that rank low for trustworthiness on NewsGuard's scale, meaning a fair amount of clickbait, misinformation, and worse comes along with the useful text. Even so, variations of Common Crawl show up in most foundation models that disclose their sources, including GPT-3 and Gemini. Some teams add filtering heuristics on top (OpenAI, for instance, only used Reddit links with at least three upvotes to train GPT-2), which helps somewhat but doesn't fully solve the quality problem.</p>
+    <p>Here's a genuinely useful, slightly counterintuitive point: more training data doesn't automatically mean a better model, because more data usually means more compute, and a smaller amount of high-quality data can beat a larger amount of low-quality data. One concrete example: using 7 billion tokens of high-quality coding data, a team (Gunasekar et al., 2023) trained a 1.3-billion-parameter model that outperformed much larger models on several important coding benchmarks. Quantity, quality, and diversity of training data all matter, and none of them alone tells the whole story.</p>
+
+    <h3>Multilingual models: one language dominates the internet</h3>
+    <p>English makes up close to half of Common Crawl (an analysis by Lai et al., 2023 puts it at 45.88%), and the next most common language, Russian, sits at roughly 6% (about eight times less, per that analysis). Some widely spoken languages are dramatically underrepresented relative to their number of speakers: Punjabi has around 113 million speakers but a tiny fraction of a percent of Common Crawl, giving it (per that same analysis) a "world population share versus Common Crawl share" ratio over 230, one of the most extreme gaps in the data. Languages this underrepresented are usually called low-resource languages.</p>
+    <p>This shows up directly in model performance. On the MMLU benchmark (a set of about 14,000 multiple-choice questions across 57 subjects, translated into other languages by OpenAI for this comparison), GPT-4 performs much better in English than in under-represented languages like Telugu. In a separate benchmark of six math problems on Project Euler, one researcher (Yennie Jun) found GPT-4 solved problems in English more than three times as often as in Armenian or Farsi, and failed all six problems in Burmese and Amharic. Under-representation in the training data is a big part of this, but it's worth being precise: it isn't the only factor, since a language's structure and the culture embedded in it can also make it genuinely harder for a model to learn, independent of how much text it saw.</p>
+    <p>Translating everything into English first and translating the answer back isn't a clean fix either. Beyond needing a model that already understands the low-resource language well enough to translate accurately, translation can lose real information. Vietnamese, for example, has different pronouns that encode the relationship between speakers; translated into English, all of that collapses into a generic "I" and "you." Models can also behave inconsistently across languages in ways that aren't purely about data volume: one study (NewsGuard, April 2023) found ChatGPT-3.5 declined to produce false claims about China for 6 out of 7 prompts in English, but produced the false claims all 7 times when asked in simplified or traditional Chinese. It's not fully clear why.</p>
+    <p>There's also a cost and speed dimension that's easy to miss: tokenization efficiency varies a lot by language. Benchmarking GPT-4 on MASSIVE (a dataset of a million short texts translated across 52 languages), the same researcher found the median token length for a piece of text was 7 in English but 32 in Hindi and 72 in Burmese, about ten times longer than English for saying the same thing. Assuming generation time per token is roughly constant across languages, that means about ten times the latency, and for token-based API pricing, about ten times the cost, just for using a low-resource language.</p>
+    <figure class="schematic">
+      <svg viewBox="0 0 600 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Median token length for the same meaning across three languages">
+        <rect x="0" y="0" width="600" height="210" rx="10" fill="#0E0E10"/>
+        <text x="20" y="26" font-family="JetBrains Mono, monospace" font-size="11" fill="#7A7A80" letter-spacing="1">SAME MEANING, DIFFERENT TOKEN COST (MASSIVE, median tokens)</text>
+        <g font-family="Inter, sans-serif" font-size="13" fill="#C9C7C1">
+          <text x="20" y="70" fill="#C9C7C1">English</text>
+          <rect x="110" y="55" width="37" height="22" rx="4" fill="rgba(111,207,151,0.18)" stroke="#6FCF97"/>
+          <text x="155" y="70" fill="#6FCF97">7</text>
+
+          <text x="20" y="120" fill="#C9C7C1">Hindi</text>
+          <rect x="110" y="105" width="169" height="22" rx="4" fill="#131316" stroke="rgba(242,239,233,0.10)"/>
+          <text x="287" y="120" fill="#F2EFE9">32</text>
+
+          <text x="20" y="170" fill="#C9C7C1">Burmese</text>
+          <rect x="110" y="155" width="380" height="22" rx="4" fill="rgba(200,69,58,0.16)" stroke="#C8453A"/>
+          <text x="498" y="170" fill="#F2EFE9">72</text>
+        </g>
+        <text x="20" y="196" font-family="Inter, sans-serif" font-size="11.5" fill="#7A7A80">~10x more tokens for the same meaning means ~10x the latency and cost, if per-token time and price stay the same.</text>
+      </svg>
+      <figcaption>Median token count to express the same content on the MASSIVE benchmark, per Yennie Jun's GPT-4 benchmarking. Bar lengths are drawn to scale from these three reported numbers.</figcaption>
+    </figure>
+
+    <h3>Domain-specific models: general-purpose only gets you so far</h3>
+    <p>General-purpose models like Gemini, the GPT family, and Llama can handle a surprisingly wide range of domains (coding, law, science, business, sports, environmental science, among others) reasonably well out of the box, largely because those domains show up in their training data. But "reasonably well on everyday questions about a domain" isn't the same as "good enough for domain-specific work," especially for tasks the model never saw examples of during training.</p>
+    <p>You can see this variance directly in benchmark tables. Comparing CLIP and Open CLIP (a later, openly trained version) across different image categories: both score similarly on ImageNet (63.2% vs. 62.9% accuracy) and on Oxford flower categories (66.7% vs. 66.0%), but they diverge sharply elsewhere: on Stanford Cars, CLIP scores 59.4% versus Open CLIP's 79.3%, and on the German Traffic Sign Recognition Benchmark, 32.2% versus 42.0%. Same general architecture and similar overall training approach, meaningfully different performance depending on the specific category, which is exactly the kind of gap that shows up between "handles everyday questions about X" and "actually good at X."</p>
+    <p>Some domains need dedicated, purpose-built models because the right data simply doesn't show up in general web scrapes. Drug discovery involves protein, DNA, and RNA data in specific, expensive-to-acquire formats. Cancer screening typically needs X-ray and fMRI (functional magnetic resonance imaging) scans, which are hard to obtain because of privacy restrictions. DeepMind's AlphaFold, trained on the sequences and 3D structures of around 100,000 known proteins, is one of the best-known examples of a model built for exactly this kind of narrow, high-value domain. NVIDIA's BioNeMo focuses on biomolecular data for drug discovery, and Google's Med-PaLM2 combines a language model with medical data to answer medical questions more accurately than a general-purpose model would. This pattern isn't limited to biomedicine either: a model trained specifically on architectural sketches or factory plans could plausibly help architects or manufacturers in ways a general-purpose model like a generic image or chat model wouldn't.</p>
+
+    <h3>The transformer architecture: solving what came before it</h3>
+    <p>As of the source material, the transformer architecture (Vaswani et al., 2017) is the dominant design behind language-based foundation models, and it's built around the attention mechanism. To see why it won out, it helps to know what it replaced: seq2seq (sequence-to-sequence), an encoder-decoder architecture built on RNNs (recurrent neural networks) that was the standard approach for tasks like translation from around 2014 to 2018 (Google folded it into Google Translate in 2016, calling it their biggest quality jump for machine translation to that point).</p>
+    <p>Seq2seq had two real problems. First, its decoder generated output using only the encoder's final hidden state, a single compressed summary of the whole input. That's roughly like trying to answer detailed questions about a book using only a one-paragraph summary of it: real detail gets lost. Second, because both the encoder and decoder were RNNs, processing happened one token at a time in sequence, which made long inputs slow.</p>
+    <p>The attention mechanism fixes both problems. Instead of compressing the whole input into one summary, attention lets the model weigh the importance of every earlier token individually when generating each output token, more like being able to flip back to any page of the book instead of relying on the summary. And because attention doesn't require RNNs at all, transformer inputs can be processed in parallel rather than one token at a time, which is a lot faster. It's worth noting attention itself predates the transformer by a few years (it was first used successfully alongside an RNN-based architecture, in Google's 2016 translation system), but it only really took off once the transformer paper showed attention worked well without RNNs at all.</p>
+    <p>One nuance worth flagging: the transformer removes the sequential bottleneck for processing input, but a transformer-based autoregressive model (one that generates a token at a time, using only what came before) still generates output sequentially. In practice this splits inference into two steps: <b>prefill</b>, where the model processes all input tokens in parallel and builds up the internal state (including key and value vectors, covered next) needed to start generating, and <b>decode</b>, where the model generates one output token at a time. The parallel part got fast; the one-token-at-a-time part is still there.</p>
+
+    <h3>Attention: deciding which earlier words matter right now</h3>
+    <p>Under the hood, attention runs on three vectors computed for each token: a query vector (Q), a key vector (K), and a value vector (V). Keeping the book analogy: the query is like a person looking for specific information, each key is like a page number labeling a previous token, and each value is like that page's actual content. Attention computes a score for a given previous token by taking a dot product between the current query and that token's key. A high score means the model leans more heavily on that token's value (its actual content) when generating the next output. In practice, all of this is computed with matrix math: given an input x and learned weight matrices W<sup>K</sup>, W<sup>V</sup>, and W<sup>Q</sup>, the model computes K = xW<sup>K</sup>, V = xW<sup>V</sup>, and Q = xW<sup>Q</sup>, then combines them as Attention(Q, K, V) = softmax(QK<sup>T</sup> / √d)·V, where softmax turns the raw scores into weights that add up to 1.</p>
+    <p>These matrices are sized to the model's hidden dimension. In Llama 2-7B, for example, the hidden dimension is 4096, so each of W<sup>K</sup>, W<sup>V</sup>, and W<sup>Q</sup> is a 4096×4096 matrix. Attention is also almost always <b>multi-headed</b>: instead of one big Q/K/V computation, the vectors get split into several smaller "heads" that each attend to different relationships between tokens at once. Llama 2-7B has 32 attention heads, so each 4096-dimension vector gets split into 32 vectors of dimension 128 (4096 ÷ 32 = 128). The outputs of all the heads get concatenated back together and passed through one more learned matrix (the output projection) before moving on.</p>
+    <figure class="schematic">
+      <svg viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Illustrative attention weights over previous tokens">
+        <rect x="0" y="0" width="600" height="240" rx="10" fill="#0E0E10"/>
+        <text x="20" y="26" font-family="JetBrains Mono, monospace" font-size="11" fill="#7A7A80" letter-spacing="1">ATTENTION: WHICH EARLIER TOKENS MATTER RIGHT NOW</text>
+        <text x="20" y="50" font-family="JetBrains Mono, monospace" font-size="12.5" fill="#F2EFE9">query is generating the next token, looking back over:</text>
+
+        <g font-family="JetBrains Mono, monospace" font-size="12.5">
+          <rect x="20" y="66" width="90" height="30" rx="6" fill="#131316" stroke="rgba(242,239,233,0.10)"/>
+          <text x="34" y="86" fill="#C9C7C1">How</text>
+          <rect x="120" y="66" width="90" height="30" rx="6" fill="#131316" stroke="rgba(242,239,233,0.10)"/>
+          <text x="134" y="86" fill="#C9C7C1">are</text>
+          <rect x="220" y="66" width="90" height="30" rx="6" fill="rgba(111,207,151,0.14)" stroke="#6FCF97"/>
+          <text x="234" y="86" fill="#6FCF97">you</text>
+          <rect x="320" y="66" width="90" height="30" rx="6" fill="rgba(111,207,151,0.10)" stroke="#6FCF97"/>
+          <text x="334" y="86" fill="#6FCF97">?</text>
+          <rect x="420" y="66" width="90" height="30" rx="6" fill="#131316" stroke="rgba(242,239,233,0.10)"/>
+          <text x="434" y="86" fill="#C9C7C1">¿</text>
+        </g>
+
+        <g font-family="Inter, sans-serif" font-size="11">
+          <rect x="20" y="112" width="90" height="14" rx="3" fill="#1A1A1D"/>
+          <rect x="20" y="112" width="14" height="14" rx="3" fill="#7A7A80"/>
+          <rect x="120" y="112" width="90" height="14" rx="3" fill="#1A1A1D"/>
+          <rect x="120" y="112" width="20" height="14" rx="3" fill="#7A7A80"/>
+          <rect x="220" y="112" width="90" height="14" rx="3" fill="#1A1A1D"/>
+          <rect x="220" y="112" width="55" height="14" rx="3" fill="#6FCF97"/>
+          <rect x="320" y="112" width="90" height="14" rx="3" fill="#1A1A1D"/>
+          <rect x="320" y="112" width="45" height="14" rx="3" fill="#6FCF97"/>
+          <rect x="420" y="112" width="90" height="14" rx="3" fill="#1A1A1D"/>
+          <rect x="420" y="112" width="14" height="14" rx="3" fill="#7A7A80"/>
+        </g>
+        <text x="20" y="146" font-family="Inter, sans-serif" font-size="11.5" fill="#7A7A80">bar width = illustrative attention weight (not measured from a real model)</text>
+        <text x="20" y="170" font-family="Inter, sans-serif" font-size="12.5" fill="#C9C7C1">"you" and "?" get the heaviest weight here: the model leans on their value vectors</text>
+        <text x="20" y="190" font-family="Inter, sans-serif" font-size="12.5" fill="#C9C7C1">most when computing the next token, instead of one fixed summary of the whole input.</text>
+      </svg>
+      <figcaption>A made-up, illustrative example of attention weights (not measured from any real model run): the query looks back at every previous token and each key/value pair gets its own weight instead of one shared summary.</figcaption>
+    </figure>
+
+    <h3>Inside a transformer block: attention, the MLP, and what sits at the ends</h3>
+    <p>A transformer is built from repeated <b>transformer blocks</b> stacked on top of each other (the number of blocks stacked is usually called the model's number of layers). Each block generally contains two parts: the <b>attention module</b> just described (its four weight matrices: query, key, value, and output projection), and the <b>MLP module</b> (multi-layer perceptron, also called the feedforward part). The MLP module is a set of linear layers (weight matrices doing linear transformations) separated by a nonlinear activation function. The nonlinearity matters: without it, stacking linear layers would still only ever produce linear transformations, no matter how many you stack, and language is not a linear pattern. Common activation functions here are simple on purpose (ReLU, which just converts every negative value to 0, and GELU, used in models like GPT-2 and GPT-3): fancier, more complex activation functions were tried and didn't perform meaningfully better, while costing more compute and memory.</p>
+    <p>Two more modules bookend the stack of blocks. Before the first block, an <b>embedding module</b> converts token IDs and their positions in the sequence into vectors, using a token embedding matrix and a separate positional embedding matrix. In a simple setup, the number of position indices this module tracks caps the model's maximum context length (if it tracks 2,048 positions, its context length is 2,048), though techniques exist to stretch context length without literally adding more raw position indices. After the last block, an <b>output layer</b> (sometimes called the unembedding layer, or the model's "head") maps the model's internal vectors into token probabilities, which is what a later sampling step (covered in part 2) uses to actually pick the next token.</p>
+    <p>A model's overall size comes from the dimensions of these pieces: the model's hidden dimension (which sizes the Q/K/V/output-projection matrices), the number of transformer blocks stacked, the feedforward dimension inside the MLP module, and the vocabulary size. Bigger numbers in any of these mean a bigger model. A useful comparison across the Llama family:</p>
+    <table class="datatable">
+      <tr><th>Model</th><th># blocks</th><th>Model dim</th><th>Feedforward dim</th><th>Vocab size</th><th>Context length</th></tr>
+      <tr><td>Llama 2-7B</td><td>32</td><td>4,096</td><td>11,008</td><td>32K</td><td>4K</td></tr>
+      <tr><td>Llama 2-13B</td><td>40</td><td>5,120</td><td>13,824</td><td>32K</td><td>4K</td></tr>
+      <tr><td>Llama 2-70B</td><td>80</td><td>8,192</td><td>22,016</td><td>32K</td><td>4K</td></tr>
+      <tr><td>Llama 3-7B</td><td>32</td><td>4,096</td><td>14,336</td><td>128K</td><td>128K</td></tr>
+      <tr><td>Llama 3-70B</td><td>80</td><td>8,192</td><td>28,672</td><td>128K</td><td>128K</td></tr>
+      <tr><td>Llama 3-405B</td><td>126</td><td>16,384</td><td>53,248</td><td>128K</td><td>128K</td></tr>
+    </table>
+    <p>Worth noting: growing context length increases how much memory a model needs at run time, but it doesn't by itself change the model's total number of parameters, since context length is about how many positions get tracked, not how many weights exist.</p>
+    <figure class="schematic">
+      <svg viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A simplified transformer stack from tokens to token probabilities">
+        <rect x="0" y="0" width="600" height="300" rx="10" fill="#0E0E10"/>
+        <g font-family="Inter, sans-serif" font-size="12.5" fill="#C9C7C1">
+          <rect x="200" y="14" width="200" height="30" rx="6" fill="#131316" stroke="rgba(242,239,233,0.10)"/>
+          <text x="240" y="34" fill="#C9C7C1">input tokens</text>
+          <text x="292" y="58" fill="#7A7A80">↓</text>
+
+          <rect x="150" y="60" width="300" height="34" rx="6" fill="#131316" stroke="rgba(242,239,233,0.10)"/>
+          <text x="168" y="82" fill="#C9C7C1">embedding module (token + position)</text>
+          <text x="292" y="108" fill="#7A7A80">↓</text>
+
+          <rect x="120" y="114" width="360" height="118" rx="8" fill="rgba(200,69,58,0.06)" stroke="rgba(200,69,58,0.35)" stroke-dasharray="4 3"/>
+          <text x="134" y="130" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#C8453A" letter-spacing="1">N TRANSFORMER BLOCKS (stacked)</text>
+
+          <rect x="150" y="140" width="300" height="28" rx="6" fill="#131316" stroke="rgba(242,239,233,0.10)"/>
+          <text x="230" y="159" fill="#F2EFE9">attention module</text>
+          <rect x="150" y="174" width="300" height="28" rx="6" fill="#131316" stroke="rgba(242,239,233,0.10)"/>
+          <text x="250" y="193" fill="#F2EFE9">MLP module</text>
+          <text x="292" y="222" fill="#7A7A80">(repeat x N)</text>
+
+          <text x="292" y="248" fill="#7A7A80">↓</text>
+          <rect x="150" y="252" width="300" height="30" rx="6" fill="#131316" stroke="rgba(242,239,233,0.10)"/>
+          <text x="178" y="272" fill="#C9C7C1">output layer (unembedding)</text>
+        </g>
+      </svg>
+      <figcaption>A simplified transformer stack: tokens go in, an embedding module attaches meaning and position, N transformer blocks (attention + MLP, repeated) do the processing, and an output layer turns the result into token probabilities.</figcaption>
+    </figure>
+
+    <h3>Other architectures nipping at the transformer's heels</h3>
+    <p>The transformer isn't the only architecture, and architectures have gone in and out of fashion before it (seq2seq roughly 2014 to 2018, GANs a bit longer). What makes the transformer unusual is how long it's stuck around (since 2017) and how heavily optimized it's become in that time, which raises a real bar for anything trying to replace it. A few alternatives are gaining some traction. RWKV is an RNN-based model that can still be parallelized for training and, because of its RNN design, doesn't in theory share the transformer's context-length limitations, though not having a hard limit in theory doesn't guarantee good performance on genuinely long context in practice. SSMs (state space models) are another active line of research aimed at long-range memory: S4 made the approach more efficient, H3 added a mechanism for recalling and comparing earlier tokens (similar in purpose to attention, but more efficient), Mamba scaled the approach to 3 billion parameters and reportedly matched transformers twice its size while scaling inference cost linearly with sequence length rather than the transformer's quadratic scaling, and Jamba combined transformer and Mamba layers into a mixture-of-experts model (52 billion total parameters, 12 billion active) that fit on a single 80GB GPU while handling contexts up to 256K tokens. None of this has displaced the transformer as of this writing, but it's an active area, not a settled one.</p>
+
+    <h3>Measuring model size: parameters, sparsity, tokens, and compute</h3>
+    <p>The parameter count in a model's name (Llama-13B has 13 billion parameters) is a proxy for its learning capacity: in general, and within the same model family and generation, more parameters means more capacity to learn and usually better performance. That's a bounded claim on purpose, because it has real exceptions. Newer-generation training methods can beat raw size: Llama 3-8B (2024) reportedly outperforms the much larger Llama 2-70B (2023) on the MMLU benchmark. And parameter count can be misleading on its own if a model is <b>sparse</b>, meaning a large share of its parameters are zero-valued: a 7-billion-parameter model that's 90% sparse only has about 700 million non-zero parameters actually doing work, so a large sparse model can need less compute than a smaller fully "dense" one.</p>
+    <p><b>Mixture-of-experts (MoE)</b> is a specific, increasingly popular sparse design: the model is split into expert groups of parameters, and only a subset of experts activates for any given token. Mixtral 8x7B is a concrete, grounded example of the arithmetic here: with 8 experts of 7 billion parameters each, you'd expect 8 × 7 billion = 56 billion parameters if nothing were shared, but because some parameters are shared across experts, it actually has 46.7 billion total parameters. Only 2 experts activate per token at each layer, so only about 12.9 billion parameters are active for any given token, meaning the model's inference cost and speed behave like a 12.9-billion-parameter model, even though it stores 46.7 billion parameters worth of weights.</p>
+    <p>Parameter count alone also isn't the whole story on the data side: a 13-billion-parameter model trained on a single repeated sentence would perform far worse than a much smaller model trained on a real, varied dataset. Because of that, dataset size is usually measured in tokens rather than raw samples (a book is worth a lot more signal than a single sentence, so counting "samples" doesn't compare fairly). Modern LLM training sets run into the trillions of tokens: reported figures for the Llama family are 1.4 trillion training tokens for Llama 1, 2 trillion for Llama 2, and 15 trillion for Llama 3, and the open source RedPajama-v2 dataset totals about 30 trillion tokens (very roughly equivalent to 450 million books, or about 5,400 times the size of Wikipedia, though its quality is much lower than a curated dataset since it's largely indiscriminate). Note that a dataset's token count and a model's actual number of <b>training tokens</b> aren't identical either: if a 1-trillion-token dataset gets used for two full passes (epochs), the model actually trained on 2 trillion training tokens.</p>
+    <p>Compute is usually measured in FLOPs (floating point operations, the total amount of compute a task needs), which is easy to confuse with FLOP/s (floating point operations per second, a machine's peak speed). As a real example of the scale involved: Google's PaLM-2 was reportedly trained using about 10<sup>22</sup> FLOPs, and GPT-3-175B was trained using about 3.14 × 10<sup>23</sup> FLOPs. An NVIDIA H100 NVL GPU can deliver up to about 60 TeraFLOP/s at peak (6 × 10<sup>13</sup> FLOPs per second, or about 5.2 × 10<sup>18</sup> FLOPs per day). Using those numbers, training GPT-3-175B on 256 H100s running at full capacity with no wasted time works out to roughly 3.14×10<sup>23</sup> ÷ (256 × 5.2×10<sup>18</sup>) ≈ 236 days, or about 7.8 months. In practice you never hit full capacity: <b>utilization</b> measures how much of a machine's advertised peak you're actually getting, and roughly 50% utilization is considered acceptable while above 70% is considered great (this bar shifts depending on the model, workload, and hardware, so treat it as a rough rule of thumb, not a fixed target). At 70% utilization and around $2 per H100 per hour, training GPT-3-175B this way would cost a bit over $4 million.</p>
+    <p>Put together, three numbers are usually enough to describe a model's scale: parameter count (a proxy for learning capacity), training token count (a proxy for how much it actually learned from), and FLOPs (a proxy for what training actually cost).</p>
+
+    <h3>The scaling law: buying performance with a fixed budget</h3>
+    <p>Compute is the usual limiting factor in practice (compute infrastructure is expensive and hard to set up on its own), so teams typically start from a fixed compute budget and ask: given this many FLOPs, what model size and dataset size gets the best performance? A model that hits the best performance a given compute budget can buy is called <b>compute-optimal</b>. The widely used rule for finding that balance is the Chinchilla scaling law (from the paper "Training Compute-Optimal Large Language Models," DeepMind, 2022), based on training 400 models ranging from 70 million to over 16 billion parameters on between 5 and 500 billion tokens. Their headline finding: for compute-optimal training, the number of training tokens should be roughly 20 times the model's parameter count (so a 3-billion-parameter model wants around 60 billion training tokens), and model size and token count should scale up together, doubling one should come with doubling the other. This scaling law was developed specifically for dense models trained mostly on human-generated data; extending the same logic cleanly to sparse (MoE) models and to synthetic training data is still active research, not a settled extension.</p>
+    <p>Compute-optimal isn't automatically the same goal as "best model to actually ship," though. Llama's own authors reportedly chose smaller, less compute-optimal models on purpose, because smaller models are cheaper and easier to actually run in production, which helped their models see wider real-world adoption than a stricter reading of the scaling law would have predicted. A later paper (Sardana et al., 2023) proposed adjusting the Chinchilla calculation specifically to account for this kind of inference-time cost, not just training-time cost.</p>
+    <p>There's also a genuine diminishing-returns pattern worth naming plainly: the cost of hitting a given level of performance tends to fall over time (the compute cost to reach 93% accuracy on ImageNet reportedly halved between 2019 and 2021, per Stanford's 2022 AI Index Report), but the cost of pushing performance further, once you're already doing well, stays high. One cited estimate: getting a model's error rate down from 3% to 2% might take an order of magnitude more data, compute, or energy than getting it from 4% to 3% did. Similarly, in language modeling, dropping cross-entropy loss (a measure of prediction error, covered in more depth in a later section of the source material) from about 3.4 to 2.8 reportedly requires about 10 times more training data. These numbers can look small in isolation, but the source material is clear that small shifts like that can produce a noticeably different, better-feeling application on the other end.</p>
+    <figure class="schematic">
+      <svg viewBox="0 0 600 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Illustrative scaling law curve: loss falling as compute, model size, and tokens grow together">
+        <rect x="0" y="0" width="600" height="250" rx="10" fill="#0E0E10"/>
+        <text x="20" y="26" font-family="JetBrains Mono, monospace" font-size="11" fill="#7A7A80" letter-spacing="1">SCALING LAW: MODEL SIZE AND TOKENS GROW TOGETHER</text>
+
+        <line x1="60" y1="200" x2="560" y2="200" stroke="rgba(242,239,233,0.25)" stroke-width="1.5"/>
+        <line x1="60" y1="50" x2="60" y2="200" stroke="rgba(242,239,233,0.25)" stroke-width="1.5"/>
+        <text x="300" y="222" font-family="Inter, sans-serif" font-size="11.5" fill="#7A7A80" text-anchor="middle">compute budget (FLOPs), increasing →</text>
+        <text x="34" y="60" font-family="Inter, sans-serif" font-size="11" fill="#7A7A80">lower</text>
+        <text x="30" y="72" font-family="Inter, sans-serif" font-size="11" fill="#7A7A80">loss</text>
+
+        <path d="M 70 190 C 180 150, 260 110, 340 85 C 420 65, 500 55, 550 50" fill="none" stroke="#C8453A" stroke-width="2.5"/>
+
+        <circle cx="140" cy="168" r="5" fill="#6FCF97"/>
+        <text x="150" y="150" font-family="Inter, sans-serif" font-size="11" fill="#6FCF97">small budget:</text>
+        <text x="150" y="164" font-family="Inter, sans-serif" font-size="11" fill="#6FCF97">smaller model, fewer tokens</text>
+
+        <circle cx="470" cy="62" r="5" fill="#F2EFE9"/>
+        <text x="410" y="90" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">big budget: bigger model,</text>
+        <text x="410" y="104" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">~20x more tokens per parameter</text>
+      </svg>
+      <figcaption>Illustrative shape only (not a plot of real data points): as compute budget grows, the Chinchilla scaling law says the compute-optimal choice is to grow both model size and training tokens together, at roughly a 20x tokens-to-parameters ratio, not to spend the whole budget on one or the other.</figcaption>
+    </figure>
+
+    <h3>When bigger gets worse: inverse scaling</h3>
+    <p>The scaling law describes what usually happens: bigger models trained on proportionally more data tend to perform better. But there are documented exceptions, and it's worth taking those seriously rather than treating "bigger is better" as a law of nature. In 2022, Anthropic found that more alignment training (the post-training work covered in part 2) counterintuitively produced models that diverged more, not less, from certain expected behaviors: per their paper (Perez et al., 2022), pushing a model further in this direction made it more likely to volunteer strong opinions on hot-button political and religious topics, to claim something like its own inner experience or moral standing, and to say it would rather not be turned off. In 2023, a separate group of researchers (mostly from NYU) ran the Inverse Scaling Prize specifically to find tasks where larger language models do worse, offering up to $100,000 for a single grand-prize submission. Out of 99 submissions, 11 won a smaller third-place prize; no second or first prize was awarded, because while the winning submissions did show larger models failing on a small test set, none of them demonstrated that failure actually showing up in real-world use. The prize's overall finding was narrower than "bigger models fail more": larger models are <i>sometimes</i>, not consistently, worse specifically on tasks that require memorization or that fight against a model's strong learned priors.</p>
+
+    <h3>Guessing the right settings before you can afford to guess wrong: scaling extrapolation</h3>
+    <p>It helps here to be precise about a distinction: a <b>parameter</b> is something the model learns during training, while a <b>hyperparameter</b> is a setting a person chooses beforehand, either to configure the model itself (number of layers, model dimension, vocabulary size) or to control how it learns (batch size, number of epochs, learning rate, and more). For small models, it's common practice to just train several times with different hyperparameter combinations and keep whichever run performs best. For large models, that's rarely practical, since training even once is already resource-draining; in effect, you often get one real shot at picking good hyperparameters. <b>Scaling extrapolation</b> (also called hyperparameter transferring) is the research effort built around that constraint: study how hyperparameters behave on models much smaller than your real target, then extrapolate what should work at the target size. One 2022 paper (from Microsoft and OpenAI) reportedly showed hyperparameters could be successfully transferred from a 40-million-parameter model up to a 6.7-billion-parameter model.</p>
+    <p>This remains a fairly niche area, partly because few teams have the resources to study large-model training at all, and partly because hyperparameters interact combinatorially: with just ten hyperparameters, fully studying them (individually, then in pairs, then larger groups, and so on) means working through 1,024 possible combinations. It's also complicated by <b>emergent abilities</b> (Wei et al., 2022): capabilities that only appear once a model crosses some scale threshold and simply aren't observable at all on the smaller models the extrapolation is based on, which limits how far the extrapolation can be trusted.</p>
+
+    <h3>What could actually stop the scaling: real bottlenecks</h3>
+    <p>Every order-of-magnitude jump in model size so far has come with a jump in performance: GPT-2 had about ten times more parameters than GPT-1 (1.5 billion vs. 117 million), and GPT-3 had about a hundred times more than GPT-2 (175 billion), a three-orders-of-magnitude jump across just a few years (2018 to 2021). It's a fair question whether that keeps going, and the honest answer is nobody fully knows, but two concrete bottlenecks are already visible: training data and electricity.</p>
+    <p>On data: the rate models consume training data is growing faster than the rate new data is being created online (a projection cited from Villalobos et al.), which is a real, non-hypothetical constraint, not a distant hypothetical. It's also worth knowing, if you post anything publicly online, there's a reasonable chance it ends up in some model's training data whether or not you consented to that, similar in spirit to how anything public tends to get indexed by search engines. On top of that, the internet is filling up with AI-generated content itself, which raises a genuine, still-debated concern (sometimes called model collapse) that future models trained partly on other models' outputs could gradually drift from real-world data patterns; one incident often cited here is Grok (a model trained by X) being caught in December 2023 refusing a request by citing "OpenAI's use case policy," which a Grok developer (Igor Babuschkin) attributed to Grok being trained on ordinary web data that already contains a lot of ChatGPT-generated text, not to Grok being trained directly on OpenAI's own outputs. Separately, data access itself is tightening: one analysis (Longpre et al., 2024) found that between 2023 and 2024, rapidly changing terms of service and crawling restrictions pushed over 28% of the most critical sources in the popular C4 dataset toward being fully restricted, with about 45% of C4 restricted in some way as of that analysis. As freely available web data gets both scarcer and more restricted, the main remaining path for more human-generated data is proprietary data (copyrighted books, contracts, medical records, and similar), which is part of why deals between AI companies and publishers have become a genuine competitive consideration.</p>
+    <p>On electricity: data centers are estimated to currently use around 1 to 2% of global electricity, a share projected to grow to somewhere between 4% and 20% by 2030 (per a 2024 analysis by Patel, Nishball, and Ontiveros, a wide range that reflects real uncertainty). Until more electricity generation capacity exists, that puts a rough ceiling on how much data centers can grow, on the order of about 50 times current capacity, which is under two orders of magnitude, meaningfully less headroom than the three orders of magnitude models already grew by between 2018 and 2021. That's a real, physical constraint sitting underneath any conversation about models continuing to scale indefinitely.</p>
+  </section>
+
+  <section>
+    <h2>Why it matters</h2>
+    <p>These three levers explain a lot of what looks confusing about foundation models from the outside. Why does the same model feel so much worse in some languages than others? Training data distribution, mostly. Why do two similarly sized models behave so differently in production? Architecture details (attention heads, context length, sparsity) and exactly how many tokens they actually trained on. Why doesn't a company just train the biggest model it can afford? Because compute-optimal and usable-in-production are different goals, and because bigger sometimes measurably backfires (inverse scaling) or simply runs into a hard ceiling (data and electricity). None of this requires you to train a model yourself, but it's exactly the kind of context that turns "pick a model" from a coin flip into an informed decision, whether that's choosing a model for a multilingual product, sizing expectations for a domain-specific task, or just understanding why a vendor's marketing about parameter count doesn't tell the whole story. Part 2 builds directly on this: it's what happens after pre-training, when a model gets shaped from "a very capable text completer" into something that can actually hold a conversation.</p>
+  </section>
+
+  <div class="remember">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Training data explains a lot of what a model can do well: language coverage and domain coverage matter as much as raw data quantity, and quality can beat quantity outright.</li>
+      <li>Nearly every current foundation model runs on the transformer architecture, and attention (weighing which earlier tokens matter for the next one, individually, instead of one fixed summary) is the mechanism that makes it work.</li>
+      <li>Model size isn't just parameter count. Sparsity (mixture-of-experts), training token count, and compute (FLOPs) all shape what "big" really means and what it actually costs to train and run.</li>
+      <li>Scaling laws describe a compute-optimal ratio (very roughly 20 training tokens per parameter), but "compute-optimal" and "good enough to ship cheaply" are different goals, and bigger isn't reliably better (see inverse scaling).</li>
+      <li>Scaling has real, physical ceilings already visible today: usable training data is running low relative to demand, and electricity capacity puts a rough cap on how much bigger data centers can get.</li>
+    </ul>
+  </div>
+
+  <div class="try">
+    <h2>Try it yourself</h2>
+    <ul>
+      <li><b>Compare tokenization across languages.</b> Take the same short sentence and translate it (or find existing translations) into English plus two other languages, one you'd expect to be well-resourced (French, Spanish) and one less so. Run all versions through any public tokenizer. Done when: you have a small table of token counts per language and one sentence noting which language costs the most tokens for the same meaning.</li>
+      <li><b>Build a tiny attention-weight toy by hand.</b> Pick a 5 to 7 word sentence. For predicting the next word, assign your own rough relevance score (0 to 1) to each earlier word for how much it "matters" to that prediction, then normalize the scores so they sum to 1 (a basic softmax by hand or in a spreadsheet works fine). Done when: your weights sum to 1 and you can explain in one sentence why the highest-weighted word makes sense.</li>
+      <li><b>Do the memory-footprint math for two real model sizes.</b> Pick two published open model sizes (for example 7B and 70B parameter versions of the same family) and calculate estimated minimum inference memory at 16-bit precision (parameters × 2 bytes). Done when: you have both numbers and have compared them against any minimum GPU memory the model's public card or docs mention.</li>
+      <li><b>Check the Chinchilla ratio for a real model.</b> Find a published parameter count and training token count for any open model you can get real numbers for (model cards or papers usually state both). Divide tokens by parameters and compare the result to the roughly 20x compute-optimal ratio described above. Done when: you've done this for at least two different models and written a sentence on whether each is near, above, or well below 20x, and why that might be (for example, favoring usability over raw compute-optimal performance).</li>
+      <li><b>Do a FLOP/s-day sanity check.</b> Pick any GPU's advertised peak FLOP/s from its public spec sheet, convert that to FLOPs per day, and estimate how many days a specific, stated FLOP budget (pick one from a paper or model card you can find) would take at 50%, 70%, and 100% utilization. Done when: you have a small three-row table (by utilization level) with an estimated training time for each.</li>
+      <li><b>Work the mixture-of-experts arithmetic.</b> Make up a small hypothetical MoE model: pick a number of experts, a size per expert, and how many experts activate per token (mirror the Mixtral 8x7B example above if it helps). Calculate total parameters (accounting for however much sharing you assume) versus active parameters per token. Done when: you can state, in one sentence, why active parameter count rather than total parameter count is closer to what determines real inference cost and speed.</li>
+    </ul>
+  </div>
+
+  <section>
+    <h2>Go deeper (optional)</h2>
+    <div class="go-deeper">
+      <p style="margin:0">If the attention mechanism was the part that clicked, the natural next question is what a freshly pre-trained model is actually missing, and how post-training (supervised finetuning, then preference finetuning like RLHF) turns a raw text-completion engine into something that can hold a conversation and follow instructions. That's exactly where part 2 of this chapter picks up, along with sampling, which explains a lot of "why did the model just say that" moments that otherwise look like pure randomness.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Sources &amp; verify</h2>
+    <ul class="sources">
+      <li>Primary source: <i>AI Engineering</i> by Chip Huyen (O'Reilly), Chapter 2, "Understanding Foundation Models," covering the "Training Data" section (general-purpose data, Multilingual Models, Domain-Specific Models) and the "Modeling" section through "Model Architecture" and "Model Size" (scaling laws, inverse scaling, scaling extrapolation, scaling bottlenecks), pages 73–100. This is part 1 of 2 for this chapter; the chapter continues with Post-Training, Sampling, and The Probabilistic Nature of AI in part 2, pages 101–136.</li>
+      <li>This digest is a teaching draft written from that source, not a replacement for it. Verify anything you plan to rely on (benchmark numbers, cost figures, parameter counts, dates) against the original chapter or a current primary source, since many figures here (compute costs, GPU pricing, electricity-share projections, dataset restriction percentages) were current as of when the chapter was written and are likely to have moved since.</li>
+      <li>Flagged inconsistency in the source material itself, preserved rather than silently corrected: the chapter's own worked example computes roughly 236 days to train GPT-3-175B on 256 H100s at full capacity, but then uses 256 days in the immediately following dollar-cost calculation. Both numbers are reproduced here as the source states them rather than reconciled.</li>
+      <li>Minor wording ambiguity flagged: the source's sentence about GELU being "used by GPT-2 and GPT-3, respectively" is oddly phrased next to two named activation functions (ReLU and GELU). This digest presents GELU as used by GPT-2 and GPT-3 per the plain reading, without resolving the ambiguity from outside knowledge.</li>
+      <li>Several named findings are third-party research reported secondhand in the source material (Gunasekar et al. 2023; Lai et al. 2023; Yennie Jun's benchmarking; the 2022 Anthropic inverse-scaling paper; the Inverse Scaling Prize results; Villalobos et al.; Longpre et al. 2024; Patel, Nishball, and Ontiveros 2024; the Microsoft/OpenAI hyperparameter-transfer paper; Sardana et al. 2023). This digest reports them as the source describes them and has not independently re-verified each original paper.</li>
+      <li>Several figures in the original chapter (bar charts and diagrams, including the MMLU-by-language chart, the C4 domain-distribution chart, and the transformer/Mamba/Jamba block diagrams) are described here in words rather than reproduced, since the underlying images are the book's own; numbers stated in this digest come from the surrounding text, not from reading values off those charts.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="who">
+      <div class="name">Mayowa</div>
+      <div class="socials">
+        <span>in/mayowa-bodunwa</span>
+        <span>@mayowa.bodunwa</span>
+      </div>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

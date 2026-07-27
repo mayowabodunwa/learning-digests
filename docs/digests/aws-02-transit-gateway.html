@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS — Transit Gateway &amp; Multi-VPC Connectivity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS · TOPIC 2 DIGEST</p>
+  <h1>Transit Gateway &amp; Multi-VPC Connectivity</h1>
+  <p class="lead">What to reach for once "just peer the VPCs" stops working: one regional hub that every VPC, VPN, and Direct Connect link attaches to, plus a route table that decides who can talk to whom.</p>
+
+  <h2>In one line</h2>
+  <p>A transit gateway is a managed, regional router that VPCs and on-premises connections attach to once, so instead of wiring every network directly to every other network, everything routes through one shared hub whose route tables decide who can reach whom.</p>
+
+  <h2>The big idea</h2>
+  <p>VPC peering connects exactly two VPCs, one connection at a time, and that connection doesn't let traffic pass through a third VPC to get somewhere else (it's "non-transitive," in AWS's own words). That's fine for two or three VPCs. It gets painful fast once you have a dozen VPCs that all need to talk to each other, because the number of individual peering connections you need grows much faster than the number of VPCs. A transit gateway fixes this by acting as a single hub: every VPC (and VPN, and Direct Connect connection) attaches to it once, and a <strong>transit gateway route table</strong> decides where each packet goes next. Add a new VPC, and you add one attachment, not one connection to every existing VPC.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Transit gateway</span> — a regional virtual router you create that VPCs and other networks attach to, so traffic between them flows through it instead of through direct connections between each pair.</li>
+    <li><span class="keyterm-term">VPC peering connection</span> — a direct, one-to-one networking link between exactly two VPCs. Covered briefly in Topic 1's context; the focus here is why it doesn't scale on its own.</li>
+    <li><span class="keyterm-term">Non-transitive</span> — traffic can't "pass through" a middle network to reach a third one. If A is peered with B, and A is peered with C, B still can't reach C through A.</li>
+    <li><span class="keyterm-term">Attachment</span> — the thing you connect to a transit gateway: a VPC, a VPN connection, a Direct Connect gateway, another transit gateway (via a peering attachment), a Transit Gateway Connect appliance, or a network function like a firewall. An attachment is both a source and a destination for traffic.</li>
+    <li><span class="keyterm-term">Transit gateway route table</span> — a table of routes inside the transit gateway (separate from any VPC's own route table) that decides, for a packet arriving from one attachment, which attachment to send it to next.</li>
+    <li><span class="keyterm-term">Association</span> — which single route table an attachment uses to look up where its outbound traffic should go. Each attachment is associated with exactly one route table at a time.</li>
+    <li><span class="keyterm-term">Propagation</span> — how an attachment's own routes (like a VPC's CIDR block) get added, automatically, into a transit gateway route table, so other attachments know how to reach it.</li>
+    <li><span class="keyterm-term">Static route</span> — a route you add to a transit gateway route table by hand, rather than one that showed up through propagation.</li>
+    <li><span class="keyterm-term">Blackhole route</span> — a route you create on purpose that drops any traffic matching it, instead of forwarding it anywhere.</li>
+    <li><span class="keyterm-term">Full-mesh peering</span> — connecting every VPC directly to every other VPC with its own peering connection, so the whole group is fully interconnected without a hub.</li>
+    <li><span class="keyterm-term">Direct Connect gateway</span> — the AWS resource that lets an on-premises network, connected via AWS Direct Connect, reach VPCs; it can attach to a transit gateway like any other attachment.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>Here's the problem a transit gateway exists to solve, in AWS's own terms: a VPC peering connection is "a networking connection between two VPCs that enables you to route traffic between them," and it's built one pair at a time. AWS's peering documentation is explicit that this doesn't chain together: <em>"VPC peering does not support transitive peering relationships. For example, if there are VPC peering connections between VPC A and VPC B, and between VPC A and VPC C, you can't route traffic from VPC B to VPC C through VPC A. To route traffic between VPC B and VPC C, you must create a VPC peering connection between them."</em> So if you want every VPC in a group to reach every other VPC, you don't get to reuse one VPC as a relay: you need a direct peering connection between literally every pair.</p>
+  <p>That's where the math turns against you. For <em>N</em> VPCs that all need full connectivity, the number of individual peering connections you need is <code>N × (N-1) / 2</code> (every VPC paired with every other VPC, counted once). With 4 VPCs that's 6 connections, which is annoying but manageable. With 10 VPCs it's 45. With 20 VPCs it's 190. Each one of those is a separate connection to create, accept, and add matching routes for in both VPCs' route tables, and every new VPC you add means creating a new connection to every VPC that already exists. This is a simplification of the operational reality (some teams only need a handful of VPCs to talk, not all of them), but the general shape holds: pairwise peering scales quadratically, and a transit gateway is the way AWS documents connecting many VPCs (and on-premises networks) without that blowup.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 340" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="150" y="26" fill="#F2EFE9" font-size="12.5" font-weight="700" text-anchor="middle">FULL-MESH PEERING</text>
+      <line x1="150" y1="60" x2="255" y2="136" stroke="#C8453A" stroke-width="1" opacity="0.7"/>
+      <line x1="150" y1="60" x2="215" y2="259" stroke="#C8453A" stroke-width="1" opacity="0.7"/>
+      <line x1="150" y1="60" x2="85" y2="259" stroke="#C8453A" stroke-width="1" opacity="0.7"/>
+      <line x1="150" y1="60" x2="45" y2="136" stroke="#C8453A" stroke-width="1" opacity="0.7"/>
+      <line x1="255" y1="136" x2="215" y2="259" stroke="#C8453A" stroke-width="1" opacity="0.7"/>
+      <line x1="255" y1="136" x2="85" y2="259" stroke="#C8453A" stroke-width="1" opacity="0.7"/>
+      <line x1="255" y1="136" x2="45" y2="136" stroke="#C8453A" stroke-width="1" opacity="0.7"/>
+      <line x1="215" y1="259" x2="85" y2="259" stroke="#C8453A" stroke-width="1" opacity="0.7"/>
+      <line x1="215" y1="259" x2="45" y2="136" stroke="#C8453A" stroke-width="1" opacity="0.7"/>
+      <line x1="85" y1="259" x2="45" y2="136" stroke="#C8453A" stroke-width="1" opacity="0.7"/>
+      <circle cx="150" cy="60" r="18" fill="#0E0E10" stroke="#C9C7C1" stroke-width="1.3"/>
+      <circle cx="255" cy="136" r="18" fill="#0E0E10" stroke="#C9C7C1" stroke-width="1.3"/>
+      <circle cx="215" cy="259" r="18" fill="#0E0E10" stroke="#C9C7C1" stroke-width="1.3"/>
+      <circle cx="85" cy="259" r="18" fill="#0E0E10" stroke="#C9C7C1" stroke-width="1.3"/>
+      <circle cx="45" cy="136" r="18" fill="#0E0E10" stroke="#C9C7C1" stroke-width="1.3"/>
+      <text x="150" y="64" fill="#F2EFE9" font-size="8.5" text-anchor="middle">VPC</text>
+      <text x="255" y="140" fill="#F2EFE9" font-size="8.5" text-anchor="middle">VPC</text>
+      <text x="215" y="263" fill="#F2EFE9" font-size="8.5" text-anchor="middle">VPC</text>
+      <text x="85" y="263" fill="#F2EFE9" font-size="8.5" text-anchor="middle">VPC</text>
+      <text x="45" y="140" fill="#F2EFE9" font-size="8.5" text-anchor="middle">VPC</text>
+      <text x="150" y="310" fill="#C8453A" font-size="11" text-anchor="middle" font-weight="700">5 VPCs = 10 peering connections</text>
+      <line x1="320" y1="10" x2="320" y2="330" stroke="#3A3A40" stroke-width="1" stroke-dasharray="3 3"/>
+      <text x="470" y="26" fill="#F2EFE9" font-size="12.5" font-weight="700" text-anchor="middle">TRANSIT GATEWAY HUB</text>
+      <line x1="470" y1="170" x2="470" y2="60" stroke="#6FCF97" stroke-width="1.3"/>
+      <line x1="470" y1="170" x2="575" y2="136" stroke="#6FCF97" stroke-width="1.3"/>
+      <line x1="470" y1="170" x2="535" y2="259" stroke="#6FCF97" stroke-width="1.3"/>
+      <line x1="470" y1="170" x2="405" y2="259" stroke="#6FCF97" stroke-width="1.3"/>
+      <line x1="470" y1="170" x2="365" y2="136" stroke="#6FCF97" stroke-width="1.3"/>
+      <rect x="440" y="150" width="60" height="40" rx="6" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.5"/>
+      <text x="470" y="174" fill="#6FCF97" font-size="9" text-anchor="middle">TGW</text>
+      <circle cx="470" cy="60" r="18" fill="#0E0E10" stroke="#C9C7C1" stroke-width="1.3"/>
+      <circle cx="575" cy="136" r="18" fill="#0E0E10" stroke="#C9C7C1" stroke-width="1.3"/>
+      <circle cx="535" cy="259" r="18" fill="#0E0E10" stroke="#C9C7C1" stroke-width="1.3"/>
+      <circle cx="405" cy="259" r="18" fill="#0E0E10" stroke="#C9C7C1" stroke-width="1.3"/>
+      <circle cx="365" cy="136" r="18" fill="#0E0E10" stroke="#C9C7C1" stroke-width="1.3"/>
+      <text x="470" y="64" fill="#F2EFE9" font-size="8.5" text-anchor="middle">VPC</text>
+      <text x="575" y="140" fill="#F2EFE9" font-size="8.5" text-anchor="middle">VPC</text>
+      <text x="535" y="263" fill="#F2EFE9" font-size="8.5" text-anchor="middle">VPC</text>
+      <text x="405" y="263" fill="#F2EFE9" font-size="8.5" text-anchor="middle">VPC</text>
+      <text x="365" y="140" fill="#F2EFE9" font-size="8.5" text-anchor="middle">VPC</text>
+      <text x="470" y="310" fill="#6FCF97" font-size="11" text-anchor="middle" font-weight="700">5 VPCs = 5 attachments</text>
+    </svg>
+    <figcaption>Same 5 VPCs, fully connected. Left: pairwise peering needs N(N-1)/2 connections. Right: a transit gateway needs one attachment per VPC.</figcaption>
+  </figure>
+
+  <h3>1. What a transit gateway actually is</h3>
+  <p>Per AWS's own description, "a transit gateway acts as a Regional virtual router for traffic flowing between your virtual private clouds (VPCs) and on-premises networks," and it "scales elastically based on the volume of network traffic." Routing happens at layer 3: a packet arrives from one attachment, the transit gateway looks at its destination IP address, checks a route table, and forwards it to the matching attachment. It's a single logical resource that lives in one AWS Region (though you can peer transit gateways across Regions, more on that below), and it works across AWS accounts too: you can share a transit gateway with other accounts using AWS RAM (Resource Access Manager), and once shared, the other account's owner can attach their own VPCs to it.</p>
+  <p>One useful mental model: a transit gateway doesn't replace your VPC route tables, it sits alongside them. Each VPC still has its own route table deciding what happens to traffic leaving its subnets; some of those routes just point at the transit gateway instead of at a NAT gateway, an internet gateway, or a peering connection. The transit gateway then has its <em>own</em>, separate route table (or tables) that takes over from there.</p>
+
+  <h3>2. Attachments — how traffic actually gets onto the hub</h3>
+  <p>An attachment is a resource of some type, connected to the transit gateway, that can both send and receive traffic through it. AWS's transit gateway concepts page lists what you can attach: one or more VPCs, a VPN connection, a VPN Concentrator, an AWS Direct Connect gateway, a Transit Gateway Connect attachment (for SD-WAN or third-party network appliances), a peering connection to another transit gateway, a Client VPN endpoint, and a network function attachment (for example, connecting an AWS Network Firewall directly to the transit gateway for traffic inspection).</p>
+  <p>The most common one for a "connect a bunch of VPCs together" setup is the <strong>VPC attachment</strong>. When you attach a VPC, you pick at least one subnet per Availability Zone you want the transit gateway to use; AWS places a network interface in that subnet, and that's the entry and exit point for traffic in that zone. A detail worth remembering: only resources in Availability Zones that actually have a transit gateway attachment subnet can reach the transit gateway at all, so if you only enable one AZ, resources in a second AZ of the same VPC are stuck.</p>
+  <p>A <strong>VPN attachment</strong> connects an AWS Site-to-Site VPN connection (typically to an on-premises network) straight to the transit gateway, so on-premises traffic can reach any other attachment the same way a VPC's traffic can. A <strong>Direct Connect gateway attachment</strong> does the same job for a Direct Connect connection (a dedicated network link into AWS, instead of a VPN over the public internet). Both are how a transit gateway becomes the single place where cloud VPCs and on-premises networks meet, rather than needing a separate VPN or Direct Connect setup wired into every VPC individually.</p>
+  <p>A <strong>peering attachment</strong> connects two transit gateways to each other (which can be in different Regions or different accounts). This is a different thing from VPC peering: here you're peering two hubs, not two VPCs, so that VPCs attached to one transit gateway can reach VPCs and other attachments on the other one, still without a direct connection between every individual VPC.</p>
+
+  <h3>3. Transit gateway route tables — how routing decisions get made</h3>
+  <p>This is the piece that actually decides who can reach whom, and it's separate from any VPC's own route table. A transit gateway "automatically comes with a default route table," and by default that same table is used for both association and propagation, meaning every new attachment lands there unless you tell it otherwise. You can create additional route tables to segment your network, similar to how you might use separate virtual routing and forwarding (VRF) tables in traditional networking; a common reason to do this is keeping, say, development VPCs unable to reach production VPCs even though both are attached to the same transit gateway.</p>
+  <p>Two mechanics decide what ends up in a route table:</p>
+  <ul>
+    <li><strong>Association</strong> — each attachment is associated with exactly one route table at a time. That table is what the transit gateway consults when deciding where to send traffic <em>coming from</em> that attachment.</li>
+    <li><strong>Propagation</strong> — an attachment's own routes (a VPC's CIDR block, for example) get installed into one or more route tables so other attachments know how to send traffic <em>to</em> it. A VPC attachment's CIDR blocks propagate automatically once propagation is enabled for that attachment/table pair; a VPN or Direct Connect gateway attachment can propagate routes learned dynamically from an on-premises router over BGP (Border Gateway Protocol, the protocol routers use to exchange reachability information).</li>
+  </ul>
+  <p>You can also add <strong>static routes</strong> by hand, and if a static route and a propagated route both exist for the same destination, the static route wins (the propagated one is dropped from that table until you remove the static one). One route type is worth flagging specifically: for a <strong>peering attachment</strong> between two transit gateways, only static routes are supported. There's no route propagation across a peering attachment, so you point traffic at the peered transit gateway with a static route yourself. You can also create a <strong>blackhole route</strong>, which deliberately drops any traffic matching it. That's useful when you want two attachments on the same route table to explicitly <em>not</em> reach each other.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 300" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <rect x="10" y="10" width="600" height="70" rx="8" fill="#0E0E10" stroke="#3A3A40" stroke-width="1.2"/>
+      <text x="26" y="32" fill="#F2EFE9" font-size="11.5" font-weight="700">3 VPC attachments -&gt; one transit gateway (us-east-1)</text>
+      <text x="26" y="52" fill="#7A7A80" font-size="10">VPC A (10.11.0.0/16)   VPC B (10.22.0.0/16)   VPC C (10.33.0.0/16)</text>
+      <text x="26" y="68" fill="#7A7A80" font-size="10">each VPC route table: 10.x.0.0/16 -&gt; local, 0.0.0.0/0 -&gt; tgw</text>
+      <text x="26" y="112" fill="#F2EFE9" font-size="12" font-weight="700">DEFAULT TRANSIT GATEWAY ROUTE TABLE</text>
+      <text x="26" y="140" fill="#7A7A80" font-size="10.5">Destination</text>
+      <text x="230" y="140" fill="#7A7A80" font-size="10.5">Attachment</text>
+      <text x="420" y="140" fill="#7A7A80" font-size="10.5">Route type</text>
+      <line x1="26" y1="150" x2="594" y2="150" stroke="#3A3A40" stroke-width="1"/>
+      <text x="26" y="172" fill="#C9C7C1" font-size="11">10.11.0.0/16</text>
+      <text x="230" y="172" fill="#C9C7C1" font-size="11">attach-A</text>
+      <text x="420" y="172" fill="#6FCF97" font-size="11">propagated</text>
+      <text x="26" y="196" fill="#C9C7C1" font-size="11">10.22.0.0/16</text>
+      <text x="230" y="196" fill="#C9C7C1" font-size="11">attach-B</text>
+      <text x="420" y="196" fill="#6FCF97" font-size="11">propagated</text>
+      <text x="26" y="220" fill="#C9C7C1" font-size="11">10.33.0.0/16</text>
+      <text x="230" y="220" fill="#C9C7C1" font-size="11">attach-C</text>
+      <text x="420" y="220" fill="#6FCF97" font-size="11">propagated</text>
+      <text x="26" y="252" fill="#7A7A80" font-size="10">All three attachments are associated with this table, so each</text>
+      <text x="26" y="268" fill="#7A7A80" font-size="10">one can reach the other two through their propagated routes.</text>
+    </svg>
+    <figcaption>Modeled on AWS's own "centralized router" example: 3 VPCs, one attachment each, one shared route table.</figcaption>
+  </figure>
+
+  <p>To see why segmentation matters, it helps to compare that centralized setup with AWS's "isolated VPCs" example: instead of one shared route table, you create a second one. VPC A and VPC B's attachments stay associated with (and propagate to) the default table, while VPC C's attachment is moved to the second table. Now traffic from A or B that's destined for C's CIDR block has no matching route in the default table, so it goes nowhere, even though all three VPCs are attached to the exact same transit gateway. That's the association/propagation split doing real work: which table an attachment is <em>associated</em> with controls what it can send to, and which tables its routes <em>propagate</em> into controls who can reach it.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 260" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <rect x="10" y="10" width="290" height="230" rx="8" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="26" y="34" fill="#6FCF97" font-size="11.5" font-weight="700">ROUTE TABLE 1 (shared)</text>
+      <text x="26" y="58" fill="#C9C7C1" font-size="10.5">associated: VPC A, VPC B</text>
+      <text x="26" y="78" fill="#7A7A80" font-size="10">10.11.0.0/16 -&gt; attach-A (propagated)</text>
+      <text x="26" y="96" fill="#7A7A80" font-size="10">10.22.0.0/16 -&gt; attach-B (propagated)</text>
+      <text x="26" y="130" fill="#6FCF97" font-size="10.5">VPC A &lt;-&gt; VPC B: reachable</text>
+      <text x="26" y="150" fill="#C8453A" font-size="10.5">no route to 10.33.0.0/16 (VPC C)</text>
+      <text x="26" y="168" fill="#C8453A" font-size="10.5">so VPC C is unreachable from here</text>
+
+      <rect x="320" y="10" width="290" height="230" rx="8" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/>
+      <text x="336" y="34" fill="#C8453A" font-size="11.5" font-weight="700">ROUTE TABLE 2 (isolated)</text>
+      <text x="336" y="58" fill="#C9C7C1" font-size="10.5">associated: VPC C</text>
+      <text x="336" y="78" fill="#7A7A80" font-size="10">10.33.0.0/16 -&gt; attach-C (propagated)</text>
+      <text x="336" y="112" fill="#C9C7C1" font-size="10.5">VPC C has no route to</text>
+      <text x="336" y="130" fill="#C9C7C1" font-size="10.5">10.11.0.0/16 or 10.22.0.0/16</text>
+      <text x="336" y="160" fill="#C8453A" font-size="10.5">VPC C can't reach A or B,</text>
+      <text x="336" y="178" fill="#C8453A" font-size="10.5">even on the same transit GW</text>
+    </svg>
+    <figcaption>Same transit gateway, two route tables. Association and propagation, not the physical wiring, is what creates the isolation.</figcaption>
+  </figure>
+
+  <h3>4. How this differs from plain VPC peering</h3>
+  <p>Both peering and a transit gateway ultimately move private traffic between VPCs without going over the public internet, but they solve different shapes of problem. A peering connection is a direct, one-to-one link: it's simple to reason about for two or three VPCs, has no separate hub resource to manage, and (per AWS's peering pricing page) is free to create, with data transfer inside the same Availability Zone also free. What it can't do is act as a relay, and it doesn't give you a single place to see or manage routing across many VPCs at once: every pair needs its own connection and its own matching routes in both sides' VPC route tables.</p>
+  <p>A transit gateway trades that simplicity for a shared hub: one resource, with its own route tables, that every VPC attaches to once. That gives you a single place to add or remove a VPC from the group (one attachment, not N new connections), and a single place to enforce segmentation (route tables, association, and propagation) instead of hand-managing which VPC route tables have routes to which peering connections. It isn't free the way peering is: AWS's transit gateway pricing model charges an hourly rate per attachment plus a charge for the data processed through the transit gateway, with those data-processing charges allocated by default to the account that owns the source attachment. AWS's own peering documentation acknowledges this trade explicitly, noting that "in some cases, you can use a transit gateway attachment instead of a VPC peering connection" once the number of VPCs and the need for shared routing logic grows past what plain peering handles comfortably.</p>
+
+  <h2>Why it matters</h2>
+  <p>This is the difference between a networking design that gets harder to reason about with every new VPC, and one that stays roughly the same shape no matter how many VPCs you add. Real organizations end up with dozens of VPCs (one per team, one per environment, one per region) surprisingly fast, and "just peer them all" turns into a spreadsheet of connections nobody wants to audit. A transit gateway is also the natural place hybrid connectivity lands: instead of wiring a VPN or Direct Connect connection into every VPC that needs on-premises access, you attach it once to the hub, and every VPC already attached to that hub can reach it (assuming the route tables allow it). And because route tables can segment attachments into groups that can't reach each other, a transit gateway is also a real tool for network isolation (dev can't reach prod, a shared-services VPC can be reachable from everywhere without everything being reachable from everywhere), not just a bigger peering connection.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>VPC peering is non-transitive and one-to-one: if A is peered with B and A is peered with C, B still can't reach C through A.</li>
+      <li>Full-mesh peering for N VPCs needs roughly N(N-1)/2 connections; a transit gateway needs one attachment per VPC.</li>
+      <li>A transit gateway is a Regional layer-3 router; attachments (VPCs, VPN, Direct Connect gateway, another transit gateway) are both sources and destinations of traffic through it.</li>
+      <li>Association decides which single route table an attachment uses to send traffic; propagation decides which route tables learn how to reach that attachment. They're separate levers.</li>
+      <li>Static routes beat propagated routes to the same destination, and transit gateway peering attachments only support static routes, never propagation.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Sketch the math.</strong> For 3, 5, and 8 VPCs, calculate how many individual peering connections a full mesh needs using N(N-1)/2, then compare that to the number of attachments a single transit gateway would need for the same group. <em>Done when:</em> you have a written comparison table for all three VPC counts and can say out loud why the gap grows.</li>
+      <li><strong>Build a 3-VPC transit gateway lab.</strong> Using the free tier, create three small VPCs in the same Region with non-overlapping CIDR blocks, create one transit gateway, and attach all three VPCs to it. <em>Done when:</em> the console (or <code>aws ec2 describe-transit-gateway-attachments</code>) shows three attachments in the <code>available</code> state on the same transit gateway.</li>
+      <li><strong>Wire up and prove three-way connectivity.</strong> In each VPC's own route table, add a route sending traffic destined for the other VPCs' CIDR blocks (or a broader <code>0.0.0.0/0</code>) to the transit gateway, then launch one small EC2 instance per VPC. <em>Done when:</em> each instance can reach the other two over their private IPs (ping or a simple TCP connection), and you can point to the propagated route in the transit gateway's route table that makes each path work.</li>
+      <li><strong>Read a real route table cold.</strong> Open your transit gateway's default route table in the console and, without looking anything up, explain each row out loud: which attachment it points to, whether it's static or propagated, and what happens to a packet that matches none of the rows. <em>Done when:</em> you could explain the whole table to someone who's never touched AWS.</li>
+      <li><strong>Prove isolation with a second route table.</strong> Create a second transit gateway route table, move one VPC's attachment association to it, and make sure its routes don't propagate to (or from) the default table. <em>Done when:</em> the two VPCs still on the default table can still reach each other, but neither can reach the VPC you isolated, and you can explain why using association and propagation rather than "it's just disconnected."</li>
+      <li><strong>Compare the pricing model, not just the topology.</strong> Read the transit gateway pricing page and the VPC peering pricing section side by side, and write two or three sentences, in your own words, about when a single peering connection stays the simpler (and cheaper) choice for just two VPCs, versus when the hub model starts paying for itself in complexity you're not managing by hand. <em>Done when:</em> you'd feel comfortable explaining that trade-off to a teammate without notes.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Two things worth a closer read on your own: <strong>appliance mode</strong>, which lets you route all inter-VPC traffic through a security appliance (like a firewall) sitting in a shared services VPC for centralized inspection before it reaches its destination, and <strong>transit gateway peering</strong> across Regions, which is how a hub-and-spoke design itself scales globally once one Region's transit gateway isn't enough. Both build directly on the association/propagation model covered here.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, written to help you build a mental model quickly. It is not a substitute for the official documentation; verify anything you plan to rely on (exact CLI syntax, current quotas, pricing) against the live pages below before you use it for real.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/tgw/what-is-transit-gateway.html" target="_blank" rel="noopener">What is AWS Transit Gateway for Amazon VPC?</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/tgw/how-transit-gateways-work.html" target="_blank" rel="noopener">How AWS Transit Gateway works</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/tgw/tgw-transit-gateways.html" target="_blank" rel="noopener">Transit gateways in AWS Transit Gateway</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/tgw/tgw-vpc-attachments.html" target="_blank" rel="noopener">Amazon VPC attachments in AWS Transit Gateway</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/tgw/tgw-route-tables.html" target="_blank" rel="noopener">Transit gateway route tables in AWS Transit Gateway</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/peering/what-is-vpc-peering.html" target="_blank" rel="noopener">What is VPC peering?</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-basics.html" target="_blank" rel="noopener">How VPC peering connections work</a></li>
+  </ul>
+  <p class="src-note">Flagged for accuracy: this digest doesn't cover exact current quotas (transit gateways per account, attachments per gateway, routes per route table) because the quotas page didn't render cleanly when fetched for this write-up; check the "Quotas" page in the Transit Gateway user guide directly before you design around any specific number. Direct Connect gateway attachments and Transit Gateway Connect (SD-WAN) attachments are described here only at the level the pages above cover; if you're building on either, read their dedicated guide sections before relying on this digest's summary.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · TikTok
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

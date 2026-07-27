@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data Models and Query Languages, Part 1 — DDIA Ch.2 digest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --panel: #0E0E10;
+    --panel2: #131316;
+    --hair: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --good: #6FCF97;
+    --handle: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--body);
+    line-height: 1.65;
+    font-size: 16px;
+  }
+  .wrap { max-width: 660px; margin: 0 auto; padding: 56px 22px 80px; }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    font-size: 12.5px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    color: var(--ink);
+    font-size: 34px;
+    line-height: 1.15;
+    margin: 0 0 14px;
+  }
+  .lead {
+    color: var(--body);
+    font-size: 18px;
+    line-height: 1.55;
+    margin: 0 0 40px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--hair);
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    color: var(--ink);
+    font-size: 22px;
+    margin: 48px 0 14px;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    color: var(--ink);
+    font-size: 17.5px;
+    margin: 28px 0 8px;
+  }
+  h4 {
+    color: var(--ink);
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 15px;
+    margin: 22px 0 6px;
+  }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 16px; padding-left: 22px; }
+  li { margin: 0 0 8px; }
+  strong { color: var(--ink); }
+  .kicker {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    font-size: 11.5px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin: 0 0 6px;
+  }
+  .term { color: var(--ink); font-weight: 600; }
+  .box {
+    border: 1px solid var(--hair);
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 6px;
+    padding: 22px 24px;
+    margin: 44px 0;
+  }
+  .box.good { border-left-color: var(--good); }
+  .box h2 { margin-top: 0; }
+  figure {
+    border: 1px solid var(--hair);
+    background: var(--panel2);
+    border-radius: 8px;
+    padding: 18px 18px 14px;
+    margin: 22px 0;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 10px;
+    text-align: center;
+  }
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--panel2);
+    color: var(--ink);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  pre {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--panel2);
+    color: var(--ink);
+    padding: 14px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--hair);
+    font-size: 13px;
+    overflow-x: auto;
+    margin: 0 0 16px;
+    line-height: 1.5;
+  }
+  a { color: var(--good); }
+  .divider { height: 1px; background: var(--hair); margin: 48px 0; border: none; }
+  footer {
+    margin-top: 60px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hair);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px; border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hair);
+  }
+  footer .name {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 15px;
+    margin: 0 0 4px;
+  }
+  footer .socials {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--handle);
+    font-size: 12.5px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  footer .socials span { white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">SYSTEMS &middot; CH.2 DIGEST (PART 1 OF 2)</p>
+  <h1>Data Models and Query Languages, Part 1: Relational vs. Document</h1>
+  <p class="lead">Why the same piece of data (a résumé, a user profile) looks completely different depending on
+  whether you store it as rows in tables or as one self-contained document, why that choice barely matters at
+  first and then suddenly matters a lot, and why "declarative" beat "imperative" as the way we ask databases for
+  things.</p>
+
+  <h2>In one line</h2>
+  <p>Every database forces your data into a shape (relational tables, JSON-like documents, or something else),
+  and that shape quietly decides how painful your future features will be, especially once your data items start
+  pointing at each other.</p>
+
+  <h2>The big idea</h2>
+  <p>There's no single "best" way to store data. The relational model (rows in tables, joined together) and the
+  document model (self-contained JSON-like blobs) each make a different bet about how your data is shaped and how
+  it'll grow. The relational model bets that your data will end up interconnected and optimizes for that. The
+  document model bets that most of what you need lives together in one tree and optimizes for fetching that tree
+  in one go. Neither bet is wrong, but picking the one that doesn't match your data's real shape is how you end up
+  fighting your database for years.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="term">Relation (table) / tuple (row)</span> &mdash; the relational model's vocabulary: a
+    relation is an unordered collection of tuples. In SQL you just call these a table and its rows.</li>
+    <li><span class="term">RDBMS</span> &mdash; relational database management system: software (PostgreSQL,
+    MySQL, Oracle, and so on) built around the relational model.</li>
+    <li><span class="term">NoSQL</span> &mdash; a loose, retroactively-defined label ("Not Only SQL") for a wave
+    of nonrelational databases that took off in the 2010s. It isn't one technology, it's a hashtag that stuck.</li>
+    <li><span class="term">Polyglot persistence</span> &mdash; using several different kinds of databases side by
+    side in one system, because different parts of your data fit different models.</li>
+    <li><span class="term">Document model / document database</span> &mdash; data stored as self-contained,
+    JSON-like (or XML-like) documents, each holding a whole nested tree of information. MongoDB, CouchDB, and
+    RethinkDB are examples.</li>
+    <li><span class="term">Object-relational mismatch (impedance mismatch)</span> &mdash; the awkwardness of
+    translating between objects in your application code and rows/columns in a relational database.</li>
+    <li><span class="term">ORM (object-relational mapping)</span> &mdash; a library (like ActiveRecord or
+    Hibernate) that automates a lot of that translation, without fully hiding it.</li>
+    <li><span class="term">One-to-many relationship</span> &mdash; one record owns many of another kind (one
+    user has many jobs on their résumé). This is the shape document databases handle naturally.</li>
+    <li><span class="term">Many-to-one relationship</span> &mdash; many records point at one shared record (many
+    users live in one region). This is where documents start to strain.</li>
+    <li><span class="term">Many-to-many relationship</span> &mdash; records on both sides can point at several of
+    the other (users can work at organizations, organizations have many employees).</li>
+    <li><span class="term">Normalization</span> &mdash; storing a piece of information in exactly one place and
+    having everything else reference it by ID, instead of copying it everywhere it's used.</li>
+    <li><span class="term">Denormalization</span> &mdash; the opposite: deliberately duplicating data to avoid a
+    lookup, at the cost of having to keep the copies in sync.</li>
+    <li><span class="term">Foreign key / document reference</span> &mdash; the same idea under two names: an ID
+    stored in one record that points at another record, resolved with a join (relational) or a follow-up query
+    (document).</li>
+    <li><span class="term">Hierarchical model</span> &mdash; an old (1960s-70s) data model where every record has
+    exactly one parent, forming a tree. IBM's IMS used this.</li>
+    <li><span class="term">Network model (CODASYL)</span> &mdash; a 1970s alternative to the hierarchical model
+    where a record could have multiple parents, letting you model many-to-many links. You queried it by
+    physically walking chains of pointers.</li>
+    <li><span class="term">Access path</span> &mdash; in the hierarchical/network model, the specific chain of
+    pointers your code had to follow to reach a record. If you didn't have a path to some data, you were stuck.</li>
+    <li><span class="term">Query optimizer</span> &mdash; the part of a relational database that automatically
+    figures out the fastest way to run your query (which indexes to use, what order to join tables), so you never
+    have to hand-pick an access path yourself.</li>
+    <li><span class="term">Shredding</span> &mdash; splitting one document-like structure across several
+    relational tables (one row here, several rows there, linked by foreign keys).</li>
+    <li><span class="term">Schema-on-read vs. schema-on-write</span> &mdash; whether the structure of your data
+    is enforced when you write it (schema-on-write, classic SQL) or only assumed by whatever code reads it later
+    (schema-on-read, typical of document databases).</li>
+    <li><span class="term">Data locality</span> &mdash; how physically close together related pieces of data are
+    stored, which affects how many disk reads it takes to fetch them all.</li>
+    <li><span class="term">Declarative vs. imperative (query language)</span> &mdash; declarative says what
+    result you want and leaves the "how" to the system (SQL, CSS). Imperative spells out the exact steps to get
+    there (a for-loop).</li>
+    <li><span class="term">MapReduce</span> &mdash; a programming model for processing large amounts of data
+    using a <code>map</code> function (transforms each item) and a <code>reduce</code> function (combines the
+    results), sitting somewhere between declarative and imperative.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>What a "data model" actually is</h3>
+  <p>Before comparing specific models, it helps to notice that almost everything you build is a stack of data
+  models, each one hiding the layer beneath it. As an application developer, you look at messy real-world things
+  (people, orders, sensor readings) and turn them into objects or data structures in your code. When you want to
+  store those, you translate them again into a general-purpose data model the database understands: rows in
+  tables, JSON documents, or a graph. The database engine then translates that, in turn, into bytes on a disk or
+  across a network, and hardware engineers have already turned those bytes into electrical signals underneath
+  that. Each layer only needs to expose a clean interface to the layer above it; nobody writing application code
+  needs to think about magnetic fields, and nobody designing a disk format needs to know what a "résumé" is. This
+  digest is about layer two: the general-purpose data model you choose to represent your application's structures
+  in storage, and specifically the fight between the relational model and the document model for that spot.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Four layers: real world objects, general purpose data model, database internal bytes, hardware">
+      <rect x="0" y="0" width="600" height="260" fill="#131316"/>
+      <g font-family="JetBrains Mono, monospace" font-size="12">
+        <rect x="40" y="16" width="520" height="42" rx="6" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.5"/>
+        <text x="300" y="42" text-anchor="middle" fill="#F2EFE9">your app's objects (User, Order, Sensor...)</text>
+
+        <line x1="300" y1="58" x2="300" y2="76" stroke="#7A7A80" stroke-width="1.5"/>
+        <polygon points="300,76 292,64 308,64" fill="#7A7A80"/>
+
+        <rect x="40" y="80" width="520" height="42" rx="6" fill="#0E0E10" stroke="#C8453A" stroke-width="1.5"/>
+        <text x="300" y="106" text-anchor="middle" fill="#C8453A">general-purpose data model: tables, JSON docs, or a graph</text>
+
+        <line x1="300" y1="122" x2="300" y2="140" stroke="#7A7A80" stroke-width="1.5"/>
+        <polygon points="300,140 292,128 308,128" fill="#7A7A80"/>
+
+        <rect x="40" y="144" width="520" height="42" rx="6" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.5"/>
+        <text x="300" y="170" text-anchor="middle" fill="#C9C7C1">database engine: bytes in memory, on disk, on the wire</text>
+
+        <line x1="300" y1="186" x2="300" y2="204" stroke="#7A7A80" stroke-width="1.5"/>
+        <polygon points="300,204 292,192 308,192" fill="#7A7A80"/>
+
+        <rect x="40" y="208" width="520" height="42" rx="6" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.5"/>
+        <text x="300" y="234" text-anchor="middle" fill="#C9C7C1">hardware: electrical signals, light pulses, magnetic fields</text>
+      </g>
+    </svg>
+    <figcaption>Original schematic: each layer hides the one below it behind a clean data model. This digest lives at layer two.</figcaption>
+  </figure>
+
+  <h3>The relational model, and why NoSQL pushed back</h3>
+  <p>The relational model, proposed by Edgar Codd in 1970, organizes data into relations (tables), each an
+  unordered collection of tuples (rows). It grew out of 1960s-70s business data processing (bank transactions,
+  airline bookings, payroll) and by the mid-1980s had become the default choice for structured data. Its big
+  selling point was hiding implementation detail: instead of forcing developers to think about how data was
+  physically laid out on disk, the relational model gave them a clean, declarative interface and let the database
+  figure out the rest. That approach turned out to generalize far beyond its original business-processing use
+  case, and relational databases have stayed dominant for roughly 25-30 years, which is close to an eternity in
+  computing.</p>
+  <p>NoSQL is the most recent serious challenge to that dominance. The name is a bit of an accident: it started
+  in 2009 as a catchy hashtag for a meetup about open-source, nonrelational databases, not as a description of any
+  one technology, and it's since been reinterpreted as "Not Only SQL." A few different pressures drove people
+  toward it: needing more scalability than relational systems could easily give (very large datasets, very high
+  write volume), wanting free and open-source options, wanting query features the relational model didn't support
+  well, and simple frustration with how rigid relational schemas can feel. Because different applications have
+  genuinely different needs, it's common today to use relational databases <em>alongside</em> various
+  nonrelational stores rather than picking one winner for everything, an idea sometimes called
+  <span class="term">polyglot persistence</span>.</p>
+
+  <h3>The document model and the object-relational mismatch</h3>
+  <p>Most application code today is written in an object-oriented style, and that creates friction with SQL's
+  world of flat tables, rows, and columns: you end up needing a translation layer between "an object in memory"
+  and "a row spread across several tables," a disconnect commonly called the <span class="term">object-relational
+  mismatch</span>. ORMs like ActiveRecord and Hibernate cut down the boilerplate for that translation, but they
+  can't erase the underlying mismatch entirely.</p>
+  <p>Take a LinkedIn-style résumé: a user has one first name and last name (fits fine as plain columns), but an
+  arbitrary number of past jobs, periods of education, and pieces of contact info (a one-to-many relationship
+  that doesn't fit neatly into fixed columns). The traditional relational fix is to put positions, education, and
+  contact info in their own tables, each row carrying a foreign key back to the user. An alternative is to encode
+  the whole résumé as one JSON document:</p>
+  <pre>{
+  "user_id":     251,
+  "first_name":  "Bill",
+  "last_name":   "Gates",
+  "positions": [
+    {"job_title": "Co-chair", "organization": "Bill &amp; Melinda Gates Foundation"},
+    {"job_title": "Co-founder, Chairman", "organization": "Microsoft"}
+  ],
+  "education": [
+    {"school_name": "Harvard University", "start": 1973, "end": 1975},
+    {"school_name": "Lakeside School, Seattle", "start": null, "end": null}
+  ],
+  "contact_info": {
+    "blog":    "http://thegatesnotes.com",
+    "twitter": "http://twitter.com/BillGates"
+  }
+}</pre>
+  <p>(This is an illustrative example in the same spirit as the kind of profile document you'd see modeled this
+  way, not a real captured record.) A résumé is mostly a self-contained thing, so a document fits it well: every
+  one-to-many relationship (user to positions, user to education pieces) just becomes nesting, which makes the
+  tree structure of the data explicit instead of scattered across tables. Document databases like MongoDB,
+  RethinkDB, and CouchDB are built around storing and querying data shaped like this. There's also a real,
+  practical win here: fetching the whole profile takes one query against one document, versus either several
+  queries or one messy multi-table join against the relational version, because all the relevant information
+  already lives in one place. That's a locality advantage, and we'll come back to it below.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="One document fetched in one query versus a shredded relational schema needing multiple table lookups">
+      <rect x="0" y="0" width="600" height="260" fill="#131316"/>
+      <g font-family="JetBrains Mono, monospace" font-size="11.5">
+        <text x="150" y="24" text-anchor="middle" fill="#6FCF97">document model</text>
+        <rect x="50" y="36" width="200" height="150" rx="8" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.5"/>
+        <text x="150" y="58" text-anchor="middle" fill="#F2EFE9">user 251</text>
+        <text x="150" y="78" text-anchor="middle" fill="#C9C7C1">positions: [...]</text>
+        <text x="150" y="98" text-anchor="middle" fill="#C9C7C1">education: [...]</text>
+        <text x="150" y="118" text-anchor="middle" fill="#C9C7C1">contact_info: {...}</text>
+        <text x="150" y="150" text-anchor="middle" fill="#6FCF97">1 fetch -&gt; whole tree</text>
+
+        <text x="450" y="24" text-anchor="middle" fill="#C8453A">shredded (relational)</text>
+        <rect x="380" y="36" width="140" height="30" rx="5" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.5"/>
+        <text x="450" y="56" text-anchor="middle" fill="#F2EFE9">users</text>
+        <rect x="380" y="86" width="140" height="30" rx="5" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.5"/>
+        <text x="450" y="106" text-anchor="middle" fill="#C9C7C1">positions</text>
+        <rect x="380" y="126" width="140" height="30" rx="5" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.5"/>
+        <text x="450" y="146" text-anchor="middle" fill="#C9C7C1">education</text>
+        <rect x="380" y="166" width="140" height="30" rx="5" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.5"/>
+        <text x="450" y="186" text-anchor="middle" fill="#C9C7C1">contact_info</text>
+        <line x1="450" y1="66" x2="450" y2="86" stroke="#C8453A" stroke-width="1.5"/>
+        <line x1="450" y1="66" x2="380" y2="126" stroke="#C8453A" stroke-width="1"/>
+        <line x1="450" y1="66" x2="380" y2="166" stroke="#C8453A" stroke-width="1"/>
+        <text x="450" y="216" text-anchor="middle" fill="#C8453A">join or 3+ fetches</text>
+      </g>
+    </svg>
+    <figcaption>Original schematic: a self-contained tree loads in one shot; the same data split across tables needs a join or several lookups.</figcaption>
+  </figure>
+
+  <h3>Many-to-one and many-to-many relationships (where joins stop being optional)</h3>
+  <p>Look again at that JSON example: <code>region_id</code> and <code>industry_id</code> are IDs, not the plain
+  text "Greater Seattle Area" or "Philanthropy". That's deliberate. Storing an ID instead of a string buys you
+  consistent spelling, no ambiguity between two places with the same name, one place to update the name if it
+  ever changes, easier localization, and better search (a search for "Washington state" can match a profile that
+  only stored "Seattle," because the region list can encode that Seattle is in Washington). The tradeoff is
+  duplication: if you store the text directly on every record, you're copying human-meaningful information
+  everywhere it's used, and every copy needs updating if it changes. Removing that duplication by referencing a
+  shared ID instead is the core idea behind <span class="term">normalization</span>.</p>
+  <p>Here's the catch: normalizing this kind of data always produces <span class="term">many-to-one</span>
+  relationships (many people live in one region, many people work in one industry), and many-to-one relationships
+  don't fit neatly into a pure document model. Relational databases make referencing another table's rows easy,
+  because joins are a first-class, well-optimized operation. Document databases are built for one-to-many tree
+  structures where joins aren't needed, so their join support is often weak or missing, which means you either
+  emulate the join yourself with multiple queries in application code, or keep a small, slow-changing reference
+  table (like a list of regions) cached in memory in your application instead.</p>
+  <p>And it tends to get worse over time, not better. Imagine two very reasonable feature requests on that résumé
+  app: first, turning "organization" and "school_name" from plain strings into references to real organization
+  and school entities (so each one can have its own page, logo, and news feed); second, letting one user write a
+  recommendation for another, showing the recommender's name and photo, which has to update automatically if the
+  recommender changes their photo later. Both of these turn what looked like a clean, self-contained document
+  into something with <span class="term">many-to-many</span> relationships: an organization has many employees,
+  a user has written many recommendations and received many, and now those references need joins when you query
+  them, however you're storing the data.</p>
+
+  <h4>Déjà vu: this argument is older than NoSQL</h4>
+  <p>This exact tension, one-to-many is easy but many-to-many is hard, goes back to the very first database
+  systems. IBM's Information Management System (IMS), the dominant business database of the 1970s, used a
+  <span class="term">hierarchical model</span> that looks a lot like today's JSON documents: everything was a tree
+  of records, each with exactly one parent. Like document databases, it handled one-to-many relationships well
+  and struggled with many-to-many ones, and it didn't support joins.</p>
+  <p>Two rival fixes were proposed. The <span class="term">network model</span> (standardized by a committee
+  called CODASYL) let a record have <em>multiple</em> parents, which could represent many-to-many links, for
+  example one shared "Greater Seattle Area" record that many different users could each link to. But the links
+  were more like raw pointers than foreign keys, and the only way to reach a record was to physically walk a
+  chain of those pointers starting from some root, an <span class="term">access path</span>. If your data had a
+  lot of many-to-many links, several different paths could lead to the same record, and it was on the programmer
+  to keep track of all of them by hand. If you ever needed a query your existing access paths didn't support, you
+  were stuck rewriting a lot of handwritten traversal code. Even the people on the CODASYL committee reportedly
+  compared it to navigating an n-dimensional space.</p>
+  <p>The relational model won that 1970s fight by refusing to expose access paths at all: a table is just a flat
+  collection of rows, full stop, and you can read any of them by any condition you like. The trick that made this
+  practical was the <span class="term">query optimizer</span>, a piece of the database that automatically figures
+  out which indexes and join order to use. You only have to build that optimizer once, and then every application
+  using the database benefits, instead of every application separately hand-coding its own access paths. That's
+  also why adding a new relational index doesn't require you to rewrite your existing queries: the optimizer just
+  starts using it where it helps.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Network model requires manually walking a chosen pointer chain; relational model lets the query optimizer pick the path automatically">
+      <rect x="0" y="0" width="600" height="240" fill="#131316"/>
+      <g font-family="JetBrains Mono, monospace" font-size="11.5">
+        <text x="150" y="24" text-anchor="middle" fill="#C8453A">network model (1970s)</text>
+        <text x="150" y="44" text-anchor="middle" fill="#C9C7C1">you pick the path by hand:</text>
+        <rect x="60" y="60" width="70" height="30" rx="5" fill="#0E0E10" stroke="#7A7A80"/>
+        <text x="95" y="80" text-anchor="middle" fill="#C9C7C1">root</text>
+        <line x1="130" y1="75" x2="170" y2="75" stroke="#C8453A" stroke-width="1.5"/>
+        <rect x="170" y="60" width="70" height="30" rx="5" fill="#0E0E10" stroke="#7A7A80"/>
+        <text x="205" y="80" text-anchor="middle" fill="#C9C7C1">rec A</text>
+        <line x1="240" y1="75" x2="280" y2="75" stroke="#C8453A" stroke-width="1.5"/>
+        <rect x="280" y="60" width="70" height="30" rx="5" fill="#0E0E10" stroke="#C8453A" stroke-width="1.5"/>
+        <text x="315" y="80" text-anchor="middle" fill="#C8453A">target</text>
+        <text x="150" y="115" text-anchor="middle" fill="#7A7A80">no path stored -&gt; rewrite the code</text>
+
+        <text x="450" y="24" text-anchor="middle" fill="#6FCF97">relational model</text>
+        <text x="450" y="44" text-anchor="middle" fill="#C9C7C1">you just declare what you want:</text>
+        <rect x="400" y="60" width="150" height="30" rx="5" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.5"/>
+        <text x="475" y="80" text-anchor="middle" fill="#F2EFE9">SELECT ... WHERE ...</text>
+        <line x1="475" y1="90" x2="475" y2="110" stroke="#6FCF97" stroke-width="1.5"/>
+        <polygon points="475,110 468,100 482,100" fill="#6FCF97"/>
+        <rect x="400" y="114" width="150" height="30" rx="5" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.5"/>
+        <text x="475" y="134" text-anchor="middle" fill="#6FCF97">optimizer picks the path</text>
+        <text x="475" y="160" text-anchor="middle" fill="#7A7A80">new index -&gt; queries unchanged</text>
+      </g>
+    </svg>
+    <figcaption>Original schematic: the network model made you hand-navigate a chosen access path; the relational model lets the query optimizer choose it for you.</figcaption>
+  </figure>
+
+  <p>Here's the part worth sitting with: relational and document databases actually resolve many-to-one and
+  many-to-many relationships the same underlying way, an ID that points at another record, resolved at read time
+  by a join (relational) or a follow-up query (document, using what's usually called a
+  <span class="term">document reference</span>). Document databases never adopted the network model's pointer-chasing
+  approach. So the real dividing line isn't "documents vs. tables," it's "does this database make joins a cheap,
+  well-optimized, built-in operation, or does the application have to fake them." If your data is mostly
+  one-to-many trees, or has barely any relationships at all, a document model is a genuinely good fit. If
+  many-to-many relationships are common and only going to grow, the relational model handles that far more
+  gracefully, and once the connections get dense enough, even the relational model starts to strain, which is
+  where graph-based models come in (a topic worth its own separate dig, since it deserves more room than fits
+  here).</p>
+
+  <h3>Relational vs. document today: schema flexibility</h3>
+  <p>Most document databases, and the JSON support built into some relational databases, don't enforce a schema
+  on what you write: you can add arbitrary keys and values to a document, and code reading it back has no
+  guarantee about what fields will actually be present. People often call this "schemaless," but that's a bit
+  misleading. There's still an implicit schema, whatever structure the reading code assumes, it's just not
+  enforced by the database itself. A more accurate pair of terms: <span class="term">schema-on-read</span> (the
+  structure is assumed by the reader, not checked at write time) versus <span class="term">schema-on-write</span>
+  (the traditional relational approach, where the database rejects data that doesn't match the declared
+  structure). It's a similar flavor of tradeoff to dynamic vs. static type checking in programming languages, and
+  like that debate, there's no universally right answer.</p>
+  <p>The difference shows up clearly when you want to change your data's shape. Say you're storing each user's
+  full name in one field and want to split it into first and last name instead. In a document database, you'd
+  typically just start writing new documents with the new fields and add a small bit of code to handle documents
+  written the old way when they're read back, something like checking whether <code>first_name</code> is missing
+  and deriving it from the old <code>name</code> field on the fly. In a schema-on-write relational database,
+  you'd typically run an explicit migration: an <code>ALTER TABLE</code> to add the column, then an
+  <code>UPDATE</code> to backfill it from the old field. It's worth being precise here rather than repeating a
+  popular myth: most relational systems execute a plain <code>ALTER TABLE ADD COLUMN</code> in milliseconds, it's
+  not inherently slow. <strong>MySQL is a specific, named exception</strong> that historically rewrote the whole
+  table on certain <code>ALTER TABLE</code> operations, which could mean real downtime on a large table (various
+  tools exist to work around that). Separately, the backfilling <code>UPDATE</code> itself is likely to be slow on
+  a large table on <em>any</em> database, since it has to rewrite every row, so if that's not acceptable, you can
+  leave the new column NULL and fill it in lazily at read time instead, which is effectively borrowing the
+  document database's trick.</p>
+  <p>Schema-on-read tends to be genuinely useful, not just a shortcut, when your records are naturally
+  heterogeneous, for instance when you're storing many different kinds of objects that don't practically fit one
+  table each, or when your data's structure is dictated by some external system you don't control and that can
+  change on its own schedule. When every record really is expected to have the same shape, an enforced schema is
+  a helpful safety net, not a bureaucratic obstacle, since it documents and checks your assumptions instead of
+  leaving them implicit in whatever code happens to read the data.</p>
+
+  <h3>Relational vs. document today: data locality</h3>
+  <p>A document is usually stored as one continuous encoded blob (JSON, XML, or a binary variant like MongoDB's
+  BSON). If your application typically needs the whole document at once, say, to render an entire profile page,
+  that locality is a genuine performance win: one read instead of several index lookups across multiple tables,
+  each of which can mean an extra disk seek. But that locality advantage only pays off when you actually need
+  most of the document at once. If you only need a small piece of a large document, the database typically still
+  has to load the whole thing, which can waste effort. And on updates, the whole document usually has to be
+  rewritten in place, since only changes that don't alter the document's encoded size can be applied cheaply. The
+  practical, bounded takeaway (this is a common pattern, not a hard law): keep documents reasonably small, and be
+  cautious about writes that keep growing a document's size.</p>
+  <p>It's also worth flagging that locality-through-grouping isn't exclusive to documents. Some relational
+  systems offer similar locality by letting you declare that one table's rows should be physically interleaved
+  with a related parent table (Google's Spanner and Oracle's multi-table index cluster tables both support this),
+  and systems built on the Bigtable-style column-family model (Cassandra, HBase) use grouping for a similar
+  purpose. Relational and document databases have also been converging in general: most relational systems now
+  support JSON columns, and some document databases (RethinkDB, for instance) support relational-style joins in
+  their query language. Treating this as an either/or choice is increasingly less accurate than it used to be.</p>
+
+  <h3>Query languages: declarative vs. imperative</h3>
+  <p>Alongside its data model, SQL introduced a genuinely different way of asking a database for things:
+  <span class="term">declarative</span>, where earlier systems like IMS and CODASYL used
+  <span class="term">imperative</span> query code. The distinction is easiest to see side by side. Imagine
+  filtering a list of animal species down to just the sharks. An imperative approach spells out the steps: loop
+  over every animal, check a condition, and manually collect the matches, something like a JavaScript
+  <code>for</code> loop that pushes matching items into a results array one at a time. A declarative approach
+  just states the pattern of what you want and leaves the "how" up to the system: <code>SELECT * FROM animals
+  WHERE family = 'Sharks';</code>. You never tell the database to loop over anything, sort anything, or manage an
+  index, you just describe the shape of the result you need.</p>
+  <p>The same contrast shows up outside databases entirely. Styling a web page with CSS is declarative: a
+  selector like <code>li.selected &gt; p</code> just states which elements should be blue, and the browser figures
+  out how and keeps it up to date automatically if the page changes. Doing the same thing with imperative
+  JavaScript DOM code means manually looping over every list item, checking its class, and setting a style, and
+  crucially, if the underlying condition changes later (say, a different item gets marked "selected"), the
+  imperative code doesn't automatically undo its earlier change unless you rerun it; the declarative CSS rule
+  just stops applying on its own.</p>
+  <p>Declarative query languages have a real practical edge, and it's not just that they tend to be shorter to
+  write. Because a declarative query never specifies exactly how to fetch the data, only what result is wanted,
+  the database is free to change its internal implementation, reorder rows on disk, add new indexes, rewrite its
+  storage format, without breaking any existing query. Imperative code that assumes a particular order or a
+  specific access path can't be changed underneath so freely, because you can never be fully sure what the
+  calling code is silently relying on. Declarative languages also tend to parallelize better: since modern CPUs
+  mostly get faster by adding more cores rather than higher clock speeds, and imperative code that specifies a
+  strict step-by-step order is inherently hard to split across cores or machines, a declarative query, which only
+  describes the result and not the algorithm, gives the database room to execute it in parallel if that helps.</p>
+
+  <h3>MapReduce querying</h3>
+  <p><span class="term">MapReduce</span> is a programming model for processing large amounts of data in bulk
+  across many machines, popularized by Google, and a limited form of it shows up in some NoSQL datastores
+  (MongoDB and CouchDB among them) as a way to run read-only queries across many documents. It sits in an
+  interesting middle ground: not fully declarative, not fully imperative either. You write two small snippets of
+  code, a <code>map</code> function and a <code>reduce</code> function, and the surrounding framework calls them
+  repeatedly on your behalf.</p>
+  <p>Picture logging ocean animal sightings and wanting a report of shark sightings per month. In SQL you'd
+  write one declarative query with a <code>WHERE</code> filter, a <code>GROUP BY</code>, and a <code>SUM</code>.
+  With MongoDB's MapReduce feature, the same report looks like two cooperating JavaScript functions: a
+  <code>map</code> function that runs once per matching document and emits a key (year and month, like
+  "1995-12") paired with a value (the number of animals seen), and a <code>reduce</code> function that's called
+  once per unique key with the full list of values emitted under that key, and just sums them. So if two shark
+  observations in December 1995 recorded 3 and 4 animals, <code>map</code> emits two ("1995-12", 3) and
+  ("1995-12", 4) pairs, and <code>reduce</code> is called with ("1995-12", [3, 4]) and returns 7.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Documents flow through a map function that emits key value pairs, which are grouped by key and passed to a reduce function">
+      <rect x="0" y="0" width="600" height="220" fill="#131316"/>
+      <g font-family="JetBrains Mono, monospace" font-size="11">
+        <rect x="20" y="20" width="110" height="34" rx="5" fill="#0E0E10" stroke="#7A7A80"/>
+        <text x="75" y="41" text-anchor="middle" fill="#C9C7C1">doc: Dec 1995, 3</text>
+        <rect x="20" y="66" width="110" height="34" rx="5" fill="#0E0E10" stroke="#7A7A80"/>
+        <text x="75" y="87" text-anchor="middle" fill="#C9C7C1">doc: Dec 1995, 4</text>
+
+        <line x1="130" y1="37" x2="200" y2="65" stroke="#7A7A80"/>
+        <line x1="130" y1="83" x2="200" y2="65" stroke="#7A7A80"/>
+        <rect x="200" y="48" width="90" height="34" rx="5" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.5"/>
+        <text x="245" y="69" text-anchor="middle" fill="#F2EFE9">map()</text>
+
+        <line x1="290" y1="65" x2="360" y2="65" stroke="#F2EFE9" stroke-width="1.5"/>
+        <rect x="360" y="48" width="140" height="34" rx="5" fill="#0E0E10" stroke="#7A7A80"/>
+        <text x="430" y="69" text-anchor="middle" fill="#C9C7C1">emit("1995-12", 3)</text>
+
+        <rect x="360" y="90" width="140" height="34" rx="5" fill="#0E0E10" stroke="#7A7A80"/>
+        <text x="430" y="111" text-anchor="middle" fill="#C9C7C1">emit("1995-12", 4)</text>
+
+        <line x1="500" y1="65" x2="530" y2="130" stroke="#6FCF97"/>
+        <line x1="500" y1="107" x2="530" y2="130" stroke="#6FCF97"/>
+        <rect x="430" y="130" width="140" height="34" rx="5" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.5"/>
+        <text x="500" y="151" text-anchor="middle" fill="#6FCF97">reduce: sum([3,4])</text>
+
+        <line x1="500" y1="164" x2="500" y2="184" stroke="#6FCF97"/>
+        <rect x="430" y="184" width="140" height="30" rx="5" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.5"/>
+        <text x="500" y="204" text-anchor="middle" fill="#6FCF97">"1995-12" -&gt; 7</text>
+      </g>
+    </svg>
+    <figcaption>Original schematic: map emits a key/value pair per document, matching keys are grouped, then reduce combines the values for each key.</figcaption>
+  </figure>
+
+  <p>Map and reduce functions come with real restrictions: they have to be pure functions, meaning they can only
+  use the data handed to them, can't fire off extra database queries of their own, and can't have side effects.
+  That restriction is what lets the database run them anywhere, in any order, and safely rerun them after a
+  failure. Despite the restriction, they're still powerful enough to parse strings, call library functions, and
+  do real computation. That said, MapReduce is a fairly low-level tool for distributed execution, and it doesn't
+  have any special monopoly on running at scale: SQL itself has nothing that limits it to a single machine, and
+  plenty of distributed SQL implementations exist that never touch MapReduce at all. Writing two carefully
+  coordinated JavaScript functions is also usually more work than writing one declarative query, and a query
+  optimizer has more room to improve a declarative query's performance than it does a hand-written MapReduce job.
+  For exactly these usability reasons, MongoDB 2.2 added a declarative alternative called the aggregation
+  pipeline, and the same shark report in that language reads as a short list of pipeline stages (a
+  <code>$match</code> filter followed by a <code>$group</code>-and-<code>$sum</code>) rather than two custom
+  functions. It's a nice small lesson on its own: a NoSQL system built to avoid SQL can still end up quietly
+  reinventing something SQL-shaped, just with different syntax.</p>
+
+  <h2>Why it matters</h2>
+  <p>This isn't a settled argument you can look up once and forget. Every time you start a new project, "what
+  shape is my data actually going to be in a year" is a real design question, not a formality, because the answer
+  changes whether a document database will keep feeling natural or start fighting you. The résumé example is a
+  pattern that repeats constantly: features that look self-contained today (a profile, an order, a support
+  ticket) tend to sprout references to other things (an organization, a recommender, a related ticket) as an
+  application grows, and each new reference is a small vote for the relational model's strengths. Meanwhile,
+  "schema-on-read vs. schema-on-write" and "declarative vs. imperative" aren't relics of the 1970s, they're the
+  same tradeoffs you're making today anytime you pick a database, write a migration, or decide whether a query
+  belongs in SQL or in application code.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>One-to-many is what document databases are built for. Many-to-many is where they start to strain,
+      because joins are the relational model's specialty, not theirs.</li>
+      <li>An ID instead of a plain string isn't bureaucracy, it's normalization: one place to update, no
+      ambiguity, easier search and localization, at the cost of needing a join or lookup to resolve it.</li>
+      <li>"Schemaless" document databases still have a schema, it's just implicit in whatever code reads the
+      data, instead of enforced by the database when it's written.</li>
+      <li>Declarative (SQL, CSS) beats imperative (a for-loop, manual DOM code) mainly because it leaves the
+      database or browser free to change how it gets the answer, without breaking anything that asked for it.</li>
+      <li>MapReduce sits between declarative and imperative, and even MongoDB eventually added a more declarative
+      aggregation pipeline on top of it, because two hand-written functions are more work than one query.</li>
+    </ul>
+  </div>
+
+  <div class="box good">
+    <h2>Try it yourself</h2>
+    <ul>
+      <li><strong>Same data, two shapes.</strong> Model a small "résumé" (a name plus a list of jobs and a list
+      of education entries) once as a single JSON document and once as three normalized tables (users, positions,
+      education) with foreign keys. Write the query or queries needed to fetch "everything about user X" in both.
+      <em>Done when:</em> the document version takes one fetch, and you can show exactly how many queries (or how
+      complex a join) the table version needs.</li>
+      <li><strong>Denormalization staleness bug.</strong> Store a "recommendation" document that duplicates the
+      recommender's name and photo URL directly inside it. Update the recommender's photo elsewhere and show the
+      recommendation still displays the old one. <em>Done when:</em> you've reproduced the staleness, then fixed
+      it by storing a reference (an ID) instead and resolving it with a lookup at read time.</li>
+      <li><strong>Declarative vs. imperative filter.</strong> Given an array of objects (like the shark/animal
+      example), write the same filtering logic two ways: an imperative loop that manually builds a results array,
+      and a single declarative-style call (your language's built-in <code>filter</code> or equivalent). <em>Done
+      when:</em> both return identical results, and you can explain in your own words why swapping the internal
+      implementation behind the declarative version wouldn't break any code that calls it.</li>
+      <li><strong>Access-path simulator.</strong> Build a tiny "network model": a handful of records connected by
+      explicit parent/child pointers (including one record with two parents), and write code that can only fetch
+      a record by walking a specific chain of pointers you define in advance. <em>Done when:</em> you can show
+      that reaching a record you didn't build a path to requires writing new traversal code, not just a new
+      query.</li>
+      <li><strong>Toy MapReduce.</strong> Implement your own tiny <code>map()</code> and <code>reduce()</code>
+      over an array of fake "sighting" records (a family and a count), reproducing a monthly-totals report, then
+      check it against a plain loop-and-dictionary version of the same report. <em>Done when:</em> both approaches
+      produce identical totals per month.</li>
+      <li><strong>ALTER TABLE timing check.</strong> Using any relational database you have handy, create a table
+      with a decent number of rows, then time a plain <code>ALTER TABLE ... ADD COLUMN</code> versus an
+      <code>UPDATE</code> that rewrites every row to backfill it. <em>Done when:</em> you've printed both timings
+      side by side and can say which one scales with table size and which (mostly) doesn't.</li>
+    </ul>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>The most re-readable idea here is the many-to-one/many-to-many distinction: it's the single fact that
+  predicts almost everything else in this comparison (which model needs joins, which one strains as an app
+  grows, why relational won the 1970s debate). A natural next question to sit with: for an app or side project
+  you're currently building, are the relationships between your main data types mostly one-to-many, or are they
+  quietly turning many-to-many as you add features?</p>
+
+  <hr class="divider">
+
+  <h2>Sources &amp; verify</h2>
+  <ul>
+    <li>Primary source: Martin Kleppmann, <em>Designing Data-Intensive Applications</em>, Chapter 2 ("Data Models
+    and Query Languages"), pages 49&ndash;70 (covering "Relational Model Versus Document Model" through "Query
+    Languages for Data" / MapReduce Querying, stopping before "Graph-Like Data Models").</li>
+    <li>This digest is a teaching draft, written to help you learn the concepts quickly. It is not a substitute
+    for the source, and anything you plan to rely on (the exact JSON/SQL examples, the CODASYL and IMS history,
+    the specific version numbers) is worth checking directly against the chapter and its own references before
+    you depend on it.</li>
+    <li>Flagged for verification: the MongoDB version numbers (2.2 for the aggregation pipeline) and support
+    details for specific databases (RethinkDB joins, MongoDB driver-side reference resolution, Spanner/Oracle
+    locality features) are as stated in the source; this digest did not independently re-verify each vendor's
+    current behavior, and some of these describe the state of things circa the book's writing rather than
+    necessarily today. The MongoDB 3.2 release date and its addition of the <code>$lookup</code> operator
+    (mentioned in the companion carousel for this unit, not in this digest's main text) were independently checked
+    against MongoDB's own documentation and a third-party release-history source rather than taken from the book,
+    since the book predates that feature.</li>
+  </ul>
+
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div>
+      <p class="name">Mayowa</p>
+      <div class="socials">
+        <span>in/mayowa-bodunwa</span>
+        <span>@mayowa.bodunwa</span>
+      </div>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

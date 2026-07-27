@@ -26,5 +26,33 @@
     "ch": "Topic 1",
     "title": "Core Networking: VPCs, Subnets, Route Tables & NAT",
     "date": "2026-07-20"
+  },
+  {
+    "slug": "ddia-ch02-part1-relational-document-query-languages",
+    "book": "Designing Data-Intensive Applications",
+    "ch": "Ch.2 (Part 1 of 2)",
+    "title": "Data Models and Query Languages, Part 1: Relational vs. Document",
+    "date": "2026-07-27"
+  },
+  {
+    "slug": "ai-eng-ch02-part1-training-data-architecture-scaling",
+    "book": "AI Engineering",
+    "ch": "Ch.2 (Part 1 of 2)",
+    "title": "Understanding Foundation Models: Training Data, Architecture, and Scale",
+    "date": "2026-07-27"
+  },
+  {
+    "slug": "hpmysql-ch02-monitoring-reliability-engineering",
+    "book": "High Performance MySQL",
+    "ch": "Ch.2",
+    "title": "Monitoring in a Reliability Engineering World",
+    "date": "2026-07-27"
+  },
+  {
+    "slug": "aws-02-transit-gateway",
+    "book": "AWS",
+    "ch": "Topic 2",
+    "title": "Transit Gateway & Multi-VPC Connectivity",
+    "date": "2026-07-27"
   }
 ]
