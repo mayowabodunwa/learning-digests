@@ -24,10 +24,10 @@ still treated like a chapter: one digest, one carousel.
 
 ## Current batch: tick each when you've studied it
 
-- [ ] DDIA — Ch.1: Reliable, Scalable, and Maintainable Applications (digest + carousel)
-- [ ] AI Engineering — Ch.1: Introduction to Building AI Applications with Foundation Models (digest + carousel)
-- [ ] High Performance MySQL — Ch.1: MySQL Architecture (digest + carousel)
-- [ ] AWS — Topic 1: Core networking (VPC, subnets, route tables, NAT, IGW) (digest + carousel)
+- [x] DDIA — Ch.1: Reliable, Scalable, and Maintainable Applications (digest + carousel)
+- [x] AI Engineering — Ch.1: Introduction to Building AI Applications with Foundation Models (digest + carousel)
+- [x] High Performance MySQL — Ch.1: MySQL Architecture (digest + carousel)
+- [x] AWS — Topic 1: Core networking (VPC, subnets, route tables, NAT, IGW) (digest + carousel)
 
 ## Track A: Designing Data-Intensive Applications
 
