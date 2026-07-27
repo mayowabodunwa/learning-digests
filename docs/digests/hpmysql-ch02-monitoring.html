@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>High Performance MySQL — Ch.2: Monitoring in a Reliability Engineering World</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0A0B; --card:#0E0E10; --card2:#131316; --hair:rgba(242,239,233,0.10);
+    --ink:#F2EFE9; --body:#C9C7C1; --muted:#7A7A80; --red:#C8453A; --green:#6FCF97;
+    --footer-muted:#D8D5CD;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--body);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    font-size:16px; line-height:1.65;
+  }
+  .wrap{max-width:660px; margin:0 auto; padding:48px 22px 64px}
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace; color:var(--red); font-size:13px;
+    letter-spacing:3px; text-transform:uppercase; margin:0 0 14px;
+  }
+  h1{
+    font-family:'Bricolage Grotesque',sans-serif; font-weight:800; color:var(--ink);
+    font-size:34px; line-height:1.15; margin:0 0 14px;
+  }
+  .lead{ font-size:18px; color:var(--ink); opacity:0.9; margin:0 0 32px; font-weight:500; }
+  h2.kicker{
+    font-family:'JetBrains Mono',monospace; color:var(--muted); font-size:12px;
+    letter-spacing:2.5px; text-transform:uppercase; margin:0 0 12px; font-weight:500;
+  }
+  h3.subhead{
+    font-family:'Bricolage Grotesque',sans-serif; color:var(--ink); font-weight:700;
+    font-size:20px; margin:0 0 8px;
+  }
+  section{ margin:0 0 42px; }
+  p{ margin:0 0 14px; }
+  .term{ color:var(--ink); font-weight:600; }
+  ul{ margin:0 0 14px; padding-left:20px; }
+  li{ margin:0 0 10px; }
+  .card{
+    background:var(--card2); border:1px solid var(--hair); border-radius:12px;
+    padding:22px 22px 8px; margin:18px 0 26px;
+  }
+  .box{
+    border:1px solid var(--hair); border-left:3px solid var(--red);
+    background:var(--card); border-radius:8px; padding:20px 22px; margin:18px 0;
+  }
+  .box.green{ border-left:3px solid var(--green); }
+  .box h3{
+    font-family:'JetBrains Mono',monospace; color:var(--ink); font-size:13px;
+    letter-spacing:2px; text-transform:uppercase; margin:0 0 14px;
+  }
+  .box.green h3{ color:var(--green); }
+  .box ul{ margin:0; padding-left:18px; }
+  .box li{ margin:0 0 12px; }
+  .box li:last-child{ margin-bottom:0; }
+  code, .mono{ font-family:'JetBrains Mono',monospace; }
+  code{
+    font-size:0.92em; color:var(--ink); background:rgba(242,239,233,0.06);
+    padding:1px 5px; border-radius:4px;
+  }
+  pre.codeblock{
+    font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--ink);
+    background:#0A0A0B; border:1px solid var(--hair); border-radius:8px;
+    padding:16px 18px; overflow-x:auto; line-height:1.6; margin:14px 0;
+  }
+  figure.schematic{
+    border:1px solid var(--hair); background:var(--card2); border-radius:12px;
+    padding:18px 18px 14px; margin:18px 0 26px;
+  }
+  figure.schematic svg{ width:100%; height:auto; display:block; }
+  figcaption{
+    font-family:'JetBrains Mono',monospace; color:var(--muted); font-size:12px;
+    margin-top:10px; letter-spacing:0.3px;
+  }
+  table.nines{
+    width:100%; border-collapse:collapse; margin:14px 0; font-size:13px;
+    font-family:'JetBrains Mono',monospace;
+  }
+  table.nines th, table.nines td{
+    border:1px solid var(--hair); padding:8px 10px; text-align:left; color:var(--body);
+  }
+  table.nines th{ color:var(--ink); font-weight:600; background:rgba(242,239,233,0.04); }
+  table.nines td.avail{ color:var(--ink); font-weight:600; }
+  .flag{ color:var(--muted); font-size:12.5px; }
+  hr.rule{ border:none; border-top:1px solid var(--hair); margin:44px 0; }
+  a{ color:var(--red); }
+  .footer{
+    margin-top:56px; padding-top:28px; border-top:1px solid var(--hair);
+    display:flex; align-items:center; gap:16px;
+  }
+  .footer img{
+    width:52px; height:52px; border-radius:50%; object-fit:cover;
+    border:1px solid var(--hair);
+  }
+  .footer .who{ font-family:'Bricolage Grotesque',sans-serif; color:var(--ink); font-weight:700; font-size:16px; }
+  .footer .socials{
+    font-family:'JetBrains Mono',monospace; color:var(--footer-muted); font-size:13px;
+    margin-top:4px; display:flex; gap:16px; flex-wrap:wrap;
+  }
+  .small{ font-size:14px; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">SQL · CH.2 DIGEST</p>
+  <h1>Monitoring in a Reliability Engineering World</h1>
+  <p class="lead">Why "is the database up?" isn't a good enough question anymore, and the small vocabulary (SLI, SLO, SLA) that lets you actually answer "are our customers happy?" instead.</p>
+
+  <section>
+    <h2 class="kicker">In one line</h2>
+    <p>Good MySQL monitoring isn't about staring at a wall of graphs, it's about picking a handful of numbers tied to customer experience, agreeing on what "healthy" means for each one, and watching those in a way that warns you before customers notice, not after.</p>
+  </section>
+
+  <section>
+    <h2 class="kicker">The big idea</h2>
+    <p>For a long time, monitoring a database mostly meant reactive digging: a server got slow, and someone who deeply understood MySQL internals went and profiled it. Site reliability engineering (SRE), a set of practices popularized by Google, reframes this. Instead of asking "is the server healthy" from the inside, you start by asking "are customers happy" from the outside, then pick a small set of measurable signals that answer that question, agree on acceptable ranges for them, and let those numbers guide where engineering time goes. That vocabulary (SLI, SLO, and optionally SLA) is the backbone of this unit, and it changes monitoring from "watch everything" into "watch the few things that actually matter, on purpose."</p>
+  </section>
+
+  <section>
+    <h2 class="kicker">Key terms</h2>
+    <ul>
+      <li><span class="term">SRE (site reliability engineering)</span> — a set of practices, popularized by Google, for running production systems that emphasizes measurable outcomes over gut-feel operations.</li>
+      <li><span class="term">SLI (service level indicator)</span> — the answer to "how do I measure whether my customers are happy?" A single measurable signal, like "response time for a customer-facing API."</li>
+      <li><span class="term">SLO (service level objective)</span> — the answer to "what's the minimum I can allow that SLI to be and still call customers happy?" Always defined over a time span (a month, say), never as a bare number in isolation.</li>
+      <li><span class="term">SLA (service level agreement)</span> — an SLO that's been written into a contract with paying customers, with financial or other penalties attached if it's missed. Optional, and more of a business decision than an engineering one.</li>
+      <li><span class="term">MTTR (mean time to recovery)</span> — roughly, how fast you can realistically get back to a working state after something breaks. Used to set expectations for disaster-recovery targets.</li>
+      <li><span class="term">Synthetic transaction (or synthetic test)</span> — a fake action you run on purpose (like a scripted <code>SELECT 1</code>, or a scripted write-then-read) purely to check that a system is actually available, instead of waiting for a real customer to hit a problem.</li>
+      <li><span class="term">Threads_running</span> — a MySQL status counter for how many queries are actively executing right now on a given host, as opposed to sitting idle.</li>
+      <li><span class="term">threads_connected / max_connections</span> — how many client connections currently exist versus the ceiling the server is configured to allow. A common failure mode is hitting the ceiling and being unable to open new connections at all.</li>
+      <li><span class="term">Connection storm</span> — a feedback loop where slower queries make application code open more connections to compensate, and that extra connection load makes the database even slower, which opens even more connections.</li>
+      <li><span class="term">Replication lag</span> — the delay between a write landing on the source server and that same write becoming visible on a replica. If your app reads from replicas, lag can make fresh data look temporarily missing.</li>
+      <li><span class="term">Source / replica</span> — in a common MySQL setup, one server (the source) accepts writes and streams changes out to one or more replicas, which mostly serve reads.</li>
+      <li><span class="term">I/O wait / IOutil</span> — how much time a server's threads spend queued up waiting on disk, and what percentage of the disk's overall access capacity is currently in use.</li>
+      <li><span class="term">Leading indicator vs. lagging indicator</span> — a leading indicator (like a rising disk-growth rate) warns you before customers are affected; a lagging one (like a spike in customer-facing errors) tells you after they already are.</li>
+      <li><span class="term">Functional sharding</span> — splitting specific tables that serve one business purpose off into their own dedicated database cluster, so that piece's uptime and performance can be managed on its own.</li>
+      <li><span class="term">Horizontal sharding</span> — splitting one large data set across multiple database clusters once it's grown past what a single cluster can reliably serve, using some lookup mechanism to find the right piece.</li>
+      <li><span class="term">Percentile</span> — the value below which a given percentage of your data points fall. The 95th percentile (p95) of response times is the value that 95% of requests were faster than.</li>
+      <li><span class="term">Average (mean)</span> — the sum of all values divided by how many there are. Useful for some things, but easy to get pulled around by a small number of extreme outliers without you noticing.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2 class="kicker">How it works</h2>
+    <p>Here's the mental shift worth grounding yourself in before the specifics: monitoring used to be something a small, specialized DBA team did privately, mostly by reacting once something already felt slow. SRE thinking flips the order of operations. You start by deciding, out loud and as a team, what "healthy" means from a customer's point of view, write it down as a number with a time window attached, and only then decide what to watch and alert on. That single reordering (define "happy" first, instrument second) is what the rest of this unit builds on.</p>
+
+    <h3 class="subhead">Defining SLIs, SLOs, and SLAs</h3>
+    <p>These three terms form a small ladder, each one answering a slightly different question. An SLI is a measurement: "response time for the checkout API" or simply "is the service up." An SLO is a target range for that measurement, always tied to a time window, like "99.5% of pages load in under a few hundred milliseconds, measured across a month." An SLA is an SLO that's been turned into a promise with real consequences attached, usually financial, made to paying customers rather than internal teams. SLAs are optional; most of what you'll actually use day to day is the SLI/SLO pair.</p>
+
+    <figure class="schematic">
+      <svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg">
+        <rect x="20" y="30" width="170" height="150" rx="8" fill="#131316" stroke="#C8453A" stroke-width="1.5"/>
+        <text x="105" y="60" text-anchor="middle" fill="#F2EFE9" font-family="Bricolage Grotesque, sans-serif" font-weight="700" font-size="16">SLI</text>
+        <text x="105" y="82" text-anchor="middle" fill="#C8453A" font-family="JetBrains Mono, monospace" font-size="10">the measurement</text>
+        <text x="105" y="112" text-anchor="middle" fill="#C9C7C1" font-family="JetBrains Mono, monospace" font-size="10">"checkout API</text>
+        <text x="105" y="128" text-anchor="middle" fill="#C9C7C1" font-family="JetBrains Mono, monospace" font-size="10">response time"</text>
+        <text x="105" y="160" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="9">how do I measure</text>
+        <text x="105" y="172" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="9">if customers are happy?</text>
+
+        <line x1="190" y1="105" x2="222" y2="105" stroke="#7A7A80" stroke-width="2"/>
+        <polygon points="228,105 218,99 218,111" fill="#7A7A80"/>
+
+        <rect x="230" y="30" width="170" height="150" rx="8" fill="#131316" stroke="#F2EFE9" stroke-width="1.5"/>
+        <text x="315" y="60" text-anchor="middle" fill="#F2EFE9" font-family="Bricolage Grotesque, sans-serif" font-weight="700" font-size="16">SLO</text>
+        <text x="315" y="82" text-anchor="middle" fill="#F2EFE9" font-family="JetBrains Mono, monospace" font-size="10">the target range</text>
+        <text x="315" y="112" text-anchor="middle" fill="#C9C7C1" font-family="JetBrains Mono, monospace" font-size="10">"99.5% under 300ms,</text>
+        <text x="315" y="128" text-anchor="middle" fill="#C9C7C1" font-family="JetBrains Mono, monospace" font-size="10">per month"</text>
+        <text x="315" y="160" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="9">what's the minimum</text>
+        <text x="315" y="172" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="9">that still means "happy"?</text>
+
+        <line x1="400" y1="105" x2="432" y2="105" stroke="#7A7A80" stroke-width="2"/>
+        <polygon points="438,105 428,99 428,111" fill="#7A7A80"/>
+
+        <rect x="440" y="30" width="150" height="150" rx="8" fill="#131316" stroke="#2B2B2F" stroke-dasharray="4,3"/>
+        <text x="515" y="60" text-anchor="middle" fill="#F2EFE9" font-family="Bricolage Grotesque, sans-serif" font-weight="700" font-size="16">SLA</text>
+        <text x="515" y="82" text-anchor="middle" fill="#6FCF97" font-family="JetBrains Mono, monospace" font-size="10">optional contract</text>
+        <text x="515" y="112" text-anchor="middle" fill="#C9C7C1" font-family="JetBrains Mono, monospace" font-size="10">an SLO with</text>
+        <text x="515" y="128" text-anchor="middle" fill="#C9C7C1" font-family="JetBrains Mono, monospace" font-size="10">penalties attached</text>
+        <text x="515" y="160" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="9">what happens if</text>
+        <text x="515" y="172" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="9">we miss it?</text>
+
+        <text x="300" y="220" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="11">SLI feeds the SLO. An SLA is only built on top when there's a paying customer and a contract.</text>
+      </svg>
+      <figcaption>Fig. 1 — SLI, SLO, and SLA answer three different questions, each building on the one before it.</figcaption>
+    </figure>
+
+    <h3 class="subhead">The trap of aiming for 100%</h3>
+    <p>Once you start picking targets, the instinct is to reach for perfection: "we will not have any downtime." It's worth resisting that on purpose. The point of an SLO isn't to be as strict as possible, it's to define the minimum that keeps customers happy, so that engineering time above that line can go toward new features instead of squeezing out one more nine of reliability nobody asked for. Concretely: if customers are content with a page loading in two seconds, chasing 750 milliseconds is spending real effort on something that isn't actually the bottleneck to anyone's happiness.</p>
+    <p>This gets more concrete once you look at what a "nine" of availability actually costs in clock time. The table below (figures attributed in the source to Amazon Web Services) shows how fast the allowed downtime shrinks as you add nines:</p>
+    <table class="nines">
+      <tr><th>Availability</th><th>Downtime / year</th><th>Downtime / month</th><th>Downtime / week</th><th>Downtime / day</th></tr>
+      <tr><td class="avail">99.999%</td><td>5 mins, 15.36 secs</td><td>26.28 secs</td><td>6.06 secs</td><td>0.14 secs</td></tr>
+      <tr><td class="avail">99.995%</td><td>26 mins, 16.8 secs</td><td>2 mins, 11.4 secs</td><td>30.3 secs</td><td>4.32 secs</td></tr>
+      <tr><td class="avail">99.990%</td><td>52 mins, 33.6 secs</td><td>4 mins, 22.8 secs</td><td>1 min, 0.66 secs</td><td>8.64 secs</td></tr>
+      <tr><td class="avail">99.950%</td><td>4 hrs, 22 mins, 48 secs</td><td>31 mins, 54 secs</td><td>5 mins, 3 secs</td><td>43 secs</td></tr>
+      <tr><td class="avail">99.900%</td><td>8 hrs, 45 mins, 36 secs</td><td>43 mins, 53 secs</td><td>10 mins, 6 secs</td><td>1 min, 26 secs</td></tr>
+      <tr><td class="avail">99.500%</td><td>43 hrs, 48 mins, 36 secs</td><td>3 hrs, 39 mins</td><td>50 hrs, 32 mins, 17 secs*</td><td>7 mins, 12 secs</td></tr>
+      <tr><td class="avail">99.250%</td><td>65 hrs, 42 mins</td><td>5 hrs, 34 mins, 30 secs</td><td>1 hr, 15 mins, 48 secs</td><td>10 mins, 48 secs</td></tr>
+      <tr><td class="avail">99.000%</td><td>3 days, 15 hrs, 54 mins</td><td>7 hrs, 18 mins</td><td>1 hr, 41 mins, 5 secs</td><td>14 mins, 24 secs</td></tr>
+    </table>
+    <p class="flag">*This weekly figure is reproduced exactly as printed in the source. It's larger than the monthly figure on the same row, which can't be right (0.5% of a week works out to roughly 50 minutes, not 50 hours) and looks like a typo carried over from the original table. Worth recalculating yourself before you rely on it rather than trusting this cell as-is.</p>
+    <p>Three nines (99.9%) already means well under ten minutes of allowed downtime in an average week. Every extra nine gets meaningfully more expensive in engineering effort, which is exactly why the goal isn't "as many nines as possible" but "the fewest nines that still make customers happy."</p>
+
+    <h3 class="subhead">What to measure: a worked online-store example</h3>
+    <p>To make this concrete, imagine a fictional online store whose traffic is growing and whose infrastructure team needs to prove the database layer can keep up. A workable pair of SLIs and SLOs for that store might look like: pages load faster than a few hundred milliseconds at least 99.5% of the time, measured across a month, and checkout succeeds without an intermittent failure at least 99% of the time in a given calendar month. Notice what's <em>not</em> in either of those: a demand for 100%. Failure is treated as inevitable, and the time window is what lets a team balance new feature work against reliability work instead of chasing perfection on every single request.</p>
+    <p>A useful pattern in the source material is combining latency and correctness in one sentence: "I expect 99.5% of my database requests to be served quickly, with no errors." That single sentence isn't confirmed by any one metric; it's really shorthand for a bundle of signals working together across three themes worth designing for on purpose: availability, latency, and lack of critical errors. A synthetic test, like a scripted page load run continuously in production, is a good starting signal that "things are broadly OK," but it's only the beginning of the picture.</p>
+
+    <h3 class="subhead">Monitoring solution options</h3>
+    <p>Once you know what you want to measure, you need something to actually collect and display it. Broadly, you're picking between paying a vendor and assembling something from open pieces, and it's a genuine tradeoff rather than an obviously correct choice either way. Commercial tools whose whole job is profiling database performance (the source names SolarWinds Database Performance Management as an example) can make query-level insight accessible to a much wider slice of an engineering org than a small DBA team could reach alone, in exchange for cost. On the open source side, Percona Monitoring and Management (PMM) is a well-established client/server pair: you install a lightweight client on each database instance, it ships metrics to a central server, and that server hosts pre-built dashboards shaped by a lot of accumulated community experience running MySQL, which makes it a solid on-ramp for engineers who are new to the database.</p>
+    <p>A third path is shipping MySQL's own slow query logs and Performance Schema output somewhere central, then mining them with tools like <code>pt-query-digest</code> (part of the Percona Toolkit). This works, but it tends to be after the fact: you're often discovering a regression once it's already been happening for a while, rather than catching it as it starts. Performance Schema itself is genuinely useful for digging into "why is this specific thing slow," but on its own it isn't really built to answer "are we meeting our reliability promises to customers" (that job belongs to the SLI/SLO layer sitting on top of it).</p>
+
+    <h3 class="subhead">Monitoring availability</h3>
+    <p>Availability means being able to answer customer requests without an error, which in HTTP terms usually means a clean success like a 200, or an accepted-but-async 202. The cleanest way to verify it is from outside your own system, either passively (reading logs from whatever sits between your application and the database) or actively, by running a synthetic transaction: something as small as a scripted <code>SELECT 1</code> just to confirm MySQL is alive and parsing queries, or something heavier like an actual write-then-read to confirm data really landed.</p>
+    <p>External checks confirm availability, but they don't warn you before a problem exists, they only tell you once it already does. That's where a leading indicator like the <code>Threads_running</code> status counter helps: it tracks how many queries are actively executing on a host right now. When that number climbs steadily and doesn't come back down, it usually means queries aren't finishing fast enough and are piling up, which can escalate into the operating system killing the MySQL process outright under CPU or memory pressure, a severe outage if it happens on a source node. A rough starting point is comparing <code>Threads_running</code> against how many CPU cores the host has; sustained numbers well above that core count are worth alerting on before things get dire, alongside watching how close you're getting to <code>max_connections</code>.</p>
+
+    <h3 class="subhead">Monitoring query latency</h3>
+    <p>MySQL has built-in ways to track how long queries take on the server side, and trending those over time as your application code changes is worthwhile. But server-side latency alone isn't the full customer picture, especially once your architecture has more than one hop between a user's click and a database row. Instrumenting the client side too (having application code itself report time-to-completion for a query) gets you meaningfully closer to what a real customer actually experienced, and pairing that with tracing tools that can follow one request across several services is how you catch the outliers a simple average would hide.</p>
+
+    <h3 class="subhead">Monitoring for errors</h3>
+    <p>Not every error is a fire. In a system with more than one moving part, some client-side errors are intermittent and resolve themselves on retry, so the raw existence of an error isn't automatically a signal something's broken. What matters more is the <em>rate</em> of an error accelerating across your fleet. Two worth knowing by name: a sharp rise in lock wait timeouts can signal escalating row-lock contention on your source node, and a sudden surge of aborted connections often points at trouble somewhere in the layer between clients and the database, both of which are worth watching as rates rather than one-off counts.</p>
+    <p>Some errors, on the other hand, matter the moment they appear even once. A MySQL instance unexpectedly reporting it's running in read-only mode can mean a replica just got promoted to source but hasn't been switched out of read-only yet (which is effectively write downtime for your whole cluster), or that something in your access layer is misrouting writes to a replica. Likewise, "too many connections" or an OS-level "cannot create new thread" error means your application layer has opened and held more connections than the server is configured to allow, and these tend to surface immediately to customers as failed requests.</p>
+
+    <h3 class="subhead">Proactive monitoring: watching for trouble before it's customer-facing</h3>
+    <p>SLO-style monitoring is great at telling you when customers are already unhappy. Proactive monitoring is the other half: watching signals that aren't directly tied to customer impact yet, so you get a heads-up before they become an incident. The balance to strike is that an alert always needs to be actionable: paging someone when a disk is already 100% full is too late (the service is already down), while paging at 80% full might still be too slow if the growth rate is fast, or too noisy if it isn't.</p>
+    <ul>
+      <li><span class="term">Disk growth</span> — worth tracking as a <em>rate</em> if your tooling allows it, not just a static threshold, since a long-running transaction with a large undo log or a big schema change can burn through free disk far faster than a slow, steady creep would suggest. If rate-tracking isn't available, layered thresholds (a soft warning during business hours, a harder page for off-hours) are a reasonable fallback, and a single hard threshold is the bare minimum if that's all your tooling supports.</li>
+      <li><span class="term">Connection growth</span> — as an application layer scales out, it opens more and more database connections, and a server only has a finite <code>max_connections</code> pool. Watching <code>threads_connected</code> alongside <code>threads_running</code> tells two different stories: connections high but threads_running low usually means the app layer is opening connections it isn't really using; both high and climbing usually means real load that's genuinely risking overload. Tracking <code>threads_connected / max_connections</code> as a percentage tends to be more useful than watching the raw count, since it scales naturally as you add capacity. Watch out for a connection storm too: rising latency can make an application layer open even more connections to compensate, which adds load and makes latency worse, feeding the same loop.</li>
+      <li><span class="term">Replication lag</span> — the gap between a write landing on the source and showing up on a replica. If reads are served from replicas, a lagging replica can make fresh data look like it silently vanished to a user (think a social comment that seems to not have saved). Lag is both an acute signal that something's wrong right now and a slower-moving trend: even without a customer-facing incident, a rising lag trend can be an early sign that write volume is starting to outgrow what your replicas can keep up with at current capacity.</li>
+      <li><span class="term">I/O utilization</span> — even on solid-state storage, once your data outgrows memory, you'll eventually be waiting on disk I/O for some queries. Tools like <code>iostat</code> let you track IOutil, the percentage of a disk's overall access capacity currently in use, as a running trend over a day, a few days, or a week. Sustained values close to 100% on a host that isn't mid-backup is usually worth investigating as a sign of full table scans or inefficient queries.</li>
+      <li><span class="term">Auto-increment space</span> — by default, an auto-increment primary key is a signed integer, and it's possible to run out of key space simply by inserting enough rows over time. Watching remaining key space for any auto-increment primary key is a cheap, easy check that can save you a genuinely painful incident later, since the fix (widening a column) is far easier to do calmly ahead of time than as an emergency.</li>
+      <li><span class="term">Backup restore time</span> — a disaster-recovery plan is really a promise about how fast you can recover, and that promise only holds if you actually test and time the whole restore-and-catch-up process regularly, not just take a backup and assume it works. As a data set grows, restore time tends to creep up quietly, and it's the kind of metric that can quietly outgrow your recovery-time promise if nobody's watching its trend.</li>
+    </ul>
+
+    <h3 class="subhead">Learning your business's traffic cadence</h3>
+    <p>Every business has a rhythm to its traffic, and that rhythm is exactly when your SLOs get tested hardest and watched most closely. Peak traffic for a given business can run orders of magnitude above an "average" day, and if your database infrastructure isn't ready for that specific shape of spike, that's precisely when customers notice. A few concrete examples of what "cadence" looks like in practice: an ecommerce store's busiest stretch tends to run from late November through the end of the year, with far more concurrent shopping carts and a lot more revenue riding on the same failure modes that are low-stakes the rest of the year. Human resources software often sees a traffic surge in November in the US, when a lot of employees are making annual benefits elections during open enrollment. An online fresh-flower vendor's busiest single day of the year is typically Valentine's Day. None of these cadences look alike, and knowing your own business's version of this is what tells you when to actually worry about capacity, not just react once you're already in the middle of it.</p>
+
+    <figure class="schematic">
+      <svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg">
+        <line x1="40" y1="210" x2="580" y2="210" stroke="#2B2B2F" stroke-width="1"/>
+        <text x="20" y="40" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="10">traffic</text>
+
+        <rect x="70" y="180" width="46" height="30" fill="#7A7A80"/>
+        <rect x="122" y="60" width="46" height="150" fill="#C8453A"/>
+        <text x="119" y="228" text-anchor="middle" fill="#C9C7C1" font-family="JetBrains Mono, monospace" font-size="10">Online store</text>
+        <text x="145" y="52" text-anchor="middle" fill="#C8453A" font-family="JetBrains Mono, monospace" font-size="9">late Nov – Dec</text>
+
+        <rect x="260" y="185" width="46" height="25" fill="#7A7A80"/>
+        <rect x="312" y="100" width="46" height="110" fill="#C8453A"/>
+        <text x="309" y="228" text-anchor="middle" fill="#C9C7C1" font-family="JetBrains Mono, monospace" font-size="10">HR software</text>
+        <text x="335" y="92" text-anchor="middle" fill="#C8453A" font-family="JetBrains Mono, monospace" font-size="9">Nov (open enrollment)</text>
+
+        <rect x="450" y="195" width="46" height="15" fill="#7A7A80"/>
+        <rect x="502" y="70" width="46" height="140" fill="#C8453A"/>
+        <text x="499" y="228" text-anchor="middle" fill="#C9C7C1" font-family="JetBrains Mono, monospace" font-size="10">Flower vendor</text>
+        <text x="525" y="62" text-anchor="middle" fill="#C8453A" font-family="JetBrains Mono, monospace" font-size="9">Valentine's Day</text>
+
+        <text x="300" y="245" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="10">grey = an average day · red = that business's peak, drawn to illustrate the shape, not exact scale</text>
+      </svg>
+      <figcaption>Fig. 2 — Traffic cadence differs by business, but the pattern is the same: a predictable peak, far above average, worth planning for ahead of time.</figcaption>
+    </figure>
+
+    <h3 class="subhead">Why averages lie and percentiles tell the truth</h3>
+    <p>This is the idea worth carrying out of the whole unit. A lot of metrics tooling aggregates long-term data down to averages by default, and over any time span longer than a few weeks, that quietly smooths away spikes. If you're checking whether your disk I/O usage could double over the next year, a graph built from averaged data points can give you a false sense of calm right up until it doesn't. An average also gets dragged around by a small number of extreme values without telling you it happened: one very slow query buried in ten thousand fast ones barely moves the average at all, even though that one query might represent a genuinely bad experience for whoever hit it.</p>
+    <p>Percentiles fix this by working differently: sort every data point in a time window, then report the value at a given rank. The 50th percentile (p50, the median) is the point where half your requests were faster and half were slower. The 95th percentile (p95) is the point where 95% were faster, meaning the slowest 5% were pushed past it. The higher the percentile, the closer you're looking at your worst-served customers rather than your typical one, which is usually exactly who you actually care about when you're deciding if the database layer is doing its job.</p>
+
+    <figure class="schematic">
+      <svg viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg">
+        <text x="300" y="24" text-anchor="middle" fill="#F2EFE9" font-family="JetBrains Mono, monospace" font-size="12" letter-spacing="1">RESPONSE TIME DISTRIBUTION: ONE SERVER, ONE HOUR</text>
+
+        <line x1="50" y1="240" x2="570" y2="240" stroke="#3A3A40" stroke-width="1.2"/>
+        <line x1="50" y1="50" x2="50" y2="240" stroke="#3A3A40" stroke-width="1.2"/>
+
+        <path d="M 50 238 C 90 236, 110 150, 150 90 C 175 55, 200 44, 230 44 C 270 44, 300 60, 340 100 C 380 140, 410 175, 450 200 C 490 220, 530 232, 570 238"
+              fill="none" stroke="#C9C7C1" stroke-width="2"/>
+
+        <path d="M 420 238 L 420 190 C 450 210, 490 224, 570 238 Z" fill="rgba(200,69,58,0.28)" stroke="none"/>
+
+        <line x1="215" y1="50" x2="215" y2="240" stroke="#6FCF97" stroke-width="1.4" stroke-dasharray="4,3"/>
+        <text x="215" y="256" text-anchor="middle" fill="#6FCF97" font-family="JetBrains Mono, monospace" font-size="10">p50</text>
+
+        <line x1="270" y1="50" x2="270" y2="240" stroke="#7A7A80" stroke-width="1.4" stroke-dasharray="4,3"/>
+        <text x="270" y="272" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="10">average</text>
+        <text x="270" y="286" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="9">(looks fine!)</text>
+
+        <line x1="420" y1="50" x2="420" y2="240" stroke="#F2EFE9" stroke-width="1.4" stroke-dasharray="4,3"/>
+        <text x="420" y="256" text-anchor="middle" fill="#F2EFE9" font-family="JetBrains Mono, monospace" font-size="10">p95</text>
+
+        <line x1="500" y1="50" x2="500" y2="240" stroke="#C8453A" stroke-width="1.6" stroke-dasharray="4,3"/>
+        <text x="500" y="256" text-anchor="middle" fill="#C8453A" font-family="JetBrains Mono, monospace" font-size="10">p99</text>
+
+        <text x="490" y="120" text-anchor="middle" fill="#C8453A" font-family="JetBrains Mono, monospace" font-size="10">the slow tail</text>
+        <text x="490" y="134" text-anchor="middle" fill="#C8453A" font-family="JetBrains Mono, monospace" font-size="10">the average never sees</text>
+      </svg>
+      <figcaption>Fig. 3 — Most requests are fast (the tall left side), but a long right-hand tail of slow ones barely nudges the average. p95 and p99 sit inside that tail, where the average doesn't reach.</figcaption>
+    </figure>
+
+    <h3 class="subhead">Long-term monitoring tools worth demanding</h3>
+    <p>Since percentiles matter this much, it's worth checking your monitoring tooling can actually give you them, not just averages, especially at retention periods stretching back months. A few things worth confirming when you're picking or auditing a metrics tool: does it store and display percentiles (not just pre-aggregated averages) for long time ranges, does it stay fast and usable when you ask it for a long historical window rather than just the last hour, and does it live in the same place the rest of your engineering org already looks at metrics, so database health isn't siloed off as a separate, special-case dashboard nobody outside the database team checks.</p>
+
+    <h3 class="subhead">Using SLOs to guide bigger architecture decisions</h3>
+    <p>The same SLIs and SLOs that tell you how things are doing right now can also tell you when it's time to make a bigger structural change. As a business grows, holding onto the same availability or latency targets (let alone tightening them) gets more expensive, because the traffic and data volume behind those numbers is growing too. Watching SLOs trend the wrong way over time, alongside signals like replication lag creeping up or disk growth accelerating, is often the earliest honest signal that it's time to consider functional sharding (splitting off one business area's tables into their own cluster) or horizontal sharding (splitting one large data set across multiple clusters), well before a capacity-driven incident forces the decision under pressure.</p>
+  </section>
+
+  <section>
+    <h2 class="kicker">Why it matters</h2>
+    <p>This unit is the vocabulary that makes every later, more technical topic actually prioritizable. Without an agreed SLI and SLO, "is this replication lag bad?" or "is this query slow?" turns into an argument about feelings. With them, it becomes a number you can check a graph against. It's also the difference between a team that's constantly firefighting reactively and one that catches trouble (a filling disk, a creeping replication lag, an approaching auto-increment ceiling) while it's still cheap and calm to fix. And the averages-versus-percentiles idea specifically will keep showing up: any time you're deciding whether a system is "fast enough," the average is very often lying to you about your worst-served customers.</p>
+  </section>
+
+  <div class="box">
+    <h3>Remember this</h3>
+    <ul>
+      <li>An SLI measures, an SLO sets the acceptable range for that measurement over a time window, and an SLA (optional) turns an SLO into a contract with penalties.</li>
+      <li>Don't aim SLOs at 100%. The goal is the minimum that keeps customers happy, so engineering time above that line can go toward new features instead.</li>
+      <li>Good monitoring covers three themes at minimum: availability, latency, and errors, plus proactive signals (disk growth, connection growth, replication lag, I/O utilization, auto-increment space, backup restore time) that warn you before customers are affected.</li>
+      <li>Averages smooth away the outliers that actually hurt your worst-served customers. Percentiles (p50, p95, p99) show you the tail an average hides.</li>
+      <li>Know your business's traffic cadence ahead of time. Peak traffic can run orders of magnitude above average, and that's exactly when your SLOs get tested hardest.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h3>Try it yourself</h3>
+    <ul>
+      <li><strong>Write your own SLI/SLO sentence.</strong> Pick any project you run, even a small personal one, and write one sentence in the shape "I expect [some %] of [some request type] to [some behavior] within [some time window]." Done when you can defend, out loud, why that percentage isn't 100%.</li>
+      <li><strong>Build a percentile meter.</strong> In any language, generate a list of a few thousand fake response times: mostly small random numbers, plus a small handful (1-2%) of much larger ones to simulate a slow tail. Compute and print the average, p50, p95, and p99. Done when you can see the average sitting much closer to p50 than to p99, even though the slow requests are real and included in every calculation.</li>
+      <li><strong>Watch threads_connected diverge from threads_running.</strong> Spin up MySQL or MariaDB in a free Docker container. In one script, open and hold 20 idle connections; in another, run a handful of connections that are actually busy-looping a query. Run <code>SHOW STATUS LIKE 'Threads%';</code> while both are active. Done when you can explain, from the two numbers alone, which script is the "idle connections" one and which is the "real load" one.</li>
+      <li><strong>Check your auto-increment headroom.</strong> On any MySQL table with an integer auto-increment primary key, look up its current auto-increment value and its column's max possible value in <code>information_schema</code>, then calculate what percentage of the key space has been used. Done when you have a concrete percentage, even if it's a tiny fraction of one percent on a fresh table.</li>
+      <li><strong>Build a tiny disk-growth alarm.</strong> Write a script that samples free disk space on a scratch directory every few seconds while you write a steadily growing dummy file, calculates the current rate of consumption, and prints an estimated time-to-full. Done when your script would have paged you with enough lead time to actually do something about it.</li>
+      <li><strong>Map your own business cadence.</strong> For any product, real or hypothetical, write down its single busiest week of the year and estimate roughly how many times busier that week is than an average one, the same way the ecommerce/HR/flower-vendor examples do above. Done when you can name one specific database-layer consequence (more connections, more writes, more replication load) that peak week would cause.</li>
+    </ul>
+  </div>
+
+  <section>
+    <h2 class="kicker">Go deeper</h2>
+    <p>Performance Schema comes up here mostly as a tool for digging into "why is this query slow" rather than as an SLO-tracking tool on its own, and it's worth exploring in more depth: a natural next question is how you'd pull an actual p95 or p99 latency number for a specific query pattern directly out of MySQL itself, instead of relying entirely on a client-side or external tool to compute it for you.</p>
+  </section>
+
+  <section>
+    <h2 class="kicker">Sources &amp; verify</h2>
+    <p class="small">Grounded in <em>High Performance MySQL, 4th Edition</em>, Chapter 2: "Monitoring in a Reliability Engineering World," pages 41–62 (extracted chapter text, PDF pages 41–62; the book's own printed pagination for this chapter runs pages 19–39). This digest is a teaching draft, not a substitute for the book: verify anything you plan to rely on (exact variable names, current tool capabilities, vendor product details) against the book itself and current documentation before using it in production. A few things worth flagging: the "downtime by nines" table above is reproduced from the source with one apparent typo in the 99.500% weekly cell, noted inline; the chapter cites several external books (Google's <em>Site Reliability Engineering</em> and <em>The Site Reliability Workbook</em>, Alex Hidalgo's <em>Implementing Service Level Objectives</em>, and Nicole Forsgren's <em>Accelerate</em>) that this digest did not independently re-verify, so treat those as further reading rather than claims checked here; and named tools and vendors (PMM, SolarWinds, pt-query-digest, Honeycomb, Lightstep) are described only as the source describes them, worth a quick check against their current docs before you rely on specific capabilities.</p>
+  </section>
+
+  <div class="footer">
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div>
+      <div class="who">Mayowa</div>
+      <div class="socials">
+        <span>in/mayowa-bodunwa</span>
+        <span>@mayowa.bodunwa</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
