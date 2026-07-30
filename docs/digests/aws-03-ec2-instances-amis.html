@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS — EC2 Instances &amp; AMIs (Part 1 of 2)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS · TOPIC 3 DIGEST (PART 1 OF 2)</p>
+  <h1>EC2 Instances &amp; AMIs</h1>
+  <p class="lead">The template and the copy: an AMI is the frozen recipe, an instance is a running server baked from it. Once that relationship clicks, instance types, launching, and lifecycle states all fall into place around it.</p>
+
+  <h2>In one line</h2>
+  <p>An EC2 instance is a virtual server that boots from a template called an AMI, the instance type you pick decides its hardware, and understanding the states an instance moves through (and what an AMI actually freezes in place) is what lets you launch, rebuild, and tear down servers on purpose instead of by accident.</p>
+
+  <h2>The big idea</h2>
+  <p>Amazon EC2 (Elastic Compute Cloud) gives you on-demand virtual servers, called instances, that you can launch, configure, and shut down as you need them. Two choices define almost everything about a new instance before it even boots: which <strong>AMI</strong> (Amazon Machine Image) you launch from, which fixes the operating system and any software baked into the image, and which <strong>instance type</strong> you pick, which fixes the hardware (CPU, memory, network, and sometimes GPU) available to run it. From there, an instance moves through a small set of well-defined states (starting, running, stopping, gone), and you can also go the other direction: take a running, customized instance and freeze it back into a brand-new AMI so you can launch more copies of it later.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Instance</span> — a virtual server running in the AWS cloud. Per AWS's own definition, it's what you'd use "the way that you'd use a computer sitting in front of you."</li>
+    <li><span class="keyterm-term">Instance type</span> — the hardware configuration you choose for an instance (compute, memory, storage, network, sometimes GPU). Every instance type belongs to an <span class="keyterm-term">instance family</span> that shares a general shape of capability, like general purpose or compute optimized.</li>
+    <li><span class="keyterm-term">AMI (Amazon Machine Image)</span> — a template that provides the software needed to boot an instance, including the operating system and any additional software packaged in, plus a block device mapping describing what storage to attach.</li>
+    <li><span class="keyterm-term">Block device mapping</span> — the part of an AMI (and of a launched instance) that specifies which storage volumes get attached, and how, when an instance boots from it.</li>
+    <li><span class="keyterm-term">Root volume</span> — the volume that holds the image an instance boots from. It's either an EBS volume (an Amazon EBS-backed AMI) or an instance store volume built from a template in Amazon S3 (an Amazon S3-backed AMI).</li>
+    <li><span class="keyterm-term">Snapshot</span> — a point-in-time copy of an EBS volume. Creating an AMI from an instance works by snapshotting that instance's root volume (and any other attached EBS volumes).</li>
+    <li><span class="keyterm-term">Launch permissions</span> — who is allowed to launch an instance from a given AMI: <em>public</em> (any AWS account), <em>explicit</em> (specific accounts or organizations the owner named), or <em>implicit</em> (the owner's own, automatic permission on their own AMI).</li>
+    <li><span class="keyterm-term">Virtualization type</span> — HVM (hardware virtual machine) or PV (paravirtual), baked into the AMI. It decides how an instance boots and whether it can use hardware extensions like enhanced networking or GPU passthrough.</li>
+    <li><span class="keyterm-term">Hypervisor</span> — the underlying virtualization technology the physical host runs. AWS documents two: Nitro (all current-generation instance types) and Xen (older, previous-generation types).</li>
+    <li><span class="keyterm-term">Key pair</span> — the credentials used to prove your identity when connecting to an instance. AWS stores the public key on the instance; you keep the private key.</li>
+    <li><span class="keyterm-term">Security group</span> — a virtual firewall attached to an instance that controls which inbound and outbound traffic is allowed to and from it.</li>
+    <li><span class="keyterm-term">Instance state</span> — where an instance sits in its lifecycle: <code>pending</code>, <code>running</code>, <code>stopping</code>, <code>stopped</code>, <code>shutting-down</code>, or <code>terminated</code>.</li>
+    <li><span class="keyterm-term">Hibernate</span> — a special stop that also saves the instance's RAM contents to its EBS root volume, so a later start restores memory state, not just disk state.</li>
+    <li><span class="keyterm-term">Termination protection</span> — a setting that blocks an instance from being terminated (through the console, CLI, or API) until you turn it off.</li>
+    <li><span class="keyterm-term">DeleteOnTermination</span> — an attribute on an attached EBS volume controlling whether that volume is deleted automatically when the instance it's attached to is terminated. It defaults to <code>true</code> for the root volume.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>Here's the grounding picture before the details: an EC2 instance isn't a single, monolithic thing you configure once. It's assembled from a small set of independent pieces, an AMI (what software boots), an instance type (what hardware runs it), storage, a key pair, and a security group, and each of those pieces has its own rules about what can and can't change after launch. AWS's own overview lists these as EC2's core features: instances, AMIs, instance types, EBS volumes, instance store volumes, key pairs, and security groups. Everything below is really just unpacking that list one piece at a time.</p>
+
+  <h3>1. What an EC2 instance actually is</h3>
+  <p>An EC2 instance is a virtual server in the AWS cloud. When you launch one, the instance type you specify determines the hardware available to it: AWS's own phrasing is that "each instance type offers a different balance of compute, memory, network, and storage resources." Amazon EC2 dedicates some of a host computer's resources (CPU, memory, instance storage) to a particular instance, while sharing others (network, disk subsystem) among the instances on that host; if every instance tries to use as much of a shared resource as possible, each gets an equal share, but an instance can burst above that share while the resource is underused elsewhere. That's part of why identical-looking instance types can occasionally feel like they perform slightly differently under heavy shared load.</p>
+  <p>Once launched, you reach an instance through a <strong>key pair</strong> (AWS holds the public half, you hold the private half, and you use it to authenticate an SSH connection on Linux or to decrypt an administrator password for RDP on Windows) and you control what can reach it at all through a <strong>security group</strong>, a virtual firewall that AWS describes as letting you "specify the protocols, ports, and source IP ranges that can reach your instances, and the destination IP ranges to which your instances can connect."</p>
+
+  <h3>2. Instance types — the hardware knob</h3>
+  <p>An instance type name isn't arbitrary. AWS's instance type naming guide breaks a name like <code>c7gn.xlarge</code> into positions: the first character of the family is the <strong>series</strong> (here, <code>c</code> for compute optimized), the next character is the <strong>generation</strong> (<code>7</code>), any characters after that are <strong>options</strong> describing extra capabilities (<code>gn</code>, in this example), and everything after the period is the <strong>size</strong> (<code>xlarge</code>, or values like <code>small</code>, <code>4xlarge</code>, or <code>metal</code> for a bare-metal instance). Learning to read a name this way means you can look at almost any instance type and get a rough sense of its shape without looking anything up.</p>
+  <p>Per AWS's current instance types documentation, instance families group into broad categories: <strong>general purpose</strong> (for example the M and T series), <strong>compute optimized</strong> (the C series), <strong>memory optimized</strong> (the R and X series, among others), <strong>storage optimized</strong> (the D and I series), <strong>accelerated computing</strong> (G, P, Inf, and Trn series, built for GPU workloads and machine learning training or inference), and a dedicated <strong>high performance computing</strong> category (the Hpc series). Most current-generation instance types across these families run on the <strong>Nitro</strong> hypervisor; a handful of older, previous-generation types (documented separately) still run on the older <strong>Xen</strong> hypervisor.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 210" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="28" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">READING AN INSTANCE TYPE NAME</text>
+      <rect x="150" y="60" width="320" height="60" rx="8" fill="#0E0E10" stroke="#3A3A40" stroke-width="1.2"/>
+      <text x="310" y="98" fill="#F2EFE9" font-size="22" font-weight="700" text-anchor="middle">c7gn.xlarge</text>
+
+      <line x1="188" y1="120" x2="188" y2="150" stroke="#C8453A" stroke-width="1.2"/>
+      <text x="188" y="166" fill="#C8453A" font-size="10" text-anchor="middle">series</text>
+      <text x="188" y="182" fill="#7A7A80" font-size="9" text-anchor="middle">c = compute</text>
+
+      <line x1="218" y1="120" x2="240" y2="150" stroke="#6FCF97" stroke-width="1.2"/>
+      <text x="240" y="166" fill="#6FCF97" font-size="10" text-anchor="middle">generation</text>
+      <text x="240" y="182" fill="#7A7A80" font-size="9" text-anchor="middle">7th gen</text>
+
+      <line x1="252" y1="120" x2="312" y2="150" stroke="#F2EFE9" stroke-width="1.2"/>
+      <text x="312" y="166" fill="#F2EFE9" font-size="10" text-anchor="middle">options</text>
+      <text x="312" y="182" fill="#7A7A80" font-size="9" text-anchor="middle">g=Graviton, n=network</text>
+
+      <line x1="335" y1="120" x2="430" y2="150" stroke="#C9C7C1" stroke-width="1.2"/>
+      <text x="430" y="166" fill="#C9C7C1" font-size="10" text-anchor="middle">size</text>
+      <text x="430" y="182" fill="#7A7A80" font-size="9" text-anchor="middle">xlarge</text>
+    </svg>
+    <figcaption>AWS's own naming example, c7gn.xlarge: series, generation, options, then size after the period.</figcaption>
+  </figure>
+
+  <h3>3. What an AMI actually is, and how it relates to an instance</h3>
+  <p>An AMI is the template you must specify to launch an instance: it "provides the software that is required to set up and boot" the instance, and it must be compatible with the instance type you're launching. An AMI is specific to a Region, an operating system, a processor architecture, a root volume type, and a virtualization type, which is why you sometimes can't reuse an AMI you found in one Region or built for one processor architecture somewhere else without copying or rebuilding it.</p>
+  <p>The relationship between an AMI and an instance is one-to-many by design: you can launch as many instances as you want from a single AMI when you need several servers with identical configuration, or launch from different AMIs when you need instances configured differently. Nothing about launching an instance changes or uses up the AMI; it's a read-only template you launch copies from, over and over.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 240" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <rect x="20" y="90" width="120" height="60" rx="8" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.4"/>
+      <text x="80" y="115" fill="#F2EFE9" font-size="11" text-anchor="middle" font-weight="700">AMI</text>
+      <text x="80" y="132" fill="#7A7A80" font-size="9" text-anchor="middle">template</text>
+
+      <line x1="140" y1="105" x2="260" y2="45" stroke="#6FCF97" stroke-width="1.3"/>
+      <line x1="140" y1="120" x2="260" y2="120" stroke="#6FCF97" stroke-width="1.3"/>
+      <line x1="140" y1="135" x2="260" y2="195" stroke="#6FCF97" stroke-width="1.3"/>
+
+      <rect x="260" y="20" width="150" height="50" rx="7" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.2"/>
+      <text x="335" y="42" fill="#6FCF97" font-size="10" text-anchor="middle">instance A</text>
+      <text x="335" y="58" fill="#7A7A80" font-size="8.5" text-anchor="middle">t3.micro</text>
+
+      <rect x="260" y="95" width="150" height="50" rx="7" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.2"/>
+      <text x="335" y="117" fill="#6FCF97" font-size="10" text-anchor="middle">instance B</text>
+      <text x="335" y="133" fill="#7A7A80" font-size="8.5" text-anchor="middle">t3.micro</text>
+
+      <rect x="260" y="170" width="150" height="50" rx="7" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.2"/>
+      <text x="335" y="192" fill="#6FCF97" font-size="10" text-anchor="middle">instance C</text>
+      <text x="335" y="208" fill="#7A7A80" font-size="8.5" text-anchor="middle">m6i.large</text>
+
+      <text x="335" y="235" fill="#7A7A80" font-size="9.5" text-anchor="middle">same AMI, any instance type it's compatible with, launched as many times as you like</text>
+    </svg>
+    <figcaption>One AMI, many independent instances. Launching doesn't consume or change the AMI.</figcaption>
+  </figure>
+
+  <p>Two characteristics decide how an AMI's storage and boot process behave. First, <strong>root volume type</strong>: an Amazon EBS-backed AMI boots from an EBS volume created out of an EBS snapshot (supported for both Linux and Windows), while an Amazon S3-backed AMI boots from an instance store volume built from a template stored in S3 (Linux only, and AWS documents these as end-of-life, only relevant on a handful of older instance types like C1, C3, D2, I2, M1, M2, M3, R3, and X1). The practical difference that matters most day to day: an EBS-backed instance can be stopped and later restarted, while an S3-backed instance can only be running or terminated, with no stopped state in between, and any data on its instance store root volume disappears the moment it stops being used. Second, <strong>virtualization type</strong>: HVM (hardware virtual machine) AMIs boot a fully virtualized hardware set and can use hardware extensions like enhanced networking and GPU processing; PV (paravirtual) AMIs use a special boot loader and can't use those extensions. All current-generation instance types support HVM only, and AWS recommends HVM for best performance.</p>
+  <p>Who can even use an AMI comes down to its <strong>launch permissions</strong>: public (any AWS account), explicit (specific accounts, organizations, or organizational units the owner named), or implicit (the owner's automatic permission on their own AMI). This is also the mechanism behind the huge library of AMIs AWS and the EC2 community publish publicly, and behind AMIs sold through the AWS Marketplace.</p>
+
+  <h3>4. The instance lifecycle — where a running server actually sits</h3>
+  <p>Every instance sits in exactly one of six documented states at any moment: <code>pending</code> (preparing to enter <code>running</code>, whether from a fresh launch or a restart), <code>running</code> (ready for use and billed by the second), <code>stopping</code> (preparing to stop), <code>stopped</code> (shut down, not billed for instance usage, can be started again at any time), <code>shutting-down</code> (preparing to terminate), and <code>terminated</code> (permanently deleted, can't be started, not billed). AWS's billing rule is blunt and worth remembering exactly: you're billed per second (one-minute minimum) the moment an instance enters <code>running</code>, and you stop being billed for instance usage as soon as it enters <code>stopping</code> or <code>shutting-down</code>, even before it fully reaches <code>stopped</code> or <code>terminated</code>. EBS volume storage, though, keeps costing money regardless of the instance's own state.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 280" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <rect x="30" y="20" width="120" height="46" rx="7" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.2"/>
+      <text x="90" y="48" fill="#C9C7C1" font-size="11" text-anchor="middle">pending</text>
+
+      <rect x="260" y="20" width="120" height="46" rx="7" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.4"/>
+      <text x="320" y="48" fill="#6FCF97" font-size="11" text-anchor="middle" font-weight="700">running</text>
+
+      <rect x="490" y="20" width="120" height="46" rx="7" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.2"/>
+      <text x="550" y="48" fill="#C9C7C1" font-size="11" text-anchor="middle">stopping</text>
+
+      <rect x="490" y="110" width="120" height="46" rx="7" fill="#0E0E10" stroke="#C9C7C1" stroke-width="1.2"/>
+      <text x="550" y="138" fill="#C9C7C1" font-size="11" text-anchor="middle">stopped</text>
+
+      <rect x="260" y="110" width="120" height="46" rx="7" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.2"/>
+      <text x="320" y="138" fill="#C9C7C1" font-size="11" text-anchor="middle">shutting-down</text>
+
+      <rect x="30" y="110" width="120" height="46" rx="7" fill="#0E0E10" stroke="#C8453A" stroke-width="1.4"/>
+      <text x="90" y="138" fill="#C8453A" font-size="11" text-anchor="middle" font-weight="700">terminated</text>
+
+      <line x1="150" y1="43" x2="258" y2="43" stroke="#6FCF97" stroke-width="1.4" marker-end="url(#a1)"/>
+      <line x1="380" y1="43" x2="488" y2="43" stroke="#7A7A80" stroke-width="1.2" marker-end="url(#a2)"/>
+      <text x="435" y="35" fill="#7A7A80" font-size="8.5" text-anchor="middle">stop</text>
+      <line x1="550" y1="66" x2="550" y2="108" stroke="#7A7A80" stroke-width="1.2" marker-end="url(#a2)"/>
+      <line x1="490" y1="133" x2="382" y2="133" stroke="#7A7A80" stroke-width="1.2" marker-end="url(#a2)"/>
+      <text x="435" y="150" fill="#7A7A80" font-size="8.5" text-anchor="middle">terminate</text>
+      <line x1="260" y1="133" x2="152" y2="133" stroke="#C8453A" stroke-width="1.2" marker-end="url(#a3)"/>
+      <line x1="490" y1="133" x2="152" y2="133" stroke="#7A7A80" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#a2)" transform="translate(0,20)"/>
+
+      <path d="M 550 108 C 620 80, 620 30, 552 22" fill="none" stroke="#6FCF97" stroke-width="1.2" marker-end="url(#a1)"/>
+      <text x="612" y="70" fill="#6FCF97" font-size="8.5" text-anchor="middle">start</text>
+
+      <path d="M 490 130 C 420 190, 380 190, 322 158" fill="none" stroke="#7A7A80" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#a2)"/>
+      <text x="400" y="205" fill="#7A7A80" font-size="8.5" text-anchor="middle">stopped -&gt; terminate also possible</text>
+
+      <path d="M 320 66 C 320 90, 320 90, 320 108" fill="none" stroke="#C8453A" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#a3)"/>
+      <text x="330" y="90" fill="#7A7A80" font-size="8.5">terminate</text>
+
+      <path d="M 340 20 C 380 -10, 260 -10, 300 20" fill="none" stroke="#C9C7C1" stroke-width="1" />
+      <text x="320" y="8" fill="#C9C7C1" font-size="8.5" text-anchor="middle">reboot loops back to running</text>
+
+      <text x="320" y="255" fill="#7A7A80" font-size="9.5" text-anchor="middle">hibernate follows the same stopping -&gt; stopped path, but also saves RAM to the EBS root volume</text>
+
+      <defs>
+        <marker id="a1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#6FCF97"/></marker>
+        <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7A7A80"/></marker>
+        <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#C8453A"/></marker>
+      </defs>
+    </svg>
+    <figcaption>The six documented instance states. Reboot keeps you in running; stop, hibernate, and terminate each take a different path out of it.</figcaption>
+  </figure>
+
+  <p>It helps to separate four actions that all sound similar but do different things to the instance underneath. A <strong>reboot</strong> stays on the same host computer, keeps the public and private IP addresses and any instance store data, and doesn't reset the per-second billing clock. A <strong>stop/start</strong> (EBS-backed instances only) moves the instance to a new host computer (though sometimes it stays put), erases instance store data, keeps the private IP (and any Elastic IP), but usually assigns a new public IPv4 address, and starts a fresh billing period when it runs again. <strong>Hibernate</strong> follows the same stopping-to-stopped path as a plain stop, but also signals the OS to suspend to disk, saving RAM contents onto the EBS root volume; AWS bills a hibernating instance while it's in <code>stopping</code> (unlike a plain stop), but not once it's fully <code>stopped</code>. <strong>Terminate</strong> is the one-way door: AWS's own warning is direct, "terminating an instance is permanent and irreversible," the instance can't be recovered, any EBS volumes with <code>DeleteOnTermination</code> set (true by default for the root volume) are deleted permanently, and all instance store data is lost. You can turn on <strong>termination protection</strong> to block an accidental terminate call through the console, CLI, or API until you explicitly disable it.</p>
+
+  <h3>5. Building your own AMI from a running instance</h3>
+  <p>You're not limited to AMIs AWS or someone else published. AWS documents a clear workflow for creating your own Amazon EBS-backed AMI: start from an existing AMI (from AWS, the Marketplace, or one you already have access to), launch an instance from it, customize that instance exactly the way you want (install software, copy data, attach extra EBS volumes), and then create a new image from it. When you do that, Amazon EC2 (by default) powers the instance down first so everything is stopped and consistent, though you can tell it not to reboot if you're confident the instance's file system is already in a safe state to snapshot. During image creation, EC2 takes snapshots of the instance's root volume and any other attached EBS volumes, and you're billed for those snapshots until you deregister the AMI and delete them. The whole process can take anywhere from a few minutes up to (per AWS's own documentation) 24 hours depending on volume size, and creating snapshots of your volumes ahead of time can speed up a later AMI creation since only the incremental changes need to be captured.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <rect x="10" y="70" width="110" height="60" rx="7" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.2"/>
+      <text x="65" y="95" fill="#F2EFE9" font-size="10" text-anchor="middle" font-weight="700">AMI #1</text>
+      <text x="65" y="111" fill="#7A7A80" font-size="8.5" text-anchor="middle">existing</text>
+
+      <line x1="120" y1="100" x2="180" y2="100" stroke="#7A7A80" stroke-width="1.2" marker-end="url(#b1)"/>
+      <text x="150" y="90" fill="#7A7A80" font-size="8" text-anchor="middle">launch</text>
+
+      <rect x="180" y="70" width="120" height="60" rx="7" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.2"/>
+      <text x="240" y="90" fill="#6FCF97" font-size="9.5" text-anchor="middle" font-weight="700">instance #1</text>
+      <text x="240" y="105" fill="#7A7A80" font-size="8" text-anchor="middle">customize:</text>
+      <text x="240" y="118" fill="#7A7A80" font-size="8" text-anchor="middle">install, configure</text>
+
+      <line x1="300" y1="100" x2="360" y2="100" stroke="#7A7A80" stroke-width="1.2" marker-end="url(#b1)"/>
+      <text x="330" y="90" fill="#7A7A80" font-size="8" text-anchor="middle">create image</text>
+
+      <rect x="360" y="30" width="120" height="60" rx="7" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.4"/>
+      <text x="420" y="52" fill="#F2EFE9" font-size="9.5" text-anchor="middle" font-weight="700">AMI #2</text>
+      <text x="420" y="67" fill="#7A7A80" font-size="8" text-anchor="middle">new snapshot of</text>
+      <text x="420" y="79" fill="#7A7A80" font-size="8" text-anchor="middle">root + data volumes</text>
+
+      <line x1="420" y1="90" x2="420" y2="130" stroke="#7A7A80" stroke-width="1" stroke-dasharray="3 3"/>
+      <line x1="420" y1="130" x2="480" y2="160" stroke="#7A7A80" stroke-width="1.2" marker-end="url(#b1)"/>
+      <text x="480" y="145" fill="#7A7A80" font-size="8" text-anchor="middle">launch</text>
+
+      <rect x="480" y="160" width="130" height="50" rx="7" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.2"/>
+      <text x="545" y="182" fill="#6FCF97" font-size="9.5" text-anchor="middle" font-weight="700">instance #2</text>
+      <text x="545" y="197" fill="#7A7A80" font-size="8" text-anchor="middle">has your customizations</text>
+
+      <defs>
+        <marker id="b1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7A7A80"/></marker>
+      </defs>
+    </svg>
+    <figcaption>AWS's own AMI-creation workflow: existing AMI, launch, customize, snapshot into a new AMI, launch again.</figcaption>
+  </figure>
+
+  <p>Once the new AMI's status shows <code>available</code>, launching from it creates a fresh EBS root volume (built from your new snapshot) and reattaches any additional volumes your block device mapping describes; instance store volumes on the new instance start empty, they never carry data over from the instance you originally customized. A related option worth knowing about: if you already have a snapshot of a root volume (say, from a backup routine), you can register an AMI directly from that snapshot instead of going through a live instance at all.</p>
+
+  <h2>Why it matters</h2>
+  <p>This is the foundation everything else in EC2 sits on top of. Auto Scaling Groups (covered next) launch new instances from an AMI you specify, using an instance type you specify, so a custom AMI with your application pre-installed is what lets a scaling event bring up a working server in minutes instead of running a setup script from scratch every time. Understanding the lifecycle states also saves real money and real headaches: knowing that a <code>stopped</code> instance still bills you for its EBS storage (but not compute), that <code>terminated</code> is permanent, and that termination protection exists, is the difference between a predictable AWS bill and an unpleasant surprise, or between "oops" and a recoverable mistake.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>An AMI is a read-only template (OS, software, block device mapping); an instance is a running server launched from one. Many instances can come from one AMI, unchanged.</li>
+      <li>An instance type name encodes series, generation, options, and size (like <code>c7gn.xlarge</code>); the family it belongs to (general purpose, compute optimized, memory optimized, storage optimized, accelerated computing, or HPC) tells you its general shape.</li>
+      <li>An instance moves through six states: pending, running, stopping, stopped, shutting-down, terminated. You're billed once it's running, and billing stops the moment it starts stopping or shutting down, before it fully reaches stopped or terminated.</li>
+      <li>Reboot, stop/start, hibernate, and terminate are four different operations with different consequences for IP addresses, instance store data, RAM, and whether you can undo it. Only terminate is permanent and irreversible.</li>
+      <li>You can freeze a customized instance back into a new AMI (via a root-volume snapshot), then launch as many new instances from it as you want, with the customization already baked in.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Launch your first instance from a public AMI.</strong> Using the free tier, launch a Free Tier-eligible instance type from a Free Tier-eligible Amazon Linux AMI, with a new key pair and the default security group, then connect to it over SSH. <em>Done when:</em> you're at a shell prompt inside the instance, and you can point to which part of the launch screen set the AMI versus the instance type. <em>Cost caution:</em> stay inside Free Tier eligible options and remember to stop or terminate the instance when you're done for the day.</li>
+      <li><strong>Watch the lifecycle states happen, not just read about them.</strong> Stop your instance, note its state moves to <code>stopping</code> then <code>stopped</code>, then start it again and watch <code>pending</code> turn into <code>running</code>. <em>Done when:</em> you've seen all four of those states appear for your own instance (in the console or via <code>aws ec2 describe-instances</code>), and you can explain in your own words why you weren't billed for compute time while it sat stopped.</li>
+      <li><strong>Compare reboot vs. stop/start on the same instance.</strong> Note the instance's public IPv4 address, then reboot it and check whether the address changed; then stop and start it and check again. <em>Done when:</em> you've observed the public IP survive a reboot but usually change after a stop/start, and you can explain why using the root-volume-vs-host-computer distinction from this digest.</li>
+      <li><strong>Create a custom AMI from a configured instance.</strong> On a running instance, install a package or write a marker file, then use the console's Actions -&gt; Image and templates -&gt; Create image (or the <code>create-image</code> CLI command) to snapshot it into a new AMI, and launch a second instance from that new AMI. <em>Done when:</em> the second instance already has your installed package or marker file present the moment it boots, with no manual setup step repeated.</li>
+      <li><strong>Turn on termination protection, then turn it off.</strong> Enable termination protection on an instance, attempt to terminate it (expect it to fail), then disable protection and terminate it for real. <em>Done when:</em> you've seen the termination attempt get blocked once, and successfully terminated the instance after removing the protection.</li>
+      <li><strong>Read an instance type name cold.</strong> Pick any three instance type names you can find in the console's launch wizard (not necessarily ones mentioned in this digest) and, without looking anything up, say out loud what family, generation, and size each one represents. <em>Done when:</em> you can do this for all three without checking a reference.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>One thread worth pulling on next: <strong>EC2 Image Builder</strong>, the AWS service that automates the exact create-your-own-AMI workflow covered here (customize, snapshot, publish) as a repeatable pipeline instead of a manual one-off, which is what most real teams use once they're maintaining more than one custom AMI over time.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, written to help you build a mental model quickly. It is not a substitute for the official documentation; verify anything you plan to rely on (exact CLI syntax, current quotas, pricing) against the live pages below before you use it for real.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/concepts.html" target="_blank" rel="noopener">What is Amazon EC2?</a></li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html" target="_blank" rel="noopener">Amazon EC2 instance types</a></li>
+    <li><a href="https://docs.aws.amazon.com/ec2/latest/instancetypes/instance-type-names.html" target="_blank" rel="noopener">Amazon EC2 instance type naming conventions</a></li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html" target="_blank" rel="noopener">Amazon Machine Images in Amazon EC2</a></li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ComponentsAMIs.html" target="_blank" rel="noopener">AMI types and characteristics in Amazon EC2</a></li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-lifecycle.html" target="_blank" rel="noopener">Amazon EC2 instance state changes</a></li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html" target="_blank" rel="noopener">Create an Amazon EBS-backed AMI</a></li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/terminating-instances.html" target="_blank" rel="noopener">Terminate Amazon EC2 instances</a></li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EC2_GetStarted.html" target="_blank" rel="noopener">Get started with Amazon EC2</a></li>
+  </ul>
+  <p class="src-note">Flagged for accuracy: the instance type naming conventions page's "Series" and "Options" reference table didn't render usable content when fetched for this write-up (it returned only a placeholder pointing back at the AWS docs site instead of the table body), so the family-letter examples above come from the instance types page's own hypervisor/family lists and the page's descriptive text and image caption, not from that table; check the naming conventions page directly for the full series/options letter key before relying on it. This part deliberately stops at instances and AMIs; Auto Scaling Groups and Elastic Load Balancing are planned for Part 2 and aren't covered here.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · TikTok
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

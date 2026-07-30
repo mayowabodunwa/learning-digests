@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>High Performance MySQL — Ch.3: Performance Schema (Part 1 of 2)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0A0B; --card:#0E0E10; --card2:#131316; --hair:rgba(242,239,233,0.10);
+    --ink:#F2EFE9; --body:#C9C7C1; --muted:#7A7A80; --red:#C8453A; --green:#6FCF97;
+    --footer-muted:#D8D5CD;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--body);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    font-size:16px; line-height:1.65;
+  }
+  .wrap{max-width:660px; margin:0 auto; padding:48px 22px 64px}
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace; color:var(--red); font-size:13px;
+    letter-spacing:3px; text-transform:uppercase; margin:0 0 14px;
+  }
+  h1{
+    font-family:'Bricolage Grotesque',sans-serif; font-weight:800; color:var(--ink);
+    font-size:34px; line-height:1.15; margin:0 0 14px;
+  }
+  .lead{ font-size:18px; color:var(--ink); opacity:0.9; margin:0 0 40px; font-weight:500; }
+  h2.kicker{
+    font-family:'JetBrains Mono',monospace; color:var(--muted); font-size:12px;
+    letter-spacing:2.5px; text-transform:uppercase; margin:0 0 12px; font-weight:500;
+  }
+  h3.subhead{
+    font-family:'Bricolage Grotesque',sans-serif; color:var(--ink); font-weight:700;
+    font-size:20px; margin:0 0 8px;
+  }
+  section{ margin:0 0 42px; }
+  p{ margin:0 0 14px; }
+  .term{ color:var(--ink); font-weight:600; }
+  ul{ margin:0 0 14px; padding-left:20px; }
+  li{ margin:0 0 10px; }
+  .card{
+    background:var(--card2); border:1px solid var(--hair); border-radius:12px;
+    padding:22px 22px 8px; margin:18px 0 26px;
+  }
+  .box{
+    border:1px solid var(--hair); border-left:3px solid var(--red);
+    background:var(--card); border-radius:8px; padding:20px 22px; margin:18px 0;
+  }
+  .box.green{ border-left:3px solid var(--green); }
+  .box h3{
+    font-family:'JetBrains Mono',monospace; color:var(--ink); font-size:13px;
+    letter-spacing:2px; text-transform:uppercase; margin:0 0 14px;
+  }
+  .box.green h3{ color:var(--green); }
+  .box ul{ margin:0; padding-left:18px; }
+  .box li{ margin:0 0 12px; }
+  .box li:last-child{ margin-bottom:0; }
+  code, .mono{ font-family:'JetBrains Mono',monospace; }
+  pre.codeblock{
+    font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--ink);
+    background:#0A0A0B; border:1px solid var(--hair); border-radius:8px;
+    padding:16px 18px; overflow-x:auto; line-height:1.6; margin:14px 0;
+  }
+  figure.schematic{
+    border:1px solid var(--hair); background:var(--card2); border-radius:12px;
+    padding:18px 18px 14px; margin:18px 0 26px;
+  }
+  figure.schematic svg{ width:100%; height:auto; display:block; }
+  figcaption{
+    font-family:'JetBrains Mono',monospace; color:var(--muted); font-size:12px;
+    margin-top:10px; letter-spacing:0.3px;
+  }
+  hr.rule{ border:none; border-top:1px solid var(--hair); margin:44px 0; }
+  a{ color:var(--red); }
+  .footer{
+    margin-top:56px; padding-top:28px; border-top:1px solid var(--hair);
+    display:flex; align-items:center; gap:16px;
+  }
+  .footer img{
+    width:52px; height:52px; border-radius:50%; object-fit:cover;
+    border:1px solid var(--hair);
+  }
+  .footer .who{ font-family:'Bricolage Grotesque',sans-serif; color:var(--ink); font-weight:700; font-size:16px; }
+  .footer .socials{
+    font-family:'JetBrains Mono',monospace; color:var(--footer-muted); font-size:13px;
+    margin-top:4px; display:flex; gap:16px; flex-wrap:wrap;
+  }
+  .small{ font-size:14px; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">SQL · CH.3 DIGEST · PART 1 OF 2</p>
+  <h1>Performance Schema: Instruments, Consumers, and Getting It Configured</h1>
+  <p class="lead">Ch.2 taught you to watch the outside of MySQL, the SLIs and SLOs customers feel. This chapter goes inside the server itself, and Part 1 covers the two ideas everything else is built on, plus how you actually turn the thing on.</p>
+
+  <section>
+    <h2 class="kicker">The big idea</h2>
+    <p>Ch.2 was about watching MySQL from the outside: is checkout succeeding, are pages loading fast, is a replica falling behind. Performance Schema is a different, complementary tool. It's a database inside your database that records what's happening at the level of individual pieces of server code, things like "how long did this exact query take" or "how much memory did this background thread allocate." It's not a replacement for the older <span class="term">SHOW STATUS</span>-style counters you met in Ch.2 (things like <code>Threads_running</code>), it's a much finer-grained lens you point at specific problems once you already suspect something is wrong, or want to watch continuously for patterns those simpler counters can't show you.</p>
+    <p>This first part covers the foundation: the two core building blocks (instruments and consumers), how the resulting tables are organized, what it costs you to turn instrumentation on, its real limitations, a friendlier companion schema called <span class="term">sys</span>, how MySQL's threads are identified, and every method the source describes for switching Performance Schema on, off, and everywhere in between. Part 2 (next batch) will go through the specific things you can actually investigate with it: slow statements, locks, memory hogs, and more.</p>
+  </section>
+
+  <section>
+    <h2 class="kicker">Key terms</h2>
+    <ul>
+      <li><span class="term">Performance Schema (performance_schema)</span> — a database built into MySQL that stores low-level metrics about what's happening inside the server itself, as opposed to just the customer-facing signals Ch.2 covered.</li>
+      <li><span class="term">Instrument</span> — a specific portion of MySQL's own code that has been wired up so it can report what it's doing. Example from the source: <code>wait/lock/metadata/sql/mdl</code> is the instrument you'd enable to capture information about metadata locks.</li>
+      <li><span class="term">Consumer</span> — a table that stores the information an instrument produces. If you instrument queries, the consumer records things like total executions, how many times no index was used, and time spent.</li>
+      <li><span class="term">setup_instruments</span> — the table in performance_schema listing every supported instrument and whether it's currently enabled.</li>
+      <li><span class="term">Digest</span> — a normalized version of a query, with the specific literal values stripped out, so many similar queries can be tracked as one thing. <code>SELECT user,birthdate FROM users WHERE user_id=19</code> and the same query with <code>user_id=13</code> or <code>27</code> all collapse into one digest: <code>SELECT user,birthdate FROM users WHERE user_id=?</code>.</li>
+      <li><span class="term">sys schema</span> — a companion schema (included since MySQL 5.7) made entirely of views and stored routines that sit on top of performance_schema, to make common questions easier to ask. It stores no data of its own.</li>
+      <li><span class="term">Foreground thread / background thread</span> — a foreground thread is created for a user connection; a background thread is created internally, say by the main server process or a storage engine.</li>
+      <li><span class="term">THREAD_ID</span> — MySQL's own internal identifier for a thread, used throughout performance_schema tables. It is not the same value as PROCESSLIST_ID, and the source flags this explicitly as a common point of confusion.</li>
+      <li><span class="term">PROCESSLIST_ID</span> — the connection identifier you see in <code>SHOW PROCESSLIST</code> output, or in the "Your MySQL connection id is" message when you connect via the command-line client. Only foreground (user connection) threads have one.</li>
+      <li><span class="term">setup_objects, setup_threads, setup_actors</span> — tables that let you scope instrumentation down to specific database objects, specific background threads, or specific user accounts, instead of everything at once.</li>
+      <li><span class="term">Autosizing / autoscaling</span> — some performance_schema tables allocate a small amount of memory at startup and grow as needed, rather than reserving a fixed size upfront.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2 class="kicker">How it works</h2>
+    <p>Performance Schema exists because tuning a database is an iterative loop: you make a change, and then you need real evidence of whether it helped. Did queries get faster? Are locks gone or still piling up? Did memory usage change? The source frames the whole chapter around answering exactly those kinds of questions, and Performance Schema is the mechanism MySQL gives you for doing it from inside the server, at a level of detail that customer-facing monitoring alone can't reach.</p>
+
+    <h3 class="subhead">Two ideas everything else builds on: instruments and consumers</h3>
+    <p>The source introduces two concepts right at the start, and almost everything else in the chapter is really just detail layered on top of these two.</p>
+    <p>An <span class="term">instrument</span> is a piece of MySQL's own code that has been marked so it can report on itself. If you want to know about metadata locks (a kind of lock that protects a table or other object's definition from being changed while something else is using it, which Part 2 covers in depth), you'd enable the instrument named <code>wait/lock/metadata/sql/mdl</code>. A <span class="term">consumer</span> is simply the table that stores what that instrument reports. Instrument queries, and the consumer records things like the total number of executions, how many times no index was used, and how much time was spent.</p>
+    <p>Picture a small online bookstore's checkout query running thousands of times a day. The instrument is the piece of server code responsible for noticing "a SELECT just ran." The consumer is the table where that gets tallied up: how many times, how long each one took, whether it needed a temporary table. You never touch the instrument directly, you just enable it and then query the consumer table with ordinary SQL.</p>
+    <p>Every instrument's name is built from parts separated by a slash, read left to right from general to specific. The source gives two examples: <code>statement/sql/select</code> and <code>wait/synch/mutex/innodb/autoinc_mutex</code>. In the first, <code>statement</code> says this is a statement-type instrument, and <code>select</code> narrows it down to SELECT queries specifically. In the second, <code>wait</code> says it's a wait-type instrument, <code>synch</code> narrows to synchronization waits, <code>mutex</code> narrows further to mutex waits (a mutex is a lock a piece of code takes on itself to avoid two threads touching the same internal data at once), and <code>innodb/autoinc_mutex</code> says specifically it's the mutex InnoDB (MySQL's default storage engine) sets when handling an auto-increment column.</p>
+
+    <figure class="schematic">
+      <svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg">
+        <text x="300" y="24" text-anchor="middle" fill="#F2EFE9" font-family="JetBrains Mono, monospace" font-size="12" letter-spacing="1">INSTRUMENT NAMES READ GENERAL -&gt; SPECIFIC</text>
+        <rect x="20" y="50" width="150" height="46" rx="6" fill="#131316" stroke="#C8453A"/>
+        <text x="95" y="78" text-anchor="middle" fill="#F2EFE9" font-family="JetBrains Mono, monospace" font-size="13">statement</text>
+        <rect x="185" y="50" width="120" height="46" rx="6" fill="#131316" stroke="#2B2B2F"/>
+        <text x="245" y="78" text-anchor="middle" fill="#C9C7C1" font-family="JetBrains Mono, monospace" font-size="13">sql</text>
+        <rect x="320" y="50" width="120" height="46" rx="6" fill="#131316" stroke="#2B2B2F"/>
+        <text x="380" y="78" text-anchor="middle" fill="#C9C7C1" font-family="JetBrains Mono, monospace" font-size="13">select</text>
+        <text x="20" y="120" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="10">type</text>
+        <text x="185" y="120" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="10">subsystem</text>
+        <text x="320" y="120" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="10">specific instrument</text>
+
+        <rect x="20" y="160" width="90" height="46" rx="6" fill="#131316" stroke="#C8453A"/>
+        <text x="65" y="188" text-anchor="middle" fill="#F2EFE9" font-family="JetBrains Mono, monospace" font-size="13">wait</text>
+        <rect x="120" y="160" width="90" height="46" rx="6" fill="#131316" stroke="#2B2B2F"/>
+        <text x="165" y="188" text-anchor="middle" fill="#C9C7C1" font-family="JetBrains Mono, monospace" font-size="13">synch</text>
+        <rect x="220" y="160" width="90" height="46" rx="6" fill="#131316" stroke="#2B2B2F"/>
+        <text x="265" y="188" text-anchor="middle" fill="#C9C7C1" font-family="JetBrains Mono, monospace" font-size="13">mutex</text>
+        <rect x="320" y="160" width="100" height="46" rx="6" fill="#131316" stroke="#2B2B2F"/>
+        <text x="370" y="188" text-anchor="middle" fill="#C9C7C1" font-family="JetBrains Mono, monospace" font-size="11">innodb</text>
+        <rect x="430" y="160" width="150" height="46" rx="6" fill="#131316" stroke="#2B2B2F"/>
+        <text x="505" y="182" text-anchor="middle" fill="#C9C7C1" font-family="JetBrains Mono, monospace" font-size="10">autoinc_</text>
+        <text x="505" y="196" text-anchor="middle" fill="#C9C7C1" font-family="JetBrains Mono, monospace" font-size="10">mutex</text>
+        <text x="300" y="240" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="11">wait/synch/mutex/innodb/autoinc_mutex: the mutex InnoDB sets on an auto-increment column</text>
+      </svg>
+      <figcaption>Fig. 1 — Every instrument name reads left to right from its broad type down to the exact thing it watches.</figcaption>
+    </figure>
+
+    <h3 class="subhead">From instrument to a row you can query</h3>
+    <p>When an application connects to MySQL and runs something that touches an enabled instrument, the server wraps that call so the result gets recorded into the matching consumer table. The source is upfront that this isn't free: enabling an instrument means extra code runs on every single call it touches, and that costs CPU. Keep that trade-off in mind through this whole chapter: instrumentation is a lens you point deliberately, not something you leave maximally on by default.</p>
+
+    <figure class="schematic">
+      <svg viewBox="0 0 600 170" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="40" width="130" height="80" rx="8" fill="#131316" stroke="#2B2B2F"/>
+        <text x="75" y="75" text-anchor="middle" fill="#F2EFE9" font-family="Bricolage Grotesque, sans-serif" font-weight="700" font-size="14">Your query</text>
+        <text x="75" y="95" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="10">runs on the server</text>
+
+        <line x1="140" y1="80" x2="168" y2="80" stroke="#7A7A80" stroke-width="2"/>
+        <polygon points="174,80 164,74 164,86" fill="#7A7A80"/>
+
+        <rect x="178" y="40" width="150" height="80" rx="8" fill="#131316" stroke="#C8453A" stroke-width="1.5"/>
+        <text x="253" y="70" text-anchor="middle" fill="#F2EFE9" font-family="Bricolage Grotesque, sans-serif" font-weight="700" font-size="14">Instrument</text>
+        <text x="253" y="90" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="9">e.g. statement/</text>
+        <text x="253" y="104" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="9">sql/select</text>
+
+        <line x1="328" y1="80" x2="356" y2="80" stroke="#7A7A80" stroke-width="2"/>
+        <polygon points="362,80 352,74 352,86" fill="#7A7A80"/>
+
+        <rect x="366" y="40" width="130" height="80" rx="8" fill="#131316" stroke="#2B2B2F"/>
+        <text x="431" y="70" text-anchor="middle" fill="#F2EFE9" font-family="Bricolage Grotesque, sans-serif" font-weight="700" font-size="14">Consumer</text>
+        <text x="431" y="90" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="9">table, in memory</text>
+
+        <line x1="496" y1="80" x2="524" y2="80" stroke="#7A7A80" stroke-width="2"/>
+        <polygon points="530,80 520,74 520,86" fill="#7A7A80"/>
+
+        <text x="565" y="70" text-anchor="middle" fill="#6FCF97" font-family="Bricolage Grotesque, sans-serif" font-weight="700" font-size="13">You</text>
+        <text x="565" y="90" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="9">SELECT it</text>
+
+        <text x="300" y="150" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="11">enabling the instrument adds extra code to every call it touches</text>
+      </svg>
+      <figcaption>Fig. 2 — An instrument is a watch point in server code; a consumer is where its results land, ready for you to query with ordinary SQL.</figcaption>
+    </figure>
+
+    <h3 class="subhead">How the consumer tables are organized</h3>
+    <p>Performance Schema stores results across a large number of tables (the source notes that MySQL Community 8.0.25 specifically ships 110 of them, though this count is version-specific and worth re-checking against whatever version you're actually running). Rather than memorizing all of them, it helps to know the families they fall into.</p>
+    <p><strong>Current and historical data.</strong> For a handful of event categories, three related tables exist per category, distinguished by a suffix: a <code>*_current</code> table (events happening right now), a <code>*_history</code> table (the last 10 completed events, per thread), and a <code>*_history_long</code> table (the last 10,000 completed events per thread, globally). Both history sizes are configurable. This three-table pattern exists for four categories: <code>events_waits</code> (low-level waits, like acquiring a mutex), <code>events_statements</code> (SQL statements), <code>events_stages</code> (profiling detail, like time spent creating a temporary table), and <code>events_transactions</code> (transactions).</p>
+
+    <figure class="schematic">
+      <svg viewBox="0 0 600 190" xmlns="http://www.w3.org/2000/svg">
+        <text x="300" y="22" text-anchor="middle" fill="#F2EFE9" font-family="JetBrains Mono, monospace" font-size="12" letter-spacing="1">events_statements_* AS AN EVENT AGES</text>
+        <rect x="20" y="50" width="160" height="70" rx="8" fill="#131316" stroke="#C8453A"/>
+        <text x="100" y="80" text-anchor="middle" fill="#F2EFE9" font-family="JetBrains Mono, monospace" font-size="12">*_current</text>
+        <text x="100" y="100" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="10">happening now</text>
+
+        <line x1="180" y1="85" x2="212" y2="85" stroke="#7A7A80" stroke-width="2"/>
+        <polygon points="218,85 208,79 208,91" fill="#7A7A80"/>
+
+        <rect x="222" y="50" width="160" height="70" rx="8" fill="#131316" stroke="#2B2B2F"/>
+        <text x="302" y="80" text-anchor="middle" fill="#F2EFE9" font-family="JetBrains Mono, monospace" font-size="12">*_history</text>
+        <text x="302" y="100" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="10">last 10 / thread</text>
+
+        <line x1="382" y1="85" x2="414" y2="85" stroke="#7A7A80" stroke-width="2"/>
+        <polygon points="420,85 410,79 410,91" fill="#7A7A80"/>
+
+        <rect x="424" y="50" width="156" height="70" rx="8" fill="#131316" stroke="#2B2B2F"/>
+        <text x="502" y="76" text-anchor="middle" fill="#F2EFE9" font-family="JetBrains Mono, monospace" font-size="12">*_history_long</text>
+        <text x="502" y="96" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="10">last 10,000, global</text>
+
+        <text x="300" y="160" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="11">applies to events_waits, events_statements, events_stages, events_transactions</text>
+      </svg>
+      <figcaption>Fig. 3 — The same completed event moves from "in progress" to a short per-thread window to a much bigger global window, until it ages out.</figcaption>
+    </figure>
+
+    <p><strong>Summary tables and digests.</strong> A summary table holds pre-aggregated information, for example <code>memory_summary_by_thread_by_event_name</code> rolls up memory usage per thread. Digests, introduced above as a key term, let Performance Schema track metrics like latency for a normalized query shape without keeping every literal variation separately.</p>
+    <p><strong>Instances.</strong> These tables describe specific object instances that exist on this MySQL installation. The source's example is <code>file_instances</code>, which holds filenames and how many threads access each one.</p>
+    <p><strong>Setup tables.</strong> These are used to configure Performance Schema at runtime, and you'll meet several of them below: <code>setup_instruments</code>, <code>setup_consumers</code>, <code>setup_objects</code>, <code>setup_threads</code>, and <code>setup_actors</code>.</p>
+    <p><strong>Other tables.</strong> Some tables don't fit a strict naming pattern, like <code>metadata_locks</code>, which holds data about metadata locks (Part 2 covers this table in more depth).</p>
+
+    <h3 class="subhead">What watching costs you</h3>
+    <p>Performance Schema's data lives entirely in memory. Some tables autosize: they start small and grow only as needed, rather than reserving a fixed amount upfront. Here's the catch worth remembering: once that memory is allocated, it is not released, even if you later disable the instrumentation and empty (truncate) the table. The only way to actually reclaim it is a server restart.</p>
+    <p>CPU cost is the other side of this. Every instrumented call adds two extra internal calls (the source calls these "macros") to record the result. How much that actually costs depends heavily on which instrument you're talking about. A statement-type instrument like <code>statement/sql/select</code> fires once per query, so enabling statement instrumentation is barely noticeable. A wait-type instrument tied to row locks is a completely different story: scanning an InnoDB table with a million rows means setting and releasing roughly a million row locks, so instrumenting locks at that scale can raise CPU usage significantly. The same caution applies to memory and metadata lock instrumentation. The practical takeaway: enable what you actually need, and expect the cost to vary wildly depending on how often the underlying code path runs.</p>
+
+    <h3 class="subhead">Three limitations worth knowing before you rely on this</h3>
+    <p>The source is direct about three real constraints, and it's worth internalizing them now rather than getting surprised by them later.</p>
+    <ul>
+      <li><strong>It needs support from the specific MySQL component involved.</strong> If you're trying to find which component is using the most memory and the answer turns out to be a storage engine that doesn't support memory instrumentation, Performance Schema simply won't be able to show you where that memory went.</li>
+      <li><strong>It only sees data from the moment an instrument and its consumer are both enabled.</strong> If you start a server with everything disabled and only enable memory instrumentation later, you won't be able to recover the exact amount already allocated by something like the InnoDB buffer pool (a cache InnoDB keeps in memory), because that allocation already happened before you turned the lens on.</li>
+      <li><strong>Freeing memory is genuinely hard.</strong> As covered above, autosized consumers only grow when data starts flowing, but disabling an instrument or consumer afterward does not give that memory back. A restart is the only real fix.</li>
+    </ul>
+
+    <h3 class="subhead">The sys schema: a friendlier front end</h3>
+    <p>Since MySQL 5.7, a standard installation also ships a companion schema called <span class="term">sys</span>. It is made up entirely of views and stored routines that sit on top of performance_schema, meant to make common questions easier to ask without writing raw joins across several tables yourself. It's worth remembering, though, that sys stores nothing of its own: everything it shows you is ultimately pulled from the underlying performance_schema tables. If you need a piece of data sys doesn't expose, the fix is to go check whether it exists in the raw performance_schema table underneath.</p>
+
+    <h3 class="subhead">Understanding threads: two different IDs that are easy to mix up</h3>
+    <p>MySQL server itself is multithreaded. Every component, whether it's a background piece like a storage engine's internal housekeeping or a foreground connection a user opened, runs as its own thread. Each thread carries at least two different identifiers, and the source calls out explicitly that they are not interchangeable: an operating-system-level thread ID (visible to tools like the Linux <code>ps -eLf</code> command) and MySQL's own internal <code>THREAD_ID</code>, which is what you'll see used throughout performance_schema tables. On top of that, every foreground thread (a user connection) also gets a <code>PROCESSLIST_ID</code>, the same connection ID you'd see in <code>SHOW PROCESSLIST</code> output, or in the "Your MySQL connection id is" message the command-line client prints when you connect.</p>
+    <p>The <code>threads</code> table in performance_schema lists every thread on the server, with columns including <code>NAME</code>, <code>THREAD_ID</code>, <code>PROCESSLIST_ID</code>, and <code>THREAD_OS_ID</code>. Background threads generally show <code>NULL</code> for <code>PROCESSLIST_ID</code>, since that identifier only applies to user connections. Beyond the identifiers, the <code>threads</code> table carries roughly the same information as <code>SHOW PROCESSLIST</code>, plus a few extra columns like <code>RESOURCE_GROUP</code> or <code>PARENT_THREAD_ID</code>.</p>
+    <p>Here's why the distinction matters in practice: performance_schema tables use <code>THREAD_ID</code> everywhere, but <code>PROCESSLIST_ID</code> only shows up in the <code>threads</code> table itself. If you're troubleshooting something like a stuck lock and need the connection ID so you can actually kill it, you have to look it up through the <code>threads</code> table first. And because <code>threads</code> can be joined against most of the other performance_schema tables, it becomes the hub you connect through to pull in query details, locks, mutexes, or open table instances for a given connection.</p>
+
+    <h3 class="subhead">Turning it on: configuration</h3>
+    <p>A small number of settings can only be changed when the MySQL server starts: whether Performance Schema is enabled at all, and the variables controlling memory usage and limits for what gets collected. Everything else, meaning individual instruments and consumers, can be flipped on or off while the server is running. The source's own advice here is worth repeating: you can run with Performance Schema itself on but almost everything inside it disabled, then dynamically enable just the specific instruments and consumers you need right before you expect to investigate an issue. That way you're not spending resources on data you don't need, and you don't risk starving the server through over-instrumentation.</p>
+    <p><strong>Enabling Performance Schema itself.</strong> This is controlled by the <code>performance_schema</code> variable, set to <code>ON</code> or <code>OFF</code>. It's a read-only variable at runtime: the only way to change it is in the configuration file or as a command-line parameter when the server starts.</p>
+    <p><strong>Enabling and disabling individual instruments.</strong> You can check any instrument's current state by querying <code>setup_instruments</code>, for example filtering <code>WHERE NAME='statement/sql/select'</code> and looking at its <code>ENABLED</code> column. The source describes three ways to change it:</p>
+    <ul>
+      <li>An ordinary <code>UPDATE</code> against <code>setup_instruments</code>, e.g. <code>SET ENABLED='YES' WHERE NAME='statement/sql/select'</code>. Because this is standard SQL, wildcards work too, so you could enable every SQL statement instrument at once with <code>WHERE NAME LIKE 'statement/sql/%'</code>. This change does not persist across a restart.</li>
+      <li>The sys schema's <code>ps_setup_enable_instrument</code> (and its counterpart, <code>ps_setup_disable_instrument</code>) stored procedures, which also support wildcards (use <code>'%'</code> to affect every instrument). Functionally, this is the same as the direct UPDATE, including that it also doesn't survive a restart.</li>
+      <li>The startup option <code>performance-schema-instrument='instrument_name=value'</code>, where value is one of <code>ON</code>/<code>TRUE</code>/<code>1</code> to enable, <code>OFF</code>/<code>FALSE</code>/<code>0</code> to disable, or <code>COUNTED</code> to count occurrences without timing them. This can be repeated for multiple instruments, supports wildcards, and (unlike the other two methods) does persist, since it's set at startup. One quirk worth knowing: if two of your specified patterns could both match the same instrument, the longer, more specific string wins regardless of the order you wrote them in.</li>
+    </ul>
+
+    <figure class="schematic">
+      <svg viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+        <text x="300" y="22" text-anchor="middle" fill="#F2EFE9" font-family="JetBrains Mono, monospace" font-size="12" letter-spacing="1">THREE WAYS TO ENABLE AN INSTRUMENT</text>
+        <rect x="20" y="45" width="170" height="70" rx="8" fill="#131316" stroke="#2B2B2F"/>
+        <text x="105" y="70" text-anchor="middle" fill="#F2EFE9" font-family="JetBrains Mono, monospace" font-size="11">UPDATE</text>
+        <text x="105" y="86" text-anchor="middle" fill="#F2EFE9" font-family="JetBrains Mono, monospace" font-size="11">setup_instruments</text>
+        <text x="105" y="105" text-anchor="middle" fill="#C8453A" font-family="JetBrains Mono, monospace" font-size="10">lost on restart</text>
+
+        <rect x="215" y="45" width="170" height="70" rx="8" fill="#131316" stroke="#2B2B2F"/>
+        <text x="300" y="70" text-anchor="middle" fill="#F2EFE9" font-family="JetBrains Mono, monospace" font-size="11">sys.ps_setup_</text>
+        <text x="300" y="86" text-anchor="middle" fill="#F2EFE9" font-family="JetBrains Mono, monospace" font-size="11">enable_instrument</text>
+        <text x="300" y="105" text-anchor="middle" fill="#C8453A" font-family="JetBrains Mono, monospace" font-size="10">lost on restart</text>
+
+        <rect x="410" y="45" width="170" height="70" rx="8" fill="#131316" stroke="#6FCF97" stroke-width="1.5"/>
+        <text x="495" y="65" text-anchor="middle" fill="#F2EFE9" font-family="JetBrains Mono, monospace" font-size="11">performance-schema-</text>
+        <text x="495" y="81" text-anchor="middle" fill="#F2EFE9" font-family="JetBrains Mono, monospace" font-size="11">instrument (startup)</text>
+        <text x="495" y="100" text-anchor="middle" fill="#6FCF97" font-family="JetBrains Mono, monospace" font-size="10">persists across restart</text>
+
+        <text x="300" y="155" text-anchor="middle" fill="#7A7A80" font-family="JetBrains Mono, monospace" font-size="11">the first two are dynamic and equivalent; only the startup option survives a reboot</text>
+      </svg>
+      <figcaption>Fig. 4 — Two dynamic paths do the same thing at runtime; only the startup-file option outlives a restart.</figcaption>
+    </figure>
+
+    <p><strong>Enabling and disabling consumers.</strong> The same three-method pattern applies: update the <code>setup_consumers</code> table, call the sys schema's <code>ps_setup_enable_consumer</code> / <code>ps_setup_disable_consumer</code> procedures, or set the <code>performance-schema-consumer</code> configuration parameter at startup. There are 15 possible consumers in total. Most are self-explanatory, but a few deserve a plain-English description: the <code>events_stages_[current|history|history_long]</code> family holds profiling detail like "Creating tmp table" or "statistics"; <code>events_statements_[...]</code> holds statement statistics; <code>events_transactions_[...]</code> holds transaction data; <code>events_waits_[...]</code> holds wait data. Two consumers control instrumentation at a broader level: <code>global_instrumentation</code>, which, if disabled, means no individual settings are even checked and no data (global or per-thread) is collected at all; and <code>thread_instrumentation</code>, which is only checked if global instrumentation is on, and which governs whether per-thread and individual event data gets collected. Finally, <code>statements_digest</code> controls whether statement digests (the normalized query shapes from the key terms above) get collected.</p>
+
+    <h3 class="subhead">Scoping what actually gets watched</h3>
+    <p>Beyond turning categories of instrumentation on or off, Performance Schema lets you narrow monitoring down to specific objects, specific background threads, and specific user accounts.</p>
+    <p>The <code>setup_objects</code> table controls instrumentation by object. Its <code>OBJECT_TYPE</code> column takes one of five values: <code>EVENT</code>, <code>FUNCTION</code>, <code>PROCEDURE</code>, <code>TABLE</code>, or <code>TRIGGER</code>, and you can further narrow things with <code>OBJECT_SCHEMA</code> and <code>OBJECT_NAME</code>, both of which support wildcards. The source's example disables instrumentation for every trigger in a schema called <code>test</code>, via <code>INSERT INTO setup_objects (OBJECT_TYPE, OBJECT_SCHEMA, OBJECT_NAME, ENABLED) VALUES ('TRIGGER', 'test', '%', 'NO')</code>, then carves out one exception for a specific trigger with a second, more specific row. When Performance Schema decides whether to instrument something, it looks for the most specific matching rule first and only falls back to a broader one if nothing more specific matches. There's no configuration-file option for this table; to persist your rules across a restart, the source points you to writing the same INSERT statements into a SQL file and loading it at startup via the <code>init_file</code> option.</p>
+    <p>The <code>setup_threads</code> table lists background threads that can be individually monitored, with an <code>ENABLED</code> column and a <code>HISTORY</code> column (whether that thread's events also get stored in the <code>_history</code> and <code>_history_long</code> tables). The example given disables history logging just for the event scheduler thread: <code>UPDATE setup_threads SET HISTORY='NO' WHERE NAME='thread/sql/event_scheduler'</code>. Because <code>setup_threads</code> doesn't cover user (foreground) threads, a separate table, <code>setup_actors</code>, exists for that: it has <code>HOST</code>, <code>USER</code>, an unused <code>ROLE</code> column, <code>ENABLED</code>, and <code>HISTORY</code>, letting you set rules per account or per host, with wildcards supported. Like <code>setup_objects</code>, neither of these has a config-file option, so persisting changes again means an <code>init_file</code>-loaded SQL script.</p>
+
+    <h3 class="subhead">Sizing the memory it's allowed to use</h3>
+    <p>Performance Schema's tables use the <code>PERFORMANCE_SCHEMA</code> storage engine, which keeps everything in memory. Some of these tables are autosized by default, others have a fixed row count, and you control both cases with startup variables following the pattern <code>performance_schema_object_[size|instances|classes|length|handles]</code>, where "object" refers to whichever consumer, setup table, or instrumented instance you're sizing. The source's own examples: <code>performance_schema_events_stages_history_size</code> sets how many stage events per thread the <code>events_stages_history</code> table stores, and <code>performance_schema_max_memory_classes</code> caps how many distinct memory instruments can exist.</p>
+
+    <h3 class="subhead">Sensible defaults (and why they're worth naming a version for)</h3>
+    <p>The source is careful to point out that MySQL's defaults shift from version to version, so anything here is worth double-checking against the current MySQL Reference Manual before you rely on it operationally. With that boundary named, here's what it describes: since version 5.7, Performance Schema is enabled by default, but with most instruments turned off. Only global, thread, statement, and transaction instrumentation is on out of the box. Since version 8.0, metadata lock and memory instrumentation are additionally enabled by default. The <code>mysql</code>, <code>information_schema</code>, and <code>performance_schema</code> databases themselves are not instrumented by default; everything else (other objects, threads, and actors) is. Most instance, handle, and setup tables are autosized. The <code>_history</code> tables keep the last 10 events per thread, and <code>_history_long</code> tables keep the latest 10,000 events per thread, by default. Stored SQL text and stored SQL digests are both capped at 1,024 bytes by default; anything longer gets right-trimmed.</p>
+  </section>
+
+  <section>
+    <h2 class="kicker">Why it matters</h2>
+    <p>This foundation is what makes Part 2 legible. Once you actually understand that an instrument is a watch point, a consumer is where its results land, and that you can dial the scope up or down through setup_objects, setup_threads, and setup_actors, the specific investigations (why is this query slow, who's holding this lock, what's eating memory) stop feeling like a list of unrelated tricks and start feeling like the same small toolkit applied to different questions. It also sets you up to make an informed cost decision every time: you now know that flipping on instrumentation isn't free, so you can be deliberate about what you turn on and when, rather than either avoiding Performance Schema out of fear or leaving everything on and wondering why CPU crept up.</p>
+  </section>
+
+  <div class="box">
+    <h3>Remember this</h3>
+    <ul>
+      <li>An instrument is a watch point in MySQL's own code; a consumer is the table that stores what it reports. Nearly everything else in this chapter is detail on top of that pair.</li>
+      <li>Instrument names read general to specific, separated by slashes (<code>statement/sql/select</code>). Consumer tables cluster into families: current/history/history_long, summary/digest, instances, setup, and a few others.</li>
+      <li>Instrumentation costs CPU, and the cost varies enormously by instrument (a once-per-query statement instrument versus a per-row-lock wait instrument are very different bets). Its memory is also never freed without a restart.</li>
+      <li>THREAD_ID is Performance Schema's internal identifier and shows up everywhere; PROCESSLIST_ID is the connection ID from SHOW PROCESSLIST and only lives in the threads table. They are not interchangeable.</li>
+      <li>Two dynamic methods (a direct UPDATE, or the sys schema's stored procedures) enable instruments and consumers the same way but don't survive a restart; only the performance-schema-instrument/consumer startup options do.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h3>Try it yourself</h3>
+    <ul>
+      <li><strong>Flip an instrument on and confirm it.</strong> On a local MySQL 8.0 instance, run <code>SELECT * FROM performance_schema.setup_instruments WHERE NAME='statement/sql/select'\G</code> and note the <code>ENABLED</code> value. Then run the UPDATE the source describes to set it to <code>'YES'</code>, and query it again. Done when: you can show the ENABLED column changing from one value to the other in your own terminal output.</li>
+      <li><strong>Compare Ch.2's lens with this one.</strong> On the same instance, run <code>SHOW GLOBAL STATUS LIKE 'Threads_running';</code> (the Ch.2-style counter), then separately query <code>SELECT NAME, THREAD_ID, PROCESSLIST_ID, THREAD_OS_ID FROM performance_schema.threads;</code>. Done when: you can explain in your own words one thing the threads table shows you that the single Threads_running number doesn't (for example, which specific connection is which).</li>
+      <li><strong>Read five instrument descriptions.</strong> Query <code>SELECT NAME, DOCUMENTATION FROM performance_schema.setup_instruments WHERE DOCUMENTATION IS NOT NULL LIMIT 5;</code> and read what each one actually does. Done when: you can restate two of the five descriptions in your own plain-English words without looking at the screen.</li>
+      <li><strong>Find your own connection twice.</strong> Open two separate MySQL command-line sessions. In each, note the "Your MySQL connection id is" number MySQL prints, then run the threads-table query from the exercise above and find the row matching each session by its PROCESSLIST_ID. Done when: you've correctly matched both sessions to their own row in the threads table.</li>
+      <li><strong>Test which enable-method survives a restart.</strong> Enable an instrument via a direct UPDATE to setup_instruments, then restart your local MySQL instance and check its ENABLED value again. Then (separately) add the same instrument via the performance-schema-instrument startup option in your config file, restart, and check again. Done when: you can show the UPDATE-based change reverting after restart while the startup-option change persists.</li>
+      <li><strong>Scope monitoring down with setup_objects.</strong> On a scratch schema, insert a row into setup_objects disabling TRIGGER instrumentation for that schema with the wildcard object name, following the pattern the source describes, then insert a second, more specific row re-enabling it for one named trigger. Done when: you can explain, using your own two rows, why Performance Schema picks the specific rule over the wildcard one.</li>
+    </ul>
+  </div>
+
+  <section>
+    <h2 class="kicker">Go deeper</h2>
+    <p>Part 2 (next batch) picks up right where this leaves off: the "Using Performance Schema" section of the chapter, where these same instruments and consumers get pointed at real troubleshooting questions, examining slow SQL statements, prepared statements and stored routines, statement profiling stages, metadata locks, memory usage, variables, and the most frequent errors on a server. If you want a preview in your own words, try predicting which consumer table you'd expect to hold "how long did each completed query take" before Part 2 confirms it.</p>
+  </section>
+
+  <section>
+    <h2 class="kicker">Sources &amp; verify</h2>
+    <p class="small">Grounded in <em>High Performance MySQL, 4th Edition</em>, Chapter 3: "Performance Schema" (contributed by Sveta Smirnova), covering pp. 63–74 of the chapter's full pp. 63–96 (PDF page numbers of the reviewed file; the book's own printed pages for this portion are 41–52). This is Part 1 of 2: it stops at the end of the chapter's "Configuration" section, right before "Using Performance Schema" begins; Part 2 will cover the remaining pages. This digest is a teaching draft, not a substitute for the book or the official MySQL Reference Manual: verify anything you plan to rely on operationally, especially exact table/column names, default values, and version-specific behavior, against a current, live MySQL instance and the current manual before using it in production. Specific things worth double-checking against your own MySQL version: the claim that MySQL Community 8.0.25 ships 110 performance_schema tables (the source's own number, tied to that exact version); the default-enabled instrumentation categories for 5.7 versus 8.0 (global/thread/statement/transaction by default since 5.7, with metadata lock and memory instrumentation added by default since 8.0); the exact count of "15 possible consumers"; and the default history sizes (10 per thread / 10,000 globally) and default text/digest length caps (1,024 bytes), all of which the source itself says can shift between versions.</p>
+  </section>
+
+  <div class="footer">
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div>
+      <div class="who">Mayowa</div>
+      <div class="socials">
+        <span>in/mayowa-bodunwa</span>
+        <span>@mayowa.bodunwa</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

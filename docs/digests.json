@@ -54,5 +54,33 @@
     "ch": "Topic 2",
     "title": "Transit Gateway & Multi-VPC Connectivity",
     "date": "2026-07-27"
+  },
+  {
+    "slug": "ddia-ch02-part2-graph-data-models",
+    "book": "Designing Data-Intensive Applications",
+    "ch": "Ch.2 (Part 2 of 2)",
+    "title": "Data Models and Query Languages, Part 2: Graph-Like Data Models",
+    "date": "2026-07-30"
+  },
+  {
+    "slug": "ai-eng-ch02-part2-post-training",
+    "book": "AI Engineering",
+    "ch": "Ch.2 (Part 2 of 3)",
+    "title": "Understanding Foundation Models: Post-Training, From Text Completer to Assistant",
+    "date": "2026-07-30"
+  },
+  {
+    "slug": "hpmysql-ch03-part1-performance-schema",
+    "book": "High Performance MySQL",
+    "ch": "Ch.3 (Part 1 of 2)",
+    "title": "Performance Schema: Instruments, Consumers, and Getting It Configured",
+    "date": "2026-07-30"
+  },
+  {
+    "slug": "aws-03-ec2-instances-amis",
+    "book": "AWS",
+    "ch": "Topic 3 (Part 1 of 2)",
+    "title": "EC2 Instances & AMIs",
+    "date": "2026-07-30"
   }
 ]

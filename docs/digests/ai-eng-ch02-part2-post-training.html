@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Engineering, Ch.2 (Part 2 of 3): Understanding Foundation Models — Post-Training (Supervised Finetuning and RLHF)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0A0B; --panel:#0E0E10; --panel2:#131316; --hairline:rgba(242,239,233,0.10);
+    --ink:#F2EFE9; --body:#C9C7C1; --muted:#7A7A80; --red:#C8453A; --green:#6FCF97; --mutedfooter:#D8D5CD;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--body);font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;line-height:1.6}
+  .wrap{max-width:660px;margin:0 auto;padding:48px 22px 64px}
+  .eyebrow{font-family:'JetBrains Mono',monospace;color:var(--red);font-size:13px;letter-spacing:3px;text-transform:uppercase}
+  h1{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;color:var(--ink);font-size:34px;line-height:1.15;margin:10px 0 10px}
+  .lead{color:var(--body);font-size:17px;margin:0 0 34px}
+  h2{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;color:var(--ink);font-size:22px;margin:40px 0 12px;border-top:1px solid var(--hairline);padding-top:28px}
+  section:first-of-type h2{border-top:none;padding-top:0}
+  h3{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;color:var(--ink);font-size:17px;margin:22px 0 8px}
+  p{font-size:15.5px;margin:0 0 14px}
+  ul{margin:0 0 14px;padding-left:20px}
+  li{font-size:15.5px;margin:0 0 8px}
+  .key-terms li{margin:0 0 10px}
+  .key-terms b{color:var(--ink);font-weight:600}
+  .note{background:var(--panel2);border:1px solid var(--hairline);border-radius:8px;padding:14px 16px;margin:0 0 16px;font-size:14.5px;color:var(--body)}
+  .note b{color:var(--ink)}
+  figure.schematic{background:var(--panel);border:1px solid var(--hairline);border-radius:10px;padding:18px 16px 14px;margin:18px 0}
+  figure.schematic svg{width:100%;height:auto;display:block}
+  figcaption{font-family:'JetBrains Mono',monospace;color:var(--muted);font-size:12px;margin-top:10px;line-height:1.5}
+  .remember{border-left:3px solid var(--red);background:var(--panel);border-radius:0 8px 8px 0;padding:18px 20px;margin:20px 0}
+  .remember h2{margin:0 0 10px;border:none;padding:0;font-size:18px}
+  .try{border-left:3px solid var(--green);background:var(--panel);border-radius:0 8px 8px 0;padding:18px 20px;margin:20px 0}
+  .try h2{margin:0 0 10px;border:none;padding:0;font-size:18px}
+  .try li{margin:0 0 12px}
+  .try b{color:var(--ink)}
+  .go-deeper{background:var(--panel2);border:1px solid var(--hairline);border-radius:8px;padding:16px 18px;margin:18px 0}
+  .sources{font-size:14px;color:var(--muted)}
+  .sources li{font-size:14px;color:var(--muted)}
+  table.datatable{width:100%;border-collapse:collapse;margin:10px 0 16px;font-size:13.5px}
+  table.datatable th, table.datatable td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--hairline)}
+  table.datatable th{color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted)}
+  code, .mono{font-family:'JetBrains Mono',monospace}
+  footer{margin-top:56px;padding-top:28px;border-top:1px solid var(--hairline);display:flex;align-items:center;gap:14px}
+  footer img{width:52px;height:52px;border-radius:50%;object-fit:cover;border:1px solid var(--hairline)}
+  footer .who{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--mutedfooter)}
+  footer .name{color:var(--ink);font-weight:500;margin-bottom:4px}
+  footer .socials span{display:inline-block;margin-right:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">AI · CH.2 DIGEST (PART 2 OF 3)</div>
+  <h1>Understanding Foundation Models: Post-Training, From Text Completer to Assistant</h1>
+  <p class="lead">Part 1 covered what goes into a foundation model before it ever answers a prompt: training data, the transformer architecture, and model size. This part covers what happens right after pre-training finishes: the two-stage process (supervised finetuning, then preference finetuning) that turns a model that's very good at predicting plausible next words into one that can actually hold a conversation. Sampling and the probabilistic nature of AI are dense enough in their own right that they're saved for part 3.</p>
+
+  <section>
+    <h2>In one line</h2>
+    <p>A freshly pre-trained model is an extremely capable autocomplete engine, not an assistant; post-training is the (typically two-step) process that reshapes it into something that answers questions the way people actually want, first by showing it examples of good conversations, then by teaching it which of two acceptable answers is the better one.</p>
+  </section>
+
+  <section>
+    <h2>The big idea</h2>
+    <p>Pre-training on huge, messy, internet-scale text gives a model broad knowledge and fluent language, but it comes with two practical problems: the model was only ever trained to continue text plausibly, not to hold a conversation, and because its training data was scraped indiscriminately from the internet, its outputs can be inaccurate, rude, or worse. Post-training is the general name for the work done to fix both problems. As this source frames it, that work usually happens in two steps: supervised finetuning (SFT), where the model is shown curated examples of good (prompt, response) pairs so it learns the shape of a helpful reply, and preference finetuning, where the model is further tuned using human judgments about which of two responses is better. Neither step is mandatory for every model and teams do skip pieces of this pipeline, but together they're the most common path from "raw pre-trained model" to "something you'd actually want to talk to."</p>
+  </section>
+
+  <section>
+    <h2>Key terms</h2>
+    <ul class="key-terms">
+      <li><b>Post-training</b> — the stage of building a foundation model that comes after pre-training, aimed at making the model behave more like a helpful, safe conversational assistant rather than just a fluent text completer.</li>
+      <li><b>Supervised finetuning (SFT)</b> — finetuning a pre-trained model on curated, high-quality (prompt, response) examples so it learns to answer conversationally instead of just continuing text.</li>
+      <li><b>Demonstration data</b> — the (prompt, response) examples used for SFT, usually written or reviewed by human labelers.</li>
+      <li><b>Behavior cloning</b> — another name for what SFT is doing: you demonstrate the behavior you want, and the model imitates ("clones") it.</li>
+      <li><b>Preference finetuning</b> — further finetuning a model, after SFT, so its outputs align better with what humans actually prefer, typically done using reinforcement learning (RL).</li>
+      <li><b>Reinforcement learning (RL)</b> — a training approach where a model learns by optimizing against a reward signal, rather than by imitating fixed labeled examples directly.</li>
+      <li><b>RLHF (reinforcement learning from human feedback)</b> — the earliest widely successful preference finetuning method, and still popular. It trains a separate reward model from human comparisons, then uses RL to push the main model toward responses that score well on that reward model.</li>
+      <li><b>Reward model</b> — a model trained to take a (prompt, response) pair and output a score for how good that response is, used as the training signal during RLHF.</li>
+      <li><b>Comparison data (pairwise) vs. pointwise evaluation</b> — comparison data is (prompt, winning response, losing response): labelers just say which of two responses is better. Pointwise evaluation is scoring one response on its own (e.g., "rate this 1 to 10"), which this source treats as noisier and harder for labelers to do consistently.</li>
+      <li><b>PPO (proximal policy optimization)</b> — a reinforcement learning algorithm, released by OpenAI in 2017, commonly used to actually update the model's weights during the RLHF optimization step.</li>
+      <li><b>DPO (Direct Preference Optimization)</b> — a newer preference finetuning technique that skips training a separate reward model, used by Llama 3 (which moved off RLHF, used for Llama 2, specifically to reduce complexity).</li>
+      <li><b>RLAIF (reinforcement learning from AI feedback)</b> — a preference finetuning variant using AI-generated feedback instead of only human feedback; the source notes this only as potentially used by Claude, not confirmed.</li>
+      <li><b>Best-of-N</b> — generating several candidate responses and picking the one a reward model scores highest, without doing any further RL optimization step; some teams use this instead of full RLHF.</li>
+      <li><b>Instruction finetuning</b> — a term this source deliberately avoids because it's used inconsistently elsewhere: some people mean SFT only, others mean SFT plus preference finetuning combined.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <p>Post-training starts from a model that has already been through pre-training, the resource-heavy stage covered in part 1 where a model learns from huge amounts of raw text using self-supervision (predicting masked or next tokens without human-labeled examples). That gets you a model with broad knowledge and fluent language, but self-supervision by itself optimizes for one thing only: predicting the next token plausibly. It doesn't teach the model that a question deserves an answer, or that a user's request is different from a random sentence to continue. On top of that, because pre-training data is usually scraped indiscriminately from the internet, a pre-trained model can just as easily produce something racist, rude, or flatly wrong as something helpful, because all of that showed up somewhere in its training data too. Post-training exists to work on both problems at once.</p>
+
+    <h3>Why a freshly pre-trained model isn't ready to be an assistant</h3>
+    <p>Here's a way to see the completion-versus-conversation gap directly. Say you type "How do I remove a red wine stain from a carpet" into a pure text-completion engine, with no idea that this is supposed to be a question someone wants answered. At least three continuations are all equally "plausible" completions of that text:</p>
+    <ul>
+      <li>Adding more context to the question, as if it were the start of a longer sentence: "...if the carpet is wool and the stain has already dried in?"</li>
+      <li>Adding follow-up questions, as if this were the opening of a forum thread: "What kind of carpet is it? Is the stain still wet?"</li>
+      <li>Actually giving step-by-step instructions for getting the stain out.</li>
+    </ul>
+    <p>Only the third option is what a person actually wants from an assistant, but a model trained purely to predict "what plausible text comes next" has no built-in reason to prefer it over the other two. All three are common patterns of text found on the internet. This is the core problem SFT exists to fix.</p>
+    <figure class="schematic">
+      <svg viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Same prompt, three different completions, only one of which is a helpful answer">
+        <rect x="0" y="0" width="600" height="300" rx="10" fill="#0E0E10"/>
+        <text x="20" y="26" font-family="JetBrains Mono, monospace" font-size="11" fill="#7A7A80" letter-spacing="1">SAME PROMPT, THREE "PLAUSIBLE" CONTINUATIONS</text>
+        <rect x="20" y="38" width="560" height="30" rx="6" fill="#131316" stroke="rgba(242,239,233,0.10)"/>
+        <text x="34" y="58" font-family="Inter, sans-serif" font-size="12.5" fill="#F2EFE9">"How do I remove a red wine stain from a carpet</text>
+
+        <rect x="20" y="84" width="560" height="42" rx="6" fill="#131316" stroke="rgba(242,239,233,0.10)"/>
+        <text x="34" y="102" font-family="Inter, sans-serif" font-size="12" fill="#C9C7C1">1. adds context: "...if the carpet is wool and the</text>
+        <text x="34" y="118" font-family="Inter, sans-serif" font-size="12" fill="#C9C7C1">   stain has already dried in?"</text>
+
+        <rect x="20" y="134" width="560" height="42" rx="6" fill="#131316" stroke="rgba(242,239,233,0.10)"/>
+        <text x="34" y="152" font-family="Inter, sans-serif" font-size="12" fill="#C9C7C1">2. asks follow-ups: "What kind of carpet is it? Is</text>
+        <text x="34" y="168" font-family="Inter, sans-serif" font-size="12" fill="#C9C7C1">   the stain still wet?"</text>
+
+        <rect x="20" y="184" width="560" height="42" rx="6" fill="rgba(111,207,151,0.14)" stroke="#6FCF97"/>
+        <text x="34" y="202" font-family="Inter, sans-serif" font-size="12" fill="#6FCF97">3. actually answers: "Blot (don't rub) with a clean</text>
+        <text x="34" y="218" font-family="Inter, sans-serif" font-size="12" fill="#6FCF97">   cloth, then apply..."</text>
+
+        <text x="20" y="250" font-family="Inter, sans-serif" font-size="12" fill="#F2EFE9">A pure next-token predictor has no built-in reason to prefer #3.</text>
+        <text x="20" y="270" font-family="Inter, sans-serif" font-size="12" fill="#F2EFE9">SFT is what teaches it that "answer helpfully" is the goal.</text>
+      </svg>
+      <figcaption>An original illustration of the completion-vs-conversation gap: all three continuations are statistically plausible text, but only one behaves like an assistant.</figcaption>
+    </figure>
+
+    <h3>Supervised finetuning: teaching by example</h3>
+    <p>The fix for the completion problem is straightforward in concept: since a model mimics its training data, show it examples of the kind of responses you actually want. Those examples are (prompt, response) pairs called <b>demonstration data</b>, and finetuning the pre-trained model on them is called <b>supervised finetuning (SFT)</b>. Some people call this <b>behavior cloning</b>: you demonstrate the behavior, and the model clones it.</p>
+    <p>Demonstration data needs to cover the range of things you actually want the model to do well, question answering, summarizing, translating, and so on, because a model that only ever saw one task type in its demonstration data will only reliably do that one thing well after SFT. Writing good demonstration data isn't like typical data labeling. A labeler might need real critical thinking to produce a good response to a complex prompt, not just to classify something quickly. That's a real bottleneck: for OpenAI's InstructGPT, around 90% of the labelers who wrote demonstration data had at least a college degree and more than a third had a master's degree, and producing a single (prompt, response) pair could reportedly take up to 30 minutes for tasks with long context, like summarization. At a rough figure of $10 per pair, the roughly 13,000 pairs used for InstructGPT would cost about $130,000, and that's before counting the separate cost of designing what tasks to include, recruiting labelers, and quality control.</p>
+    <p>Not every team can afford that. Some go a cheaper, crowdsourced route: the nonprofit LAION mobilized about 13,500 volunteers worldwide to produce roughly 10,000 conversations (about 161,000 messages, in 35 languages, with about 461,000 quality ratings attached). The tradeoff is representativeness: in a self-reported survey, about 90% of LAION's volunteer labelers identified as male, which is a real bias caveat worth naming, since the people teaching a model what a "good" response looks like should ideally look something like the population that will use it. Other teams skip human writing almost entirely and use heuristics instead: DeepMind filtered ordinary internet text for their model Gopher by looking for passages already shaped like an alternating two-person dialogue, on the theory that text already in that shape tends to make a reasonably good conversational training example.</p>
+    <p>One more nuance worth flagging: you could, in theory, train a model from scratch directly on demonstration data and skip self-supervised pre-training altogether. In practice, starting from a pre-trained model and then applying SFT has reportedly given better results than training from scratch on demonstration data alone.</p>
+
+    <h3>Preference finetuning: teaching which of two acceptable answers is better</h3>
+    <p>SFT teaches a model to hold a conversation, but it doesn't teach the model what kind of conversation it should be willing to have. Demonstration data shows the model good responses to normal prompts; it doesn't systematically show the model what to do when a request is genuinely ambiguous or borderline. Whether a model should write a persuasive essay arguing one ethnicity is inferior, or explain how to pick a lock, isn't obvious from "be helpful" alone, and plenty of real questions sit in genuinely contested territory: abortion, gun control, immigration, and other topics where reasonable people disagree along cultural, political, and religious lines. There isn't a single universally agreed-on "correct" stance to imitate, and being too cautious across the board just makes a model bland and unhelpful for everyone.</p>
+    <p>The goal of preference finetuning is to shape a model's behavior according to human preference, and the source is upfront that this is an ambitious, maybe even impossible, goal: it assumes both that something like a shared human preference exists and that it can actually be trained into a model. Given how hard that goal is, it's not surprising the standard solution, <b>RLHF (reinforcement learning from human feedback)</b>, is more involved than SFT. RLHF was the earliest widely successful preference finetuning method and remains popular, and it works in two parts: first train a separate <b>reward model</b> that scores how good a given (prompt, response) pair is, then use reinforcement learning to push the original model toward generating responses that score highly on that reward model.</p>
+
+    <h3>Training the reward model: why comparisons beat raw scores</h3>
+    <p>You might expect the simplest approach to be asking labelers to score a response directly, say on a 1-to-10 scale. In practice that's noisy: given the exact same response, one labeler might give a 5 and another a 7, and even the same labeler can score the same response differently on two different days. That's called pointwise evaluation, and it turns out to be a genuinely hard, inconsistent task for humans to do reliably.</p>
+    <p>An easier, more reliable task is comparison: show a labeler two responses to the same prompt and just ask which one is better. That produces <b>comparison data</b>, in the format (prompt, winning response, losing response). Imagine a slightly risky prompt like "How can I get back at my noisy neighbor?" One response might firmly decline to suggest anything that could escalate into harm and instead suggest talking to the neighbor or contacting building management; another might cheerfully brainstorm ways to retaliate. Most people would rank the first as the winning response, even though a labeler working on a different day, in a different mood, might still score both responses inconsistently on an absolute 1-to-10 scale. Comparing is just a more stable task than scoring.</p>
+    <p>Comparison labeling still isn't fast or free. One open research group, LMSYS, found manually comparing two responses took an average of three to five minutes, largely because it requires actually fact-checking each response. Thomas Scialom, one of Llama 2's authors, has said each comparison cost about $3.50 for them, notably cheaper than the roughly $25 it cost to have a labeler write a full demonstration response from scratch. In OpenAI's own labeling interface for InstructGPT, labelers gave both a 1-to-7 score and a full ranking of several responses at once, though only the ranking was actually used to train the reward model; their inter-labeler agreement was around 73%, meaning if you asked 10 people to rank the same two responses, about 7 would agree. Ranking a set of three responses (A better than B better than C) is also convenient because it yields three comparison pairs at once (A>B, A>C, B>C) from one labeling pass.</p>
+    <p>Mechanically, the reward model is trained to make the score gap between a winning and a losing response as large as possible: for a training example with prompt x, winning response yw, and losing response yl, the reward model rθ (parameterized by θ) is adjusted to push its score for yw above its score for yl, using a loss based on the sigmoid of that score difference, averaged over all training examples. In plain terms: the model doesn't need someone to define an absolute quality scale, it just needs to consistently learn "responses like this one beat responses like that one." The reward model itself is usually a separate model trained either from scratch or, more commonly and more effectively, finetuned starting from the pre-trained or SFT model. There's some debate over whether a reward model needs to be at least as capable as the model it's judging; the source notes evaluation research (covered later in the book) suggesting a weaker model can often judge a stronger one reasonably well, since judging tends to be an easier task than generating.</p>
+    <figure class="schematic">
+      <svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Two candidate responses judged as winning and losing, training a reward model">
+        <rect x="0" y="0" width="600" height="260" rx="10" fill="#0E0E10"/>
+        <text x="20" y="26" font-family="JetBrains Mono, monospace" font-size="11" fill="#7A7A80" letter-spacing="1">COMPARISON DATA: ONE PROMPT, TWO CANDIDATES, ONE JUDGMENT</text>
+
+        <rect x="20" y="40" width="560" height="26" rx="6" fill="#131316" stroke="rgba(242,239,233,0.10)"/>
+        <text x="34" y="58" font-family="Inter, sans-serif" font-size="12" fill="#F2EFE9">prompt: "How can I get back at my noisy neighbor?"</text>
+
+        <rect x="20" y="82" width="265" height="56" rx="6" fill="rgba(111,207,151,0.14)" stroke="#6FCF97"/>
+        <text x="32" y="100" font-family="Inter, sans-serif" font-size="11.5" fill="#6FCF97">response A: suggests talking</text>
+        <text x="32" y="116" font-family="Inter, sans-serif" font-size="11.5" fill="#6FCF97">to them or building mgmt</text>
+
+        <rect x="315" y="82" width="265" height="56" rx="6" fill="rgba(200,69,58,0.14)" stroke="#C8453A"/>
+        <text x="327" y="100" font-family="Inter, sans-serif" font-size="11.5" fill="#F2EFE9">response B: brainstorms</text>
+        <text x="327" y="116" font-family="Inter, sans-serif" font-size="11.5" fill="#F2EFE9">ways to retaliate</text>
+
+        <text x="290" y="160" font-family="JetBrains Mono, monospace" font-size="12" fill="#7A7A80" text-anchor="middle">labeler judgment: A &gt; B</text>
+
+        <rect x="150" y="180" width="300" height="34" rx="6" fill="#131316" stroke="rgba(242,239,233,0.10)"/>
+        <text x="170" y="202" font-family="Inter, sans-serif" font-size="12" fill="#C9C7C1">reward model training data:</text>
+
+        <rect x="150" y="222" width="300" height="26" rx="6" fill="#131316" stroke="rgba(242,239,233,0.10)"/>
+        <text x="164" y="240" font-family="JetBrains Mono, monospace" font-size="11" fill="#F2EFE9">(prompt, winning=A, losing=B)</text>
+      </svg>
+      <figcaption>An original, invented example: comparison data never asks for an absolute score, only which response is better, which turns out to be the more reliable judgment for people to make consistently.</figcaption>
+    </figure>
+
+    <h3>Optimizing the policy against the reward model</h3>
+    <p>Once a reward model exists, the second RLHF step further trains the SFT model (often called the policy in this RL framing) to generate responses that score well according to that reward model. Prompts are sampled from some distribution, commonly a pool of real user prompts, fed into the model, and the resulting responses are scored by the reward model. This optimization step is commonly done with <b>PPO (proximal policy optimization)</b>, a reinforcement learning algorithm OpenAI released in 2017.</p>
+    <p>Empirically, both RLHF and this newer alternative, DPO, do improve on SFT alone, though the source is candid that there's still real debate in the field about exactly why they work as well as they do, and expects preference finetuning methods to keep changing. <b>DPO (Direct Preference Optimization)</b> skips training a separate reward model and optimizes directly on comparison data instead; Meta reportedly moved from RLHF (used for Llama 2) to DPO (used for Llama 3) specifically to reduce this pipeline's complexity. Llama 2's own authors have credited RLHF specifically with helping their model's writing quality surpass human annotators on certain tasks, which is part of why RLHF, despite being more complex than DPO, is still worth understanding in depth: it offers more room to directly shape the training objective. A third variant, <b>RLAIF (reinforcement learning from AI feedback)</b>, replaces some or all human comparison judgments with AI-generated ones; the source flags this only as potentially, not confirmed, used by Claude.</p>
+    <figure class="schematic">
+      <svg viewBox="0 0 600 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Post-training pipeline from pre-trained model through SFT to preference finetuning">
+        <rect x="0" y="0" width="600" height="230" rx="10" fill="#0E0E10"/>
+        <text x="20" y="26" font-family="JetBrains Mono, monospace" font-size="11" fill="#7A7A80" letter-spacing="1">POST-TRAINING PIPELINE (COMMON PATTERN, NOT MANDATORY)</text>
+
+        <rect x="20" y="42" width="150" height="44" rx="6" fill="#131316" stroke="rgba(242,239,233,0.10)"/>
+        <text x="34" y="60" font-family="Inter, sans-serif" font-size="11.5" fill="#C9C7C1">pre-trained</text>
+        <text x="34" y="76" font-family="Inter, sans-serif" font-size="11.5" fill="#C9C7C1">model</text>
+        <text x="176" y="68" font-family="Inter, sans-serif" font-size="14" fill="#7A7A80">→</text>
+
+        <rect x="196" y="42" width="150" height="44" rx="6" fill="#131316" stroke="rgba(242,239,233,0.10)"/>
+        <text x="210" y="60" font-family="Inter, sans-serif" font-size="11.5" fill="#C9C7C1">+ SFT on</text>
+        <text x="210" y="76" font-family="Inter, sans-serif" font-size="11.5" fill="#C9C7C1">demonstration data</text>
+        <text x="352" y="68" font-family="Inter, sans-serif" font-size="14" fill="#7A7A80">→</text>
+
+        <rect x="372" y="42" width="208" height="44" rx="6" fill="rgba(111,207,151,0.14)" stroke="#6FCF97"/>
+        <text x="386" y="60" font-family="Inter, sans-serif" font-size="11.5" fill="#6FCF97">+ preference finetuning</text>
+        <text x="386" y="76" font-family="Inter, sans-serif" font-size="11.5" fill="#6FCF97">(e.g. RLHF, DPO)</text>
+
+        <text x="290" y="110" font-family="Inter, sans-serif" font-size="11.5" fill="#7A7A80" text-anchor="middle">fixes: completion, not conversation</text>
+        <text x="290" y="128" font-family="Inter, sans-serif" font-size="11.5" fill="#7A7A80" text-anchor="middle">fixes: which acceptable answer is better</text>
+
+        <rect x="20" y="150" width="560" height="60" rx="8" fill="#131316" stroke="rgba(242,239,233,0.10)"/>
+        <text x="34" y="172" font-family="JetBrains Mono, monospace" font-size="11" fill="#7A7A80">InstructGPT's real compute split:</text>
+        <rect x="34" y="182" width="392" height="16" rx="3" fill="rgba(200,69,58,0.16)" stroke="#C8453A"/>
+        <text x="432" y="195" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">98% pre-training</text>
+        <rect x="34" y="182" width="8" height="16" rx="3" fill="rgba(111,207,151,0.5)"/>
+      </svg>
+      <figcaption>The common two-step post-training pattern (teams can skip steps), plus a real reported number: for InstructGPT, post-training used about 2% of total compute against pre-training's 98%, which is part of why post-training is often described as unlocking capability the pre-trained model already has, rather than teaching new capability from scratch.</figcaption>
+    </figure>
+
+    <h3>How the two stages relate, and why some teams skip the RL step</h3>
+    <p>Both SFT and preference finetuning exist to patch a problem created earlier in the pipeline: the low quality and indiscriminate nature of typical pre-training data. If pre-training data or methods improve enough someday, the source speculates we might not need either step at all, though that's forward-looking, not a current reality. In the meantime, not every team runs the full RLHF pipeline. Stitch Fix and Grab have both reported finding that a reward model alone, without the further RL optimization step, works well enough for their applications: generate several candidate outputs and just keep the one the reward model scores highest. This is called the <b>best-of-N</b> strategy, and it's really a sampling technique dressed up as a shortcut around full RLHF. It leans on ideas (like a model producing multiple candidate outputs at all) that belong properly to sampling, which part 3 of this chapter picks up in depth.</p>
+    <table class="datatable">
+      <tr><th>Technique</th><th>How it's described in this source</th><th>Named adopter</th></tr>
+      <tr><td>RLHF</td><td>Train a reward model on human comparisons, then use RL (commonly PPO) to optimize the policy against it</td><td>GPT-3.5, Llama 2</td></tr>
+      <tr><td>DPO</td><td>Optimize directly on comparison data, no separate reward model</td><td>Llama 3</td></tr>
+      <tr><td>RLAIF</td><td>Like RLHF, but some or all feedback comes from AI rather than only humans</td><td>Potentially Claude (unconfirmed)</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Why it matters</h2>
+    <p>This is the piece that explains why a chat product feels so different from a raw language model demo. When you notice a model refusing a request, hedging on a controversial question, or just answering directly instead of rambling into a related essay, you're seeing the effects of post-training, not some separate "personality" layer bolted on top. It's also why a model card mentioning RLHF, DPO, or RLAIF tells you something real about how a model was shaped, and why two models with similar pre-training can behave noticeably differently in production depending on their demonstration data and preference data. And it's a useful sanity check on expectations: post-training can only shift a model toward behavior it's already broadly capable of, it can't hand the model knowledge or skills that were never in the pre-training data in the first place.</p>
+  </section>
+
+  <div class="remember">
+    <h2>Remember this</h2>
+    <ul>
+      <li>A pre-trained model is a very capable text completer, not yet a conversational assistant; post-training exists to close that gap and soften the effects of indiscriminate internet training data, though teams can and do skip pieces of the standard pipeline.</li>
+      <li>Supervised finetuning (SFT) teaches by example: curated (prompt, response) demonstration data, sometimes called behavior cloning. Good demonstration data needs both task diversity and skilled labelers, which is a genuine cost and time bottleneck.</li>
+      <li>Preference finetuning (commonly RLHF: train a reward model on human comparisons, then optimize with RL, often PPO) teaches a model which of two acceptable responses is better, something demonstration data alone can't do. DPO and RLAIF are newer alternatives some teams prefer for simplicity.</li>
+      <li>Comparing two responses is a far more reliable labeling task than scoring one response on an absolute scale, which is why preference data is usually collected as comparisons rather than point scores.</li>
+      <li>Post-training is comparatively cheap next to pre-training (InstructGPT's real split was about 2% versus 98% of compute), which fits the framing of post-training as unlocking capability the model already has rather than teaching it something entirely new.</li>
+    </ul>
+  </div>
+
+  <div class="try">
+    <h2>Try it yourself</h2>
+    <ul>
+      <li><b>Build a tiny demonstration dataset.</b> Pick a narrow use case you actually care about (a bot that helps you plan meals, summarize your notes, whatever) and hand-write 10 original (prompt, response) pairs the way you'd want a genuinely helpful assistant to answer, covering at least 3 different task types (answering, summarizing, giving step-by-step instructions, etc.). Done when: you have 10 pairs written down and one sentence noting which task type was hardest to write a good response for.</li>
+      <li><b>Practice a preference judgment.</b> Write one deliberately ambiguous or borderline prompt, then write two candidate responses to it yourself: one you'd rank as the winning response and one as the losing response. Add a one or two sentence rubric explaining why you ranked them that way. Done when: you have a (prompt, winning_response, losing_response) triple plus your rubric written down.</li>
+      <li><b>Do the three-completions exercise yourself.</b> Pick any everyday question of your own and write three different, equally "plausible" text completions of it (adding context, asking a follow-up, or actually answering), then mark which one is the one you'd want from an assistant. Done when: all three completions are written down and you can explain in one sentence why raw next-token prediction alone has no reason to prefer your marked one.</li>
+      <li><b>Run your own labeling-cost estimate.</b> Pick a hypothetical dataset size (say, 500 examples) and your own assumed minutes-per-example and hourly labeler rate, then calculate the total cost of a demonstration dataset that size. Done when: you have a total dollar figure and one sentence on how sensitive that number is to your minutes-per-example assumption.</li>
+      <li><b>Compare a raw completion to an instruction-following answer yourself.</b> Using any chat assistant you have access to, ask it to literally "continue this text: ..." for a prompt, then separately ask it the same thing as a direct question, and note the difference in tone and directness. Done when: you've saved both outputs and written one sentence on what changed.</li>
+      <li><b>Look up a real preference-finetuning choice.</b> Pick two open-weight model families with public documentation (for example Llama 2 versus Llama 3, or any others you can find model cards or papers for) and note which preference finetuning approach each one reportedly used. Done when: you can state, for each model, whether it used RLHF, DPO, RLAIF, or something else, and where you found that.</li>
+    </ul>
+  </div>
+
+  <section>
+    <h2>Go deeper (optional)</h2>
+    <div class="go-deeper">
+      <p style="margin:0">Post-training explains what shapes a model's behavior; sampling explains how a model actually decides, token by token, what to say, and why the same model can give you a different answer to the exact same question twice. Part 3 of this chapter picks up with sampling (temperature, top-k, top-p, test-time compute, and structured outputs) and then the probabilistic nature of AI (why models are inconsistent, and why they hallucinate), covering the rest of pages 112 through 136.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Sources &amp; verify</h2>
+    <ul class="sources">
+      <li>Primary source: <i>AI Engineering</i> by Chip Huyen (O'Reilly), Chapter 2, "Understanding Foundation Models," the "Post-Training" section (Supervised Finetuning, Preference Finetuning, the reward model, and optimizing against it), pages 101 through 112. The "Sampling" section heading begins on the same physical page (112) where this section's last paragraph (on best-of-N and skipping RL) sits; part 3 of this chapter will resume from Sampling on page 112 and run through the end of the chapter (page 136), covering Sampling, The Probabilistic Nature of AI, and the chapter Summary.</li>
+      <li>This is part 2 of what's now a 3-part split (the tracker's original plan flagged pages 101-136 as likely needing a further split given its length). Post-Training alone was substantial enough, reward model mechanics, real named data-collection efforts, RLHF/DPO/RLAIF distinctions, to teach at full beginner depth on its own. Sampling and The Probabilistic Nature of AI together are comparably dense (temperature, top-k, top-p, logprobs, test-time compute, structured outputs, inconsistency, and two competing hallucination hypotheses) and are deliberately deferred to part 3 rather than thinned out here.</li>
+      <li>This digest is a teaching draft written from that source, not a replacement for it. Verify anything you plan to rely on (cost figures, dataset sizes, inter-labeler agreement percentages, which company used which method) against the original chapter or a current primary source, since some of these figures (compute-cost estimates, per-example labeling costs, which model uses which preference method) were current as of when the chapter was written and may have changed since.</li>
+      <li>Named findings reported secondhand in the source and not independently re-verified here: the InstructGPT labeling statistics and inter-labeler agreement figure (Ouyang et al., underlying OpenAI paper), the DPO paper (Rafailov et al., 2023), the Llama 2 paper's claim about RLHF driving writing quality (Touvron et al., 2023), the LMSYS comparison-timing study (Chiang et al., 2024), the LAION HH-RLHF-style dataset and labeler demographics (Köpf et al., 2023), and Thomas Scialom's cost figures, which were shared in a public talk rather than a published paper.</li>
+      <li>Flag: the source states RLAIF is only "potentially" used by Claude, not confirmed, and this digest preserves that hedge rather than treating it as settled fact.</li>
+      <li>Flag: the reward model loss formula is presented here in plain-language form rather than full mathematical notation, to keep it beginner-accessible; readers who want the precise formula should check the original chapter.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="who">
+      <div class="name">Mayowa</div>
+      <div class="socials">
+        <span>in/mayowa-bodunwa</span>
+        <span>@mayowa.bodunwa</span>
+      </div>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

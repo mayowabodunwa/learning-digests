@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data Models and Query Languages, Part 2 — DDIA Ch.2 digest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --panel: #0E0E10;
+    --panel2: #131316;
+    --hair: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --good: #6FCF97;
+    --handle: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--body);
+    line-height: 1.65;
+    font-size: 16px;
+  }
+  .wrap { max-width: 660px; margin: 0 auto; padding: 56px 22px 80px; }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    font-size: 12.5px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    color: var(--ink);
+    font-size: 34px;
+    line-height: 1.15;
+    margin: 0 0 14px;
+  }
+  .lead {
+    color: var(--body);
+    font-size: 18px;
+    line-height: 1.55;
+    margin: 0 0 40px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--hair);
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    color: var(--ink);
+    font-size: 22px;
+    margin: 48px 0 14px;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    color: var(--ink);
+    font-size: 17.5px;
+    margin: 28px 0 8px;
+  }
+  h4 {
+    color: var(--ink);
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 15px;
+    margin: 22px 0 6px;
+  }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 16px; padding-left: 22px; }
+  li { margin: 0 0 8px; }
+  strong { color: var(--ink); }
+  .kicker {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    font-size: 11.5px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin: 0 0 6px;
+  }
+  .term { color: var(--ink); font-weight: 600; }
+  .box {
+    border: 1px solid var(--hair);
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 6px;
+    padding: 22px 24px;
+    margin: 44px 0;
+  }
+  .box.good { border-left-color: var(--good); }
+  .box h2 { margin-top: 0; }
+  figure {
+    border: 1px solid var(--hair);
+    background: var(--panel2);
+    border-radius: 8px;
+    padding: 18px 18px 14px;
+    margin: 22px 0;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 10px;
+    text-align: center;
+  }
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--panel2);
+    color: var(--ink);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  pre {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--panel2);
+    color: var(--ink);
+    padding: 14px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--hair);
+    font-size: 13px;
+    overflow-x: auto;
+    margin: 0 0 16px;
+    line-height: 1.5;
+  }
+  a { color: var(--good); }
+  .divider { height: 1px; background: var(--hair); margin: 48px 0; border: none; }
+  footer {
+    margin-top: 60px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hair);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px; border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hair);
+  }
+  footer .name {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 15px;
+    margin: 0 0 4px;
+  }
+  footer .socials {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--handle);
+    font-size: 12.5px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  footer .socials span { white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">SYSTEMS &middot; CH.2 DIGEST (PART 2 OF 2)</p>
+  <h1>Data Models and Query Languages, Part 2: Graph-Like Data Models</h1>
+  <p class="lead">What happens once "many-to-many" stops being the exception and becomes most of your data: why
+  graphs give you a third shape to reach for, how Cypher and SPARQL let you ask for a pattern instead of writing a
+  chain of joins, and why a graph database is not just the 1970s network model wearing a new outfit.</p>
+
+  <h2>In one line</h2>
+  <p>When almost anything in your data can be related to almost anything else, a graph (things plus the
+  relationships between them, both queryable) tends to fit more naturally than forcing everything into tables or
+  documents, and modern graph query languages finally let you ask "find a pattern like this" declaratively instead
+  of hand-walking pointers.</p>
+
+  <h2>The big idea</h2>
+  <p>Part 1 ended on many-to-many relationships: document databases handle one-to-many nicely and strain once
+  references multiply, while the relational model copes better because joins are a built-in, optimized operation.
+  Graphs are what you reach for once those connections stop being occasional and become the point of the data
+  itself, think of a social network, a map, or a recommendation engine. This part covers two ways to model and
+  query that kind of data (the property graph, queried with Cypher, and the triple-store, queried with SPARQL),
+  a reminder that you can technically force graph data into SQL (awkwardly), and the reason graph databases,
+  despite looking a bit like the old CODASYL network model, actually solve its core problem rather than repeating
+  it.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="term">Graph</span> &mdash; a structure made of two kinds of objects: vertices (things) and
+    edges (the relationships between them). Social networks, road maps, and the web itself (pages linked by
+    hyperlinks) are all naturally graphs.</li>
+    <li><span class="term">Vertex (node)</span> &mdash; one "thing" in a graph: a person, a web page, a road
+    junction, whatever your data is about.</li>
+    <li><span class="term">Edge (relationship)</span> &mdash; a connection between two vertices. An edge always
+    has a direction: it starts at a tail vertex and points to a head vertex.</li>
+    <li><span class="term">Property graph</span> &mdash; the graph model where both vertices and edges are more
+    than just an ID: each one also carries a small bag of key-value properties. Implemented by databases like
+    Neo4j.</li>
+    <li><span class="term">Label</span> &mdash; the name attached to an edge (or a vertex type) describing what
+    kind of relationship or thing it is, e.g. <code>DEPENDS_ON</code> or <code>MAINTAINED_BY</code>. Different
+    labels let one graph store many different kinds of facts at once.</li>
+    <li><span class="term">Cypher</span> &mdash; the declarative, pattern-matching query language created for
+    Neo4j (named after a character in <em>The Matrix</em>, not related to cryptographic ciphers).</li>
+    <li><span class="term">MATCH clause</span> &mdash; Cypher's way of describing the shape you're looking for in
+    the graph, using an arrow notation like <code>(a)-[:REL]-&gt;(b)</code>.</li>
+    <li><span class="term">Variable-length path (<code>*0..</code>)</span> &mdash; a piece of Cypher path syntax
+    meaning "follow this edge label zero or more times," used when you don't know in advance how many hops a
+    relationship chain will take (similar in spirit to the <code>*</code> in a regex).</li>
+    <li><span class="term">Recursive common table expression (<code>WITH RECURSIVE</code>)</span> &mdash; a SQL
+    feature, standardized in SQL:1999, that lets a query build up a result set by referring to its own
+    in-progress output, which is how you fake a variable-length graph traversal in plain SQL.</li>
+    <li><span class="term">Triple-store</span> &mdash; a graph database that stores every fact as a tiny
+    three-part statement, implemented by databases like Datomic and AllegroGraph.</li>
+    <li><span class="term">Triple</span> &mdash; one <code>(subject, predicate, object)</code> statement, e.g.
+    <code>(transit-lib, dependsOn, http-core)</code>. Equivalent to one edge, or, when the object is a plain value,
+    one property, in a graph.</li>
+    <li><span class="term">RDF (Resource Description Framework)</span> &mdash; the W3C data model behind
+    triple-stores, originally designed so different websites could publish machine-readable data in a shared
+    format (the "semantic web").</li>
+    <li><span class="term">Turtle</span> &mdash; a compact, human-readable text format for writing RDF triples
+    (there's also a much more verbose RDF/XML format that means the same thing).</li>
+    <li><span class="term">SPARQL</span> &mdash; the standard declarative query language for RDF triple-stores
+    (SPARQL Protocol and RDF Query Language, pronounced "sparkle"). Its pattern-matching syntax predates and
+    heavily influenced Cypher's.</li>
+    <li><span class="term">Datalog</span> &mdash; an older (1980s) rule-based query language, a subset of Prolog,
+    that builds queries out of small, reusable, sometimes-recursive rules rather than one big statement. Used by
+    Datomic and Cascalog.</li>
+    <li><span class="term">CODASYL / network model</span> &mdash; the 1970s data model from Part 1 where a record
+    could have multiple parents, but the only way to reach a record was to walk a pre-declared chain of pointers
+    (an "access path").</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>Why reach for a graph at all</h3>
+  <p>Part 1's closing point was that many-to-one and many-to-many relationships are where document databases
+  start to strain and the relational model earns its keep, because joins are a first-class, optimized operation
+  there. Graphs are the next step along that same line: once the connections in your data aren't just common but
+  are genuinely the point, the relational model can start to strain too. A social network (who knows whom), the
+  web itself (which pages link to which), and a road network (which junctions connect to which) are all naturally
+  graph-shaped, and well-known algorithms already exist for them, like a car navigation system finding the
+  shortest path between two junctions, or PageRank ranking web pages by how they're linked to.</p>
+  <p>A graph is not necessarily made of one kind of thing, either. It's common for every vertex to represent the
+  same kind of entity (all people, or all web pages), but a graph can just as easily mix several kinds of vertices
+  and edges in one datastore. As one real illustration of that: Facebook's internal graph reportedly holds
+  vertices for people, places, events, check-ins, and comments, with edges capturing who's friends with whom,
+  which check-in happened where, who commented on what, and so on, all as one connected structure rather than
+  separate stores per entity type. There are a couple of different, related ways to actually build and query a
+  graph like this, and this digest covers two of them: the <strong>property graph</strong> model (queried with
+  Cypher) and the <strong>triple-store</strong> model (queried with SPARQL). There are also imperative graph
+  query languages, like Gremlin, and dedicated graph-processing frameworks for batch computation over huge graphs,
+  like Pregel, but those are outside what this part covers in depth.</p>
+
+  <h3>The property graph model</h3>
+  <p>In the property graph model, a vertex is: a unique identifier, a set of outgoing edges, a set of incoming
+  edges, and a collection of properties (plain key-value pairs). An edge is: a unique identifier, the vertex it
+  starts at (the tail), the vertex it ends at (the head), a label describing what kind of relationship it is, and
+  its own collection of properties. Notice edges get properties too, not just vertices, so you can attach detail
+  to the relationship itself (like the year a dependency was added), not only to the things it connects.</p>
+  <p>Here's an original example to make this concrete: imagine tracking software packages and who maintains them.
+  <code>transit-lib</code> is a <code>Package</code> vertex with properties <code>{name: 'transit-lib', version:
+  '2.3.0'}</code>. It has a <code>DEPENDS_ON</code> edge (with a property <code>{since: 2021}</code>) pointing to
+  another <code>Package</code> vertex, <code>http-core</code>. Both packages have a <code>MAINTAINED_BY</code>
+  edge pointing to an <code>Org</code> vertex, <code>Acme</code> or <code>Globex</code> respectively.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A property graph with two Package vertices and two Org vertices, connected by DEPENDS_ON and MAINTAINED_BY edges, each carrying properties">
+      <rect x="0" y="0" width="600" height="260" fill="#131316"/>
+      <g font-family="JetBrains Mono, monospace" font-size="11.5">
+        <rect x="30" y="24" width="170" height="70" rx="8" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.5"/>
+        <text x="115" y="42" text-anchor="middle" fill="#F2EFE9">Package</text>
+        <text x="115" y="60" text-anchor="middle" fill="#C9C7C1">name: transit-lib</text>
+        <text x="115" y="78" text-anchor="middle" fill="#C9C7C1">version: 2.3.0</text>
+
+        <rect x="400" y="24" width="170" height="70" rx="8" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.5"/>
+        <text x="485" y="42" text-anchor="middle" fill="#F2EFE9">Package</text>
+        <text x="485" y="60" text-anchor="middle" fill="#C9C7C1">name: http-core</text>
+        <text x="485" y="78" text-anchor="middle" fill="#C9C7C1">version: 1.0.4</text>
+
+        <line x1="200" y1="55" x2="398" y2="55" stroke="#C8453A" stroke-width="1.5"/>
+        <polygon points="398,55 388,50 388,60" fill="#C8453A"/>
+        <text x="300" y="40" text-anchor="middle" fill="#C8453A">DEPENDS_ON {since:2021}</text>
+
+        <rect x="30" y="166" width="170" height="56" rx="8" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.5"/>
+        <text x="115" y="188" text-anchor="middle" fill="#6FCF97">Org</text>
+        <text x="115" y="206" text-anchor="middle" fill="#C9C7C1">name: Acme</text>
+
+        <rect x="400" y="166" width="170" height="56" rx="8" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.5"/>
+        <text x="485" y="188" text-anchor="middle" fill="#6FCF97">Org</text>
+        <text x="485" y="206" text-anchor="middle" fill="#C9C7C1">name: Globex</text>
+
+        <line x1="115" y1="94" x2="115" y2="164" stroke="#7A7A80" stroke-width="1.5"/>
+        <polygon points="115,164 110,152 120,152" fill="#7A7A80"/>
+        <text x="115" y="130" text-anchor="middle" fill="#7A7A80">MAINTAINED_BY</text>
+
+        <line x1="485" y1="94" x2="485" y2="164" stroke="#7A7A80" stroke-width="1.5"/>
+        <polygon points="485,164 480,152 490,152" fill="#7A7A80"/>
+        <text x="485" y="130" text-anchor="middle" fill="#7A7A80">MAINTAINED_BY</text>
+      </g>
+    </svg>
+    <figcaption>Original schematic: vertices and edges both carry their own properties, and a label like DEPENDS_ON or MAINTAINED_BY says what kind of relationship an edge represents.</figcaption>
+  </figure>
+
+  <p>Three things about this model matter a lot in practice. First, any vertex can have an edge to any other
+  vertex, there's no schema declaring in advance which kinds of things are allowed to connect. Second, given any
+  vertex you can efficiently find both its incoming and its outgoing edges (that's exactly why, if you represent
+  this in plain relational tables, you'd index the edges table on both the tail and the head columns), which
+  means you can traverse the graph forward or backward. Third, different labels let you store several genuinely
+  different kinds of relationships in one graph while keeping the data model clean. Put together, this tends to
+  make graphs unusually good for evolvability: as an application grows and needs a new kind of relationship (say,
+  a <code>FORKED_FROM</code> edge between packages), you can typically just start creating edges with that label,
+  without redesigning anything that already exists.</p>
+
+  <h3>Cypher: asking for a pattern, not a procedure</h3>
+  <p>Cypher is a declarative query language for property graphs, built for Neo4j. Its signature move is an arrow
+  notation you use both to create data and to describe a pattern you want the database to find. Continuing the
+  package example, here's an original Cypher statement that creates a small piece of that graph:</p>
+  <pre>CREATE
+  (transitLib:Package {name:'transit-lib', version:'2.3.0'}),
+  (httpCore:Package    {name:'http-core',   version:'1.0.4'}),
+  (acme:Org             {name:'Acme'}),
+  (globex:Org           {name:'Globex'}),
+  (transitLib) -[:DEPENDS_ON {since:2021}]-&gt; (httpCore),
+  (transitLib) -[:MAINTAINED_BY]-&gt; (acme),
+  (httpCore)   -[:MAINTAINED_BY]-&gt; (globex)</pre>
+  <p>Each vertex gets a short symbolic name (<code>transitLib</code>, <code>httpCore</code>...) so later parts of
+  the same query can refer back to it. Now suppose you want to answer a real question: which packages maintained
+  by Acme depend, directly or through some chain of other packages, on a package maintained by Globex? That's
+  exactly the kind of "unknown number of hops" question a graph is built to answer, and Cypher's <code>MATCH</code>
+  clause expresses it concisely:</p>
+  <pre>MATCH
+  (pkg:Package) -[:DEPENDS_ON*0..]-&gt; (dep:Package) -[:MAINTAINED_BY]-&gt; (:Org {name:'Globex'}),
+  (pkg) -[:MAINTAINED_BY]-&gt; (:Org {name:'Acme'})
+RETURN pkg.name</pre>
+  <p>Read the first line as: find a package <code>pkg</code>, then follow zero or more <code>DEPENDS_ON</code>
+  edges (that's what <code>*0..</code> means, "this edge label, zero or more times," much like the <code>*</code>
+  in a regular expression) until you land on some package <code>dep</code>, which itself has a
+  <code>MAINTAINED_BY</code> edge to the <code>Org</code> named Globex. The second line says that same
+  <code>pkg</code> also has to be maintained by Acme. Nothing in the query says how to execute this: whether to
+  start by scanning every package, or to start from the Globex vertex and work backward along incoming edges. As
+  is typical for a declarative language, that's left entirely to the query optimizer, which is free to pick
+  whatever strategy it predicts will be fastest.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A Cypher MATCH pattern shown as a chain: pkg follows zero or more DEPENDS_ON edges to dep, which is maintained by Globex, while pkg itself is maintained by Acme">
+      <rect x="0" y="0" width="600" height="230" fill="#131316"/>
+      <g font-family="JetBrains Mono, monospace" font-size="11.5">
+        <rect x="20" y="30" width="90" height="34" rx="6" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.5"/>
+        <text x="65" y="52" text-anchor="middle" fill="#F2EFE9">(pkg)</text>
+
+        <line x1="110" y1="47" x2="220" y2="47" stroke="#6FCF97" stroke-width="1.5"/>
+        <polygon points="220,47 210,42 210,52" fill="#6FCF97"/>
+        <text x="165" y="30" text-anchor="middle" fill="#6FCF97">[:DEPENDS_ON*0..]</text>
+
+        <rect x="220" y="30" width="90" height="34" rx="6" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.5"/>
+        <text x="265" y="52" text-anchor="middle" fill="#F2EFE9">(dep)</text>
+
+        <line x1="310" y1="47" x2="420" y2="47" stroke="#7A7A80" stroke-width="1.5"/>
+        <polygon points="420,47 410,42 410,52" fill="#7A7A80"/>
+        <text x="365" y="30" text-anchor="middle" fill="#7A7A80">[:MAINTAINED_BY]</text>
+
+        <rect x="420" y="30" width="150" height="34" rx="6" fill="#0E0E10" stroke="#C8453A" stroke-width="1.5"/>
+        <text x="495" y="52" text-anchor="middle" fill="#C8453A">Org {name:'Globex'}</text>
+
+        <line x1="65" y1="64" x2="65" y2="140" stroke="#7A7A80" stroke-width="1.5"/>
+        <polygon points="65,140 60,128 70,128" fill="#7A7A80"/>
+        <text x="65" y="120" text-anchor="middle" fill="#7A7A80">[:MAINTAINED_BY]</text>
+
+        <rect x="0" y="144" width="150" height="34" rx="6" fill="#0E0E10" stroke="#C8453A" stroke-width="1.5"/>
+        <text x="75" y="166" text-anchor="middle" fill="#C8453A">Org {name:'Acme'}</text>
+
+        <text x="300" y="205" text-anchor="middle" fill="#C9C7C1">same pkg must satisfy both conditions -&gt; RETURN pkg.name</text>
+      </g>
+    </svg>
+    <figcaption>Original schematic: the MATCH clause describes a shape (a chain plus a side branch), and the same pkg vertex has to satisfy every part of it at once.</figcaption>
+  </figure>
+
+  <h3>Can you query a graph with plain SQL? Sort of.</h3>
+  <p>You can absolutely store a property graph in ordinary relational tables: one table for vertices, one for
+  edges, each with a JSON-ish properties column, and indexes on the edge table's tail and head columns so you can
+  traverse in either direction. The catch shows up the moment you try to query it. In a typical relational query
+  you know in advance exactly which joins you need. In a graph query like the one above, you don't: you might need
+  to walk one <code>DEPENDS_ON</code> edge, or five, before you find what you're after, so the number of joins
+  isn't fixed ahead of time.</p>
+  <p>SQL does have an answer to this, since SQL:1999: a <strong>recursive common table expression</strong>, written
+  with <code>WITH RECURSIVE</code>, which lets a query refer to its own result set so it can keep growing it until
+  no more rows match. It's supported in PostgreSQL, IBM DB2, Oracle, and SQL Server. Here's the same
+  "who depends on Globex, and is also maintained by Acme" question, written against a generic
+  <code>nodes</code>/<code>edges</code> schema:</p>
+  <pre>WITH RECURSIVE
+  -- packages maintained directly by Globex
+  globex_direct(node_id) AS (
+    SELECT edges.tail_id FROM edges
+      JOIN nodes ON nodes.node_id = edges.head_id
+      WHERE edges.label = 'maintained_by' AND nodes.props-&gt;&gt;'name' = 'Globex'
+  ),
+  -- grow that set by following incoming depends_on edges, however many hops it takes
+  depends_on_globex(node_id) AS (
+      SELECT node_id FROM globex_direct
+    UNION
+      SELECT edges.tail_id FROM edges
+        JOIN depends_on_globex ON edges.head_id = depends_on_globex.node_id
+        WHERE edges.label = 'depends_on'
+  )
+SELECT nodes.props-&gt;&gt;'name'
+FROM nodes
+JOIN depends_on_globex ON nodes.node_id = depends_on_globex.node_id
+JOIN edges e2       ON e2.tail_id = nodes.node_id AND e2.label = 'maintained_by'
+JOIN nodes org      ON org.node_id = e2.head_id AND org.props-&gt;&gt;'name' = 'Acme';</pre>
+  <p>That works, and it's a genuinely useful technique to know, but notice how much more of the traversal logic
+  you have to spell out by hand compared to Cypher's single <code>*0..</code>. This isn't a knock on SQL in
+  general, it's a good illustration of a broader point: a technique being <em>possible</em> in a language doesn't
+  mean that language was designed for it, and picking a data model that actually fits your problem tends to save
+  you a lot of this kind of clumsiness later.</p>
+
+  <h3>Triple-stores and SPARQL</h3>
+  <p>The triple-store model is mostly the property graph model wearing different words. Instead of vertices and
+  labeled edges, everything is stored as tiny three-part statements: <code>(subject, predicate, object)</code>.
+  In the triple <code>(transit-lib, dependsOn, http-core)</code>, <code>transit-lib</code> is the subject,
+  <code>dependsOn</code> is the predicate (a verb), and <code>http-core</code> is the object. The subject of a
+  triple lines up with a vertex. The object is one of two things: a plain value like a string or number, in which
+  case the predicate and object together work like a property (<code>(transit-lib, name, "transit-lib")</code> is
+  just a vertex with a <code>name</code> property), or another vertex, in which case the predicate is an edge
+  label, the subject is the tail, and the object is the head.</p>
+  <p>Here's the same small package graph written as triples, in a compact text format called Turtle:</p>
+  <pre>@prefix : &lt;urn:example:&gt;.
+_:translib a :Package; :name "transit-lib"; :dependsOn _:httpcore; :maintainedBy _:acme.
+_:httpcore a :Package; :name "http-core";   :maintainedBy _:globex.
+_:acme     a :Org;     :name "Acme".
+_:globex   a :Org;     :name "Globex".</pre>
+  <p>The <code>_:translib</code>-style names only mean something inside this one file, they exist purely so
+  multiple triples can point at "the same vertex." The semicolons are a shorthand for saying several things about
+  the same subject without repeating it. (A side note worth flagging: triple-stores are closely associated with
+  the "semantic web," the idea that websites could publish machine-readable data the way they publish pages for
+  humans, using RDF as a shared format. That vision was heavily hyped in the early 2000s and, at least as of this
+  writing, hasn't really materialized at internet scale, so treat "semantic web" and "triple-store" as related but
+  separable ideas: a triple-store can be a genuinely useful internal data model for an application with zero
+  interest in publishing anything to the open web.)</p>
+  <p><strong>SPARQL</strong> is the standard query language for triple-stores built on the RDF data model. It
+  predates Cypher, and Cypher's pattern-matching syntax borrows from it, so the two read similarly. Here's the
+  Acme/Globex dependency question again, this time in SPARQL:</p>
+  <pre>PREFIX : &lt;urn:example:&gt;
+SELECT ?pkgName WHERE {
+  ?pkg :name ?pkgName .
+  ?pkg :dependsOn* / :maintainedBy / :name "Globex" .
+  ?pkg :maintainedBy / :name "Acme" .
+}</pre>
+  <p>Variables start with a question mark. The line <code>?pkg :dependsOn* / :maintainedBy / :name "Globex"</code>
+  chains three predicates together with <code>/</code>: follow <code>dependsOn</code> zero or more times (the
+  <code>*</code>, same idea as Cypher's <code>*0..</code>), then one <code>maintainedBy</code> edge, then check the
+  resulting vertex's <code>name</code> property equals "Globex", all in one line. Because RDF doesn't distinguish
+  between an edge and a property, both work through the same predicate syntax.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A table of subject predicate object triples on the left, matched against an equivalent small property graph on the right">
+      <rect x="0" y="0" width="600" height="260" fill="#131316"/>
+      <g font-family="JetBrains Mono, monospace" font-size="11">
+        <text x="150" y="22" text-anchor="middle" fill="#6FCF97">triple-store</text>
+        <rect x="20" y="32" width="260" height="26" fill="#0E0E10" stroke="#7A7A80"/>
+        <text x="35" y="49" fill="#F2EFE9">subject</text>
+        <text x="135" y="49" fill="#F2EFE9">predicate</text>
+        <text x="225" y="49" fill="#F2EFE9">object</text>
+        <rect x="20" y="58" width="260" height="24" fill="#0E0E10" stroke="#7A7A80"/>
+        <text x="35" y="74" fill="#C9C7C1">translib</text>
+        <text x="135" y="74" fill="#C9C7C1">dependsOn</text>
+        <text x="225" y="74" fill="#C9C7C1">httpcore</text>
+        <rect x="20" y="82" width="260" height="24" fill="#0E0E10" stroke="#7A7A80"/>
+        <text x="35" y="98" fill="#C9C7C1">translib</text>
+        <text x="135" y="98" fill="#C9C7C1">maintainedBy</text>
+        <text x="225" y="98" fill="#C9C7C1">acme</text>
+        <rect x="20" y="106" width="260" height="24" fill="#0E0E10" stroke="#7A7A80"/>
+        <text x="35" y="122" fill="#C9C7C1">httpcore</text>
+        <text x="135" y="122" fill="#C9C7C1">maintainedBy</text>
+        <text x="225" y="122" fill="#C9C7C1">globex</text>
+        <rect x="20" y="130" width="260" height="24" fill="#0E0E10" stroke="#7A7A80"/>
+        <text x="35" y="146" fill="#C9C7C1">acme</text>
+        <text x="135" y="146" fill="#C9C7C1">name</text>
+        <text x="225" y="146" fill="#C9C7C1">"Acme"</text>
+
+        <text x="450" y="22" text-anchor="middle" fill="#C8453A">same data, as a graph</text>
+        <rect x="380" y="40" width="80" height="30" rx="6" fill="#0E0E10" stroke="#F2EFE9"/>
+        <text x="420" y="60" text-anchor="middle" fill="#F2EFE9">translib</text>
+        <rect x="500" y="40" width="80" height="30" rx="6" fill="#0E0E10" stroke="#F2EFE9"/>
+        <text x="540" y="60" text-anchor="middle" fill="#F2EFE9">httpcore</text>
+        <line x1="460" y1="55" x2="498" y2="55" stroke="#C8453A"/>
+        <polygon points="498,55 490,51 490,59" fill="#C8453A"/>
+        <rect x="380" y="110" width="80" height="30" rx="6" fill="#0E0E10" stroke="#6FCF97"/>
+        <text x="420" y="130" text-anchor="middle" fill="#6FCF97">acme</text>
+        <rect x="500" y="110" width="80" height="30" rx="6" fill="#0E0E10" stroke="#6FCF97"/>
+        <text x="540" y="130" text-anchor="middle" fill="#6FCF97">globex</text>
+        <line x1="420" y1="70" x2="420" y2="108" stroke="#7A7A80"/>
+        <polygon points="420,108 415,96 425,96" fill="#7A7A80"/>
+        <line x1="540" y1="70" x2="540" y2="108" stroke="#7A7A80"/>
+        <polygon points="540,108 535,96 545,96" fill="#7A7A80"/>
+        <text x="480" y="180" text-anchor="middle" fill="#7A7A80">every row above is one edge, or one property</text>
+        <text x="480" y="200" text-anchor="middle" fill="#7A7A80">on a vertex, same underlying graph either way</text>
+      </g>
+    </svg>
+    <figcaption>Original schematic: a triple-store's rows and a property graph's vertices/edges are two notations for the same underlying structure.</figcaption>
+  </figure>
+
+  <h3>Datalog: building queries out of small, reusable rules</h3>
+  <p>Datalog is much older than Cypher or SPARQL, studied by academics since the 1980s, and it's the query
+  language behind Datomic (Cascalog is a Datalog implementation for querying large Hadoop datasets). Its data
+  model looks like the triple-store model generalized slightly: instead of writing <code>(subject, predicate,
+  object)</code>, you write <code>predicate(subject, object)</code>. Where Cypher and SPARQL jump straight to a
+  single query, Datalog builds a query out of small rules that can call each other, similar to how functions call
+  other functions, including calling themselves recursively. Here's the package example as Datalog facts and
+  rules:</p>
+  <pre>name(acme, 'Acme').
+name(globex, 'Globex').
+maintained_by(translib, acme).
+maintained_by(httpcore, globex).
+depends_on(translib, httpcore).
+
+depends_on_rec(Pkg, Dep) :- depends_on(Pkg, Dep).
+depends_on_rec(Pkg, Dep) :- depends_on(Pkg, Via), depends_on_rec(Via, Dep).
+
+needs_review(PkgName) :- name(Pkg, PkgName),
+                          maintained_by(Pkg, AcmeOrg), name(AcmeOrg, 'Acme'),
+                          depends_on_rec(Pkg, Dep),
+                          maintained_by(Dep, GlobexOrg), name(GlobexOrg, 'Globex').
+
+?- needs_review(Who).
+/* Who = 'transit-lib'. */</pre>
+  <p>Words starting with an uppercase letter (<code>Pkg</code>, <code>Dep</code>, <code>Who</code>) are variables.
+  The two <code>depends_on_rec</code> rules define a new relationship that isn't stored directly: the first rule
+  says a direct dependency counts, the second says "if A depends on B, and B recursively depends on C, then A
+  recursively depends on C," and the database keeps reapplying that second rule until nothing new is produced.
+  That's a genuinely different way to think about a query than one big declarative statement, and it's less handy
+  for a one-off question, but rules can be combined and reused across many queries, which tends to pay off once
+  your data and questions both get more complex.</p>
+
+  <h3>Graphs vs. the old network model, for real this time</h3>
+  <p>CODASYL's network model, from Part 1, let a record have multiple parents, which sounds a lot like a graph
+  where a vertex can have multiple incoming edges. Given that, it's a fair question whether a graph database is
+  just CODASYL rebranded. It isn't, and the differences are worth naming precisely, since they're exactly what
+  makes graphs practical where the network model wasn't:</p>
+  <ul>
+    <li><strong>Schema.</strong> CODASYL required a schema declaring which record type could be nested inside
+    which other record type. A graph database has no such restriction: any vertex can have an edge to any other
+    vertex, which is what lets you add a brand-new relationship type without redesigning anything that already
+    exists.</li>
+    <li><strong>How you reach a record.</strong> In CODASYL, the only way to a particular record was to walk one
+    of its pre-declared access paths. In a graph database, you can refer directly to any vertex by its unique ID,
+    or look one up through an index, no access path required.</li>
+    <li><strong>Ordering.</strong> CODASYL kept a record's children as an ordered set, which the database had to
+    maintain (with real consequences for how data was physically laid out) and which applications had to think
+    about when inserting. In a graph database, vertices and edges typically aren't ordered at all; you only sort
+    when you ask a query to sort its results.</li>
+    <li><strong>Query style.</strong> CODASYL queries were all imperative, and easy to break with a schema change.
+    You can still write imperative traversal code against a graph database if you want to, but most graph
+    databases also offer a high-level declarative language, Cypher or SPARQL, on top.</li>
+  </ul>
+  <p>Worth bounding that first point a little: "any vertex can have an edge to any other vertex" describes the
+  common, schema-flexible case for property graph and triple-store databases, not a universal law of every graph
+  system everywhere; some graph tools do let you layer optional constraints on top. The core contrast still
+  holds: CODASYL made you declare and hand-navigate your access paths up front, while a typical graph database
+  lets the connections and the query optimizer do that work instead.</p>
+
+  <figure>
+    <svg viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CODASYL requires a fixed schema and a hand walked access path to add a new relationship, while a property graph just adds a new labeled edge">
+      <rect x="0" y="0" width="600" height="240" fill="#131316"/>
+      <g font-family="JetBrains Mono, monospace" font-size="11.5">
+        <text x="150" y="24" text-anchor="middle" fill="#C8453A">CODASYL network model</text>
+        <text x="150" y="44" text-anchor="middle" fill="#C9C7C1">new relationship type =</text>
+        <rect x="50" y="58" width="200" height="30" rx="5" fill="#0E0E10" stroke="#C8453A" stroke-width="1.5"/>
+        <text x="150" y="78" text-anchor="middle" fill="#C8453A">redeclare schema</text>
+        <line x1="150" y1="88" x2="150" y2="106" stroke="#C8453A" stroke-width="1.5"/>
+        <polygon points="150,106 143,94 157,94" fill="#C8453A"/>
+        <rect x="50" y="110" width="200" height="30" rx="5" fill="#0E0E10" stroke="#C8453A" stroke-width="1.5"/>
+        <text x="150" y="130" text-anchor="middle" fill="#C8453A">rewrite access-path code</text>
+        <text x="150" y="165" text-anchor="middle" fill="#7A7A80">only reachable via a declared path</text>
+
+        <text x="450" y="24" text-anchor="middle" fill="#6FCF97">property graph</text>
+        <text x="450" y="44" text-anchor="middle" fill="#C9C7C1">new relationship type =</text>
+        <rect x="360" y="58" width="180" height="30" rx="5" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.5"/>
+        <text x="450" y="78" text-anchor="middle" fill="#6FCF97">add a new edge label</text>
+        <text x="450" y="105" text-anchor="middle" fill="#7A7A80">e.g. (pkg)-[:FORKED_FROM]-&gt;(pkg2)</text>
+        <text x="450" y="140" text-anchor="middle" fill="#7A7A80">no migration, no schema change</text>
+        <text x="450" y="165" text-anchor="middle" fill="#7A7A80">reachable by ID or index, any time</text>
+      </g>
+    </svg>
+    <figcaption>Original schematic: CODASYL made a new relationship type a schema-and-code change; a property graph makes it one new edge label.</figcaption>
+  </figure>
+
+  <h2>Why it matters</h2>
+  <p>Data started out as one big tree (the hierarchical model), which struggled with many-to-many relationships,
+  which is exactly the problem the relational model was invented to solve. Document databases and graph databases
+  are the two directions modern NoSQL took that same fight in: document databases bet that relationships between
+  records will stay rare, graph databases bet the opposite, that anything might eventually relate to everything.
+  All three (relational, document, graph) are genuinely useful today, each in its own domain, and you can emulate
+  one in terms of another (as the recursive-CTE example above shows), but the result tends to be awkward, which is
+  exactly why different systems exist for different shapes of problem instead of one that tries to do everything.
+  Recognizing when your data has quietly become "anything relates to everything" is a real, practical skill: it's
+  the signal that tells you it might be worth reaching for a graph model instead of forcing more joins onto a
+  relational schema, or more application-side lookups onto a document one.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>A graph is just vertices (things) plus edges (labeled, directional relationships between them), and a
+      property graph lets both carry their own key-value properties.</li>
+      <li>Cypher and SPARQL let you describe a <em>pattern</em> ("this vertex, connected this way, to a vertex
+      with this property") and leave the traversal strategy to the query optimizer, the same declarative bet SQL
+      made decades earlier.</li>
+      <li>SQL can express a variable-length graph traversal with <code>WITH RECURSIVE</code>, but it's noticeably
+      more code than Cypher's <code>*0..</code>, a good reminder that "possible" and "designed for this" aren't
+      the same thing.</li>
+      <li>A triple-store's <code>(subject, predicate, object)</code> facts are the same underlying idea as a
+      property graph's vertices and edges, just described with different vocabulary.</li>
+      <li>Graph databases aren't CODASYL again: no fixed schema restricting connections, direct ID/index access
+      instead of hand-walked paths, and declarative query languages on top when you want them.</li>
+    </ul>
+  </div>
+
+  <div class="box good">
+    <h2>Try it yourself</h2>
+    <ul>
+      <li><strong>Plain-dict graph and a manual traversal.</strong> Model a small dependency graph as a Python (or
+      any language) dict of vertices and a list of edges (each edge a tail, head, and label), then write a
+      function that checks whether package A depends on package B directly or through any chain of other
+      packages. <em>Done when:</em> your function correctly answers "yes" for a chain of at least 3 hops and "no"
+      for an unrelated pair.</li>
+      <li><strong>Recursive SQL CTE for a 2-hop traversal.</strong> Using SQLite (or Postgres), create the
+      generic <code>nodes</code>/<code>edges</code> tables from this digest, insert a handful of packages, orgs,
+      and edges, then write a <code>WITH RECURSIVE</code> query that finds every package depending (directly or
+      transitively) on a package maintained by a given org. <em>Done when:</em> the query's results match what you
+      can verify by tracing the chain by hand.</li>
+      <li><strong>Flat triples, queried in code.</strong> Represent the same small graph as a plain list of
+      <code>(subject, predicate, object)</code> tuples, then write a function that answers "who maintains what"
+      and "what does X depend on" purely by filtering that list, no graph library involved. <em>Done when:</em>
+      both questions return correct answers using nothing but list filtering.</li>
+      <li><strong>Toy Datalog rule engine.</strong> Reimplement the <code>depends_on_rec</code> idea from this
+      digest as a small recursive function over your list of edges (not a real Datalog engine, just the same
+      logic), then confirm it finds transitive dependencies your direct-only lookup misses. <em>Done when:</em>
+      it correctly finds a dependency that's 3+ hops away.</li>
+      <li><strong>Schema-change stress test.</strong> Add a brand-new relationship type (like
+      <code>FORKED_FROM</code>) to both your dict-graph from the first project and to a small fixed relational
+      schema (a proper table with foreign key columns) representing the same data. <em>Done when:</em> you can
+      point to the exact extra step (a new column, table, or migration) the relational version needed that the
+      graph version didn't.</li>
+      <li><strong>Try a real graph database.</strong> Spin up Neo4j (the free desktop app or an online sandbox),
+      load a tiny dataset with a Cypher <code>CREATE</code> statement like the one in this digest, and run one
+      <code>MATCH ... RETURN</code> query with a variable-length path. <em>Done when:</em> the query returns the
+      result you expected, and you can explain in your own words what <code>*0..</code> is doing.</li>
+    </ul>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>The most re-readable idea here is the CODASYL comparison: it's tempting to assume "graph database" and
+  "1970s network model" are the same thing wearing different clothes, and the four concrete differences above
+  (schema, access, ordering, query style) are the fastest way to see why that assumption is wrong. A natural next
+  question: for a project you're building, is there a relationship you're currently faking with extra lookup
+  tables or application-side joins that would just be a single labeled edge in a graph?</p>
+
+  <hr class="divider">
+
+  <h2>Sources &amp; verify</h2>
+  <ul>
+    <li>Primary source: Martin Kleppmann, <em>Designing Data-Intensive Applications</em>, Chapter 2 ("Data Models
+    and Query Languages"), the "Graph-Like Data Models" section through the chapter's Summary. This corresponds to
+    pages 71&ndash;90 of the source PDF extraction used for this digest; the printed page numbers visible on those
+    same pages run 49&ndash;67, with the chapter's teaching content ending around printed page 63 (PDF page ~86)
+    and the remaining pages being the chapter's references/bibliography list, not additional teaching material.</li>
+    <li>This digest is a teaching draft, written to help you learn the concepts quickly. It is not a substitute
+    for the source, and anything you plan to rely on (the exact Cypher/SPARQL syntax, version numbers, or the
+    Facebook graph example) is worth checking directly against the chapter and its own references before you
+    depend on it.</li>
+    <li>Flagged for verification: this digest's Part 1 companion cited its own page range as 49&ndash;70, which
+    numerically overlaps with the 49&ndash;67 printed-page range visible on this part's extracted pages; that
+    likely reflects a difference in how each part's page range was estimated rather than an error in this digest's
+    content, but it's worth reconciling against your own physical or PDF copy if the exact page numbers matter to
+    you. Separately, Cypher and SPARQL syntax shown here (arrow notation, <code>*0..</code>, property-path
+    chaining with <code>/</code> and <code>*</code>) is written in the same style the source describes, but this
+    digest's specific package/dependency examples are original and were not run against a live Neo4j or SPARQL
+    endpoint, so treat them as illustrative rather than copy-paste-tested code.</li>
+  </ul>
+
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div>
+      <p class="name">Mayowa</p>
+      <div class="socials">
+        <span>in/mayowa-bodunwa</span>
+        <span>@mayowa.bodunwa</span>
+      </div>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
