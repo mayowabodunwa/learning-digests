@@ -24,10 +24,10 @@ still treated like a chapter: one digest, one carousel.
 
 ## Current batch: tick each when you've studied it
 
-- [ ] DDIA — Ch.2 (Part 1 of 2): Data Models and Query Languages — relational vs. document model, the birth of NoSQL, the object-relational mismatch, many-to-one/many-to-many relationships, declarative vs. imperative query languages, MapReduce querying
-- [ ] AI Engineering — Ch.2 (Part 1 of 2): Understanding Foundation Models — training data (general-purpose, multilingual, domain-specific), the transformer architecture, model size and scaling laws (incl. inverse scaling)
-- [ ] High Performance MySQL — Ch.2: Monitoring in a Reliability Engineering World — SLIs/SLOs/SLAs, what to measure, proactive monitoring, why percentiles beat averages
-- [ ] AWS — Topic 2: Transit Gateway & multi-VPC connectivity — why full-mesh VPC peering doesn't scale, transit gateways, attachments, transit gateway route tables
+- [x] DDIA — Ch.2 (Part 1 of 2): Data Models and Query Languages — relational vs. document model, the birth of NoSQL, the object-relational mismatch, many-to-one/many-to-many relationships, declarative vs. imperative query languages, MapReduce querying
+- [x] AI Engineering — Ch.2 (Part 1 of 2): Understanding Foundation Models — training data (general-purpose, multilingual, domain-specific), the transformer architecture, model size and scaling laws (incl. inverse scaling)
+- [x] High Performance MySQL — Ch.2: Monitoring in a Reliability Engineering World — SLIs/SLOs/SLAs, what to measure, proactive monitoring, why percentiles beat averages
+- [x] AWS — Topic 2: Transit Gateway & multi-VPC connectivity — why full-mesh VPC peering doesn't scale, transit gateways, attachments, transit gateway route tables
 
 <!-- Gate is LOCKED until every box above is ticked. Once cleared, the next run finishes
      the in-progress chapters first: DDIA Ch.2 Part 2 (pp.71-90: graph-like data models,
