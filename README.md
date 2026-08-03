@@ -1,6 +1,6 @@
 # learning-digests
 
-A self-paced learning engine. It turns book chapters (and AWS docs) into a beginner-
+A self-paced learning engine. It turns book chapters (and docs) into a beginner-
 friendly **HTML digest** (with schematics and a micro-project to build) and a matching
 **carousel** for TikTok, on a dark personal-brand theme.
 
