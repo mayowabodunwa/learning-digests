@@ -35,6 +35,15 @@ TRACK_ORDER = [
 ]
 
 
+def norm_ch(ch):
+    """Drop any promised part total: 'Ch.2 (Part 1 of 3)' -> 'Ch.2 (Part 1)'.
+
+    Mirrors build_index.py. A total published on Part 1 goes stale as soon as the
+    estimate changes, so it is never rendered. See SKILL.md "Never promise a part total".
+    """
+    return re.sub(r"(?i)\s+of\s+\d+\s*(?=[),]|$)", "", ch or "").strip()
+
+
 def chap_num(ch):
     m = re.search(r"\d+", ch or "")
     return int(m.group()) if m else 9999
@@ -75,7 +84,7 @@ def button(href, label):
 
 def card(d, base):
     href = f'{base}/digests/{d["slug"]}.html'
-    eyebrow = f'{d.get("book","")} &middot; {d.get("ch","")}'.strip(" &middot;")
+    eyebrow = f'{d.get("book","")} &middot; {norm_ch(d.get("ch",""))}'.strip(" &middot;")
     return (
         f'<tr><td style="padding:0 0 14px">'
         f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" '
