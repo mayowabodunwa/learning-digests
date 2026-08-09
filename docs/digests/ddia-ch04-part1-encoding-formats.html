@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DDIA — Ch.4: Formats for Encoding Data (Part 1)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">DDIA · CH.4 DIGEST (PART 1)</p>
+  <h1>Formats for Encoding Data</h1>
+  <p class="lead">Every time your program hands data to a file, a network, or another process, it has to be squeezed out of memory and into a flat sequence of bytes. This part covers the formats that do that squeezing, from plain JSON to schema-based binary formats like Protocol Buffers and Avro, and the small set of rules that keep old code and new code able to read each other's bytes.</p>
+
+  <h2>In one line</h2>
+  <p>Encoding is the translation from "data your program can work with" to "bytes you can send or store," and the format you pick decides how compact those bytes are and, more importantly, whether old code and new code can still make sense of each other's data once your schema changes.</p>
+
+  <h2>The big idea</h2>
+  <p>Applications change, and when they change, the shape of the data they read and write usually changes too: a new field shows up, an old one gets removed, a type gets widened. Because you can rarely update every copy of your code and every stored record at the same instant, you end up with old and new versions of both your code and your data coexisting for a while. Encoding formats differ enormously in how gracefully they handle that overlap: some make it easy for a newer reader to understand older data (<strong>backward compatibility</strong>) and for an older reader to tolerate newer data (<strong>forward compatibility</strong>), and some make it genuinely hard.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Encoding</span> (also called serialization or marshalling) — translating an in-memory data structure (an object, a struct, a list) into a self-contained sequence of bytes. e.g. turning a record with a name and a number into a JSON string.</li>
+    <li><span class="keyterm-term">Decoding</span> (parsing, deserialization, unmarshalling) — the reverse: turning a byte sequence back into something your program can work with in memory.</li>
+    <li><span class="keyterm-term">Schema</span> — a definition of what fields a record has and what type each field is.</li>
+    <li><span class="keyterm-term">Schema evolution</span> — the fact that schemas change over time (fields added, removed, renamed, retyped), and the rules a format offers for doing that without corrupting old or new data.</li>
+    <li><span class="keyterm-term">Backward compatibility</span> — newer code can read data that was written by older code.</li>
+    <li><span class="keyterm-term">Forward compatibility</span> — older code can read data that was written by newer code, even data it's never seen the shape of before.</li>
+    <li><span class="keyterm-term">Rolling upgrade</span> (staged rollout) — deploying a new version of a service to a few machines at a time instead of everywhere at once, so a problem is caught before it reaches every user. This is a common reason old and new code end up running side by side.</li>
+    <li><span class="keyterm-term">Field tag</span> (field number) — a small integer used by some binary formats to identify a field in the encoded bytes, instead of spelling out the field's name.</li>
+    <li><span class="keyterm-term">IDL</span> (interface definition language) — a small language you write a schema in (Thrift and Protocol Buffers each have their own), which a code generator turns into real classes in your programming language.</li>
+    <li><span class="keyterm-term">Variable-length integer</span> (varint) — an integer encoding where small numbers take fewer bytes than large ones, so everyday values stay compact.</li>
+    <li><span class="keyterm-term">Writer's schema</span> — in Avro, the version of the schema that the process encoding a piece of data was using at the time.</li>
+    <li><span class="keyterm-term">Reader's schema</span> — in Avro, the version of the schema that the process decoding a piece of data is expecting.</li>
+    <li><span class="keyterm-term">Union type</span> — an Avro way of declaring that a field can be one of several types (including null). Avro doesn't make every field nullable by default the way some languages do; you opt in with a union.</li>
+    <li><span class="keyterm-term">Object container file</span> — Avro's own file format for storing many records under one schema, with that schema written once at the start of the file instead of repeated per record.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>Here's the grounding picture before the details. Your program usually works with data in two very different shapes. In memory, while the program is running, data lives in objects, structs, lists, and hash tables, wired together with pointers so the CPU can get at it quickly. The moment you want to write that data to a file or send it to another process over a network, a pointer is useless (the other process doesn't share your memory), so the data has to become a flat, self-contained sequence of bytes instead. Translating from the in-memory shape to that byte sequence is <strong>encoding</strong>; translating back is <strong>decoding</strong>. Everything in this part of the material is really about which byte layout you choose for that translation, and what that choice costs you later when the shape of your data needs to change.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 190" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="24" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">CROSSING THE MEMORY BOUNDARY</text>
+      <rect x="30" y="55" width="190" height="70" rx="8" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.3"/>
+      <text x="125" y="86" fill="#F2EFE9" font-size="12" text-anchor="middle" font-weight="700">in memory</text>
+      <text x="125" y="104" fill="#7A7A80" font-size="9.5" text-anchor="middle">objects, structs,</text>
+      <text x="125" y="117" fill="#7A7A80" font-size="9.5" text-anchor="middle">pointers</text>
+
+      <rect x="400" y="55" width="190" height="70" rx="8" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="495" y="86" fill="#6FCF97" font-size="12" text-anchor="middle" font-weight="700">byte sequence</text>
+      <text x="495" y="104" fill="#7A7A80" font-size="9.5" text-anchor="middle">a file, or bytes</text>
+      <text x="495" y="117" fill="#7A7A80" font-size="9.5" text-anchor="middle">sent over a network</text>
+
+      <line x1="220" y1="75" x2="398" y2="75" stroke="#6FCF97" stroke-width="1.4" marker-end="url(#e1)"/>
+      <text x="309" y="66" fill="#6FCF97" font-size="10" text-anchor="middle">encode</text>
+
+      <line x1="398" y1="105" x2="220" y2="105" stroke="#C9C7C1" stroke-width="1.4" marker-end="url(#e2)"/>
+      <text x="309" y="122" fill="#C9C7C1" font-size="10" text-anchor="middle">decode</text>
+
+      <text x="310" y="165" fill="#7A7A80" font-size="10" text-anchor="middle">a pointer means nothing to another process, so it can't survive the trip</text>
+
+      <defs>
+        <marker id="e1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#6FCF97"/></marker>
+        <marker id="e2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#C9C7C1"/></marker>
+      </defs>
+    </svg>
+    <figcaption>Encoding and decoding are just the two directions of crossing this boundary.</figcaption>
+  </figure>
+
+  <h3>1. The trouble with your language's own built-in encoder</h3>
+  <p>Most programming languages ship with a built-in way to turn an object straight into bytes: Java has <code>java.io.Serializable</code>, Ruby has <code>Marshal</code>, Python has <code>pickle</code>, and there are third-party libraries like Kryo for Java. These are genuinely convenient, since they save and restore objects with almost no extra code. But this material flags a handful of deep problems with leaning on them for anything long-lived. First, the encoding is usually tied to one programming language, so reading the data from another language is difficult, which locks you into your current language for potentially a long time. Second, restoring an object generally means the decoder has to be able to instantiate arbitrary classes, and that turns out to be a real source of security problems: if an attacker can get your application to decode a byte sequence they control, they can sometimes get it to construct classes that do damaging things, including remote code execution. Third, versioning is usually an afterthought in these libraries, so forward and backward compatibility get neglected. Fourth, efficiency is often an afterthought too. Java's built-in serialization is specifically called out as notorious for bad performance and bloated output. Put together, the takeaway is that your language's own built-in encoder is usually fine for something short-lived and internal, but a bad choice for anything you'll store for a while or share outside your own language.</p>
+
+  <h3>2. Textual formats: JSON, XML, and CSV</h3>
+  <p>JSON and XML are the standardized, language-independent formats most people reach for, with CSV as a simpler, less powerful third option. They're textual, so they're somewhat human-readable, and JSON in particular is popular partly because it's built into web browsers as a subset of JavaScript. But underneath the readability, this material points out some subtle problems that catch people out.</p>
+  <p>The biggest one is <strong>number ambiguity</strong>. XML and CSV can't distinguish a number from a string that happens to be made of digits without an external schema to tell you which it is. JSON does distinguish strings from numbers, but it doesn't distinguish an integer from a floating-point number, and it doesn't pin down a precision. That matters concretely once numbers get large: an IEEE 754 double-precision float (the number type JavaScript uses) can't exactly represent every integer bigger than 2<sup>53</sup>, so a large integer parsed by a JavaScript-based JSON parser can come out subtly wrong. The material gives a real example: Twitter identifies each tweet with a 64-bit number, well past that 2<sup>53</sup> ceiling, so Twitter's API includes each tweet ID twice, once as a JSON number and once as a string, specifically to work around JavaScript mangling the numeric version.</p>
+  <p>The second problem is <strong>binary strings</strong>. JSON and XML handle Unicode text well, but neither has native support for a plain sequence of bytes that isn't text. The common workaround is to Base64-encode the binary data into a text string, which works, but is a bit of a hack and increases the data's size by about a third.</p>
+  <p>The third is <strong>schemas</strong>. Both XML and JSON have optional schema languages, and they're powerful but also complicated to learn and implement. XML schemas are used fairly widely; a lot of JSON-based tooling skips schemas entirely, which means the correct way to interpret a value (is this really a number, is this Base64 binary data) often has to be hardcoded into the application instead of read from a schema. CSV doesn't even have an optional schema: it's up to the application to decide what each column means, adding a new column is a manual coordination problem, and CSV's escaping rules (what happens when a value itself contains a comma) are formally specified but not always implemented correctly by every parser.</p>
+  <p>None of this makes JSON, XML, or CSV bad choices. This material is explicit that they're good enough for a lot of purposes, especially as a format for exchanging data between organizations that need to agree on something simple, since getting different organizations to agree on anything at all is usually the harder problem.</p>
+
+  <h3>3. Binary variants of JSON, and where they hit a ceiling</h3>
+  <p>For data that stays inside your own organization, there's less pressure to pick a lowest-common-denominator format, so once a dataset gets into the terabytes, a more compact or faster-to-parse format starts to matter. That observation led to a handful of binary encodings for JSON, among them MessagePack, BSON, and Smile, plus binary variants of XML like WBXML. These extend JSON's datatypes a bit (distinguishing integers from floats, adding binary strings), but they otherwise keep JSON's data model as-is. Crucially, since none of them prescribe a schema, they still have to write every field name into the encoded bytes.</p>
+  <p>Here's a worked example this material walks through. Take a small record: a username, a favorite number, and a list of interests. Encoded as plain JSON with the whitespace stripped out, that's 81 bytes. Encoded with MessagePack, a binary encoding for JSON, it comes out to 66 bytes: the first byte (<code>0x83</code>) says "an object with 3 fields," the next byte (<code>0xa8</code>) says "an 8-byte string follows," then the 8 ASCII bytes for the field name <code>userName</code> itself, and so on. That's only a modest saving over textual JSON, and the field names (<code>userName</code>, <code>favoriteNumber</code>, <code>interests</code>) are still sitting there in the bytes, spelled out in full. As this material puts it, it's not obvious that saving that little space (or parsing a bit faster) is worth losing human-readability for. The bigger wins come from formats that don't have to write field names into every record at all, which is exactly what the schema-based formats below do differently.</p>
+
+  <h3>4. Schema-based binary encoding: Thrift and Protocol Buffers</h3>
+  <p>Apache Thrift (originally built at Facebook) and Protocol Buffers, or "protobuf" (originally built at Google), both went open source around 2007–08 and both work on the same principle: you write a schema up front, in a small interface definition language, and a code generator turns it into classes in whatever programming language you're using. A schema for that same username/favorite-number/interests record looks similar in both:</p>
+  <p><code>struct Person { 1: required string userName, 2: optional i64 favoriteNumber, 3: optional list&lt;string&gt; interests }</code> in Thrift, and <code>message Person { required string user_name = 1; optional int64 favorite_number = 2; repeated string interests = 3; }</code> in Protocol Buffers.</p>
+  <p>Notice the small numbers next to each field. Those are <strong>field tags</strong>, and they're the whole trick: instead of writing the field name <code>favoriteNumber</code> into the bytes, the encoded record just writes the number <code>2</code>, along with a marker for its datatype and, where needed, a length. That's why the same record comes out so much smaller: Thrift's BinaryProtocol encodes it in 59 bytes, Thrift's more compact CompactProtocol packs the tag and type into a single byte and uses variable-length integers to get it down to 34 bytes, and Protocol Buffers (which only has the one binary format) does its own version of that same bit-packing trick to land at 33 bytes. Note that whether a field was declared <code>required</code> or <code>optional</code> doesn't change anything about how it's encoded; the only difference is that <code>required</code> turns on a runtime check that fails loudly if the field was never set, which is handy for catching bugs early.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 210" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="24" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">A TAGGED FIELD, SIMPLIFIED FOR TEACHING</text>
+      <text x="310" y="42" fill="#7A7A80" font-size="9.5" text-anchor="middle">favoriteNumber = 1337, tag 2, from the example record above</text>
+
+      <rect x="60" y="70" width="150" height="56" rx="7" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/>
+      <text x="135" y="94" fill="#C8453A" font-size="11" text-anchor="middle" font-weight="700">tag: 2</text>
+      <text x="135" y="112" fill="#7A7A80" font-size="9" text-anchor="middle">+ type: integer</text>
+
+      <rect x="240" y="70" width="150" height="56" rx="7" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.3"/>
+      <text x="315" y="94" fill="#F2EFE9" font-size="11" text-anchor="middle" font-weight="700">length / marker</text>
+      <text x="315" y="112" fill="#7A7A80" font-size="9" text-anchor="middle">tells the parser how</text>
+
+      <rect x="420" y="70" width="150" height="56" rx="7" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="495" y="94" fill="#6FCF97" font-size="11" text-anchor="middle" font-weight="700">value: 1337</text>
+      <text x="495" y="112" fill="#7A7A80" font-size="9" text-anchor="middle">packed as a varint</text>
+
+      <text x="310" y="150" fill="#7A7A80" font-size="10" text-anchor="middle">no field name is ever written, only the tag number 2</text>
+      <text x="310" y="168" fill="#7A7A80" font-size="10" text-anchor="middle">the schema is what tells you tag 2 means "favoriteNumber"</text>
+      <text x="310" y="192" fill="#4a4a50" font-size="8.5" text-anchor="middle">exact bit-level packing differs by format (Thrift CompactProtocol vs. Protocol Buffers do it slightly differently)</text>
+    </svg>
+    <figcaption>The general idea behind a tagged binary field: tag, type, then value. Real formats pack these bits together for compactness.</figcaption>
+  </figure>
+
+  <h3>5. Field tags and schema evolution</h3>
+  <p>An encoded record in Thrift or Protobuf is just its fields, concatenated one after another, each carrying its own tag number and type marker; if a field is unset, it's simply left out entirely. Because of that layout, the tag numbers are doing all the work of tying the bytes back to a meaning. You're free to rename a field in your schema any time you like, since the encoded data never refers to field names at all. What you can never do is change a field's existing tag number, because that would make every record already encoded with the old tag meaningless.</p>
+  <p>Adding a new field is safe as long as it gets a tag number nobody has used before. If an old reader (one that doesn't know the new tag) encounters it, the type marker tells the parser how many bytes to skip, so it just ignores the unfamiliar field. That's what makes the format <strong>forward compatible</strong>: old code can read data written by new code. Going the other way, a new reader can always make sense of old data, because tag numbers keep the same meaning over time, which gives you <strong>backward compatibility</strong> too, with one catch: a newly added field can never be marked <code>required</code>. If you added a required field and old code (which never wrote it) had written some of the data, a new reader's required-field check would fail. So every field you add after the schema's first release has to be optional or carry a default. Removing a field follows the same logic in reverse: you can only remove a field that was optional (a required field can never be removed), and you can never reuse that tag number again later for something else, because there may still be old data out there using it.</p>
+  <p>Changing a field's datatype is possible in both formats, but the material flags a real risk of losing precision. Widening a 32-bit integer field to 64 bits is safe for new code reading old data (it just fills the extra bits with zero), but if old code (still expecting 32 bits) reads a 64-bit value written by new code, and that value doesn't fit in 32 bits, it gets truncated. One more detail worth knowing: Protocol Buffers has no dedicated list or array type. Instead a field can be marked <code>repeated</code>, and a repeated field's encoding is just the same tag appearing multiple times in the record. That has a nice side effect: you can safely turn a single-valued optional field into a repeated one later. New code reading old data just sees a list with zero or one items; old code reading new data sees only the last of the repeated values. Thrift instead has a dedicated list type parameterized by its element type, which doesn't support that same single-to-multi evolution, but does support nested lists, which Protobuf's repeated-field trick doesn't handle as cleanly.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 260" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">OLD CODE, NEW DATA — AND BACK AGAIN</text>
+
+      <text x="150" y="48" fill="#6FCF97" font-size="10" text-anchor="middle" font-weight="700">FORWARD COMPATIBLE</text>
+      <rect x="30" y="60" width="120" height="46" rx="7" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.2"/>
+      <text x="90" y="80" fill="#F2EFE9" font-size="9.5" text-anchor="middle">new writer</text>
+      <text x="90" y="94" fill="#7A7A80" font-size="8" text-anchor="middle">tags 1, 2, 3(new)</text>
+      <line x1="150" y1="83" x2="190" y2="83" stroke="#6FCF97" stroke-width="1.3" marker-end="url(#f1)"/>
+      <rect x="190" y="60" width="120" height="46" rx="7" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.4"/>
+      <text x="250" y="80" fill="#6FCF97" font-size="9.5" text-anchor="middle" font-weight="700">old reader</text>
+      <text x="250" y="94" fill="#7A7A80" font-size="8" text-anchor="middle">skips tag 3, unknown</text>
+
+      <text x="470" y="48" fill="#C9C7C1" font-size="10" text-anchor="middle" font-weight="700">BACKWARD COMPATIBLE</text>
+      <rect x="330" y="60" width="120" height="46" rx="7" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.2"/>
+      <text x="390" y="80" fill="#C9C7C1" font-size="9.5" text-anchor="middle">old writer</text>
+      <text x="390" y="94" fill="#7A7A80" font-size="8" text-anchor="middle">tags 1, 2 only</text>
+      <line x1="450" y1="83" x2="490" y2="83" stroke="#C9C7C1" stroke-width="1.3" marker-end="url(#f2)"/>
+      <rect x="490" y="60" width="120" height="46" rx="7" fill="#0E0E10" stroke="#C9C7C1" stroke-width="1.3"/>
+      <text x="550" y="80" fill="#F2EFE9" font-size="9.5" text-anchor="middle">new reader</text>
+      <text x="550" y="94" fill="#7A7A80" font-size="8" text-anchor="middle">fills default for tag 3</text>
+
+      <line x1="310" y1="130" x2="310" y2="130" stroke="none"/>
+      <text x="310" y="140" fill="#7A7A80" font-size="9.5" text-anchor="middle">both directions rely on the same habit:</text>
+      <text x="310" y="158" fill="#7A7A80" font-size="9.5" text-anchor="middle">every field added after the first release is optional, or has a default</text>
+      <text x="310" y="180" fill="#7A7A80" font-size="9.5" text-anchor="middle">and a tag number, once used, is never reused for something else</text>
+
+      <text x="310" y="215" fill="#4a4a50" font-size="8.5" text-anchor="middle">Avro works the same way but matches by field name instead of tag number,</text>
+      <text x="310" y="230" fill="#4a4a50" font-size="8.5" text-anchor="middle">see the next section</text>
+
+      <defs>
+        <marker id="f1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#6FCF97"/></marker>
+        <marker id="f2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#C9C7C1"/></marker>
+      </defs>
+    </svg>
+    <figcaption>Forward compatibility flows from new writer to old reader; backward compatibility flows from old writer to new reader. Both need the same evolution discipline.</figcaption>
+  </figure>
+
+  <h3>6. Avro: schema evolution without tag numbers at all</h3>
+  <p>Apache Avro started in 2009 as a Hadoop subproject, built specifically because Thrift wasn't a good fit for Hadoop's needs. It also uses a schema, written either in a human-friendly IDL or as an equivalent, more machine-readable JSON document, but if you look closely at an Avro schema there's a detail missing: no tag numbers anywhere. Encoded with an Avro schema, that same example record comes out to just 32 bytes, the most compact of every format covered here, and the encoded bytes contain nothing that identifies a field or its type at all: it's genuinely just the values, concatenated in schema order. A string is a length prefix plus UTF-8 bytes, but nothing in those bytes says "this is a string" rather than, say, an integer. The only way to correctly decode an Avro record is to walk through the fields in the exact order the schema declares them, using the schema to know each field's type as you go. That means the code reading Avro data has to know the exact schema the data was written with, or something compatible with it.</p>
+  <p>That's where Avro's central idea comes in: the <strong>writer's schema</strong> is whatever schema the encoding side used, and the <strong>reader's schema</strong> is whatever schema the decoding side expects, and Avro's whole design is built around the fact that those two don't have to be identical, only compatible. When data is decoded, Avro's library lines the writer's schema and the reader's schema up side by side and resolves the difference: fields are matched up by name rather than by position or number, so it's fine if the two schemas list fields in a different order. If the writer's schema has a field the reader's schema doesn't know about, it's ignored. If the reader's schema expects a field the writer's schema never had, Avro fills in whatever default value the reader's schema declares for it.</p>
+  <p>The compatibility rule that falls out of this is simple to state: you may only add or remove a field that has a default value. Add a field with a default, and a reader using the new schema can still read data an old writer produced, since the default fills the gap; that's backward compatibility (new schema as reader, old schema as writer). Remove a field that has a default, and an old reader can still make sense of data a new writer produced; that's forward compatibility (new schema as writer, old schema as reader). Add a field with no default and you break backward compatibility; remove a field with no default and you break forward compatibility. One Avro-specific wrinkle: unlike some languages where <code>null</code> is an acceptable default for anything, Avro requires you to explicitly declare a field as a <strong>union type</strong> (for example, "this field is either a number or null") if you want it nullable, and you can only use <code>null</code> as a default if it's one of the union's listed options. It's a little more ceremony than "everything is nullable by default," but this material frames it as a deliberate trade: more explicit, fewer accidental-null bugs. Changing a field's datatype is possible if Avro can convert between the two types. Renaming a field is possible too, using aliases in the reader's schema that map old names to new ones, though that direction only works one way: it's backward compatible but not forward compatible, since an old reader wouldn't know to look for the new name.</p>
+  <p>So how does a reader even find out which schema a given piece of data was written with, if the bytes themselves don't say? The material walks through three real contexts where this comes up. For a large file holding millions of records that all share one schema (a common Hadoop-era use case), the writer just writes the schema once at the top of the file; Avro has a dedicated file format, the <strong>object container file</strong>, built exactly for this. For a database where individual records might have been written at very different times under different schema versions, the simplest approach is to store a small version number with every record and keep a lookup table of schema versions elsewhere (this material points to LinkedIn's Espresso document store, which is built this way, using Avro for storage). For two processes talking over a live network connection, they can simply negotiate which schema version to use once, at the start of the connection, and then keep using it; Avro's own RPC protocol works this way.</p>
+  <p>One more distinction worth pulling out: because Avro schemas carry no tag numbers, they're notably friendlier to being <strong>generated automatically</strong>. If you wanted to dump a relational database table to a file in Thrift or Protobuf, someone would have to hand-assign a tag number to each database column, and be careful never to reuse an old one as the table's own schema changed over time. With Avro, the field names carry the meaning, so a script can regenerate the Avro schema straight from the current database schema every time it runs, with no manual tag bookkeeping at all. On a related note, Thrift and Protobuf lean on code generation, which is genuinely useful in statically typed languages for compile-time type checking, but is more of an obstacle than a help in dynamically typed languages like Python, Ruby, or JavaScript, where there's no compiler to satisfy in the first place. Avro supports optional code generation but doesn't require it: an Avro object container file carries its own schema, so a dynamically typed tool can just open it and start reading, the same way you'd casually open a JSON file.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 260" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="24" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">SAME RECORD, WILDLY DIFFERENT BYTE COUNTS</text>
+      <text x="310" y="40" fill="#7A7A80" font-size="9.5" text-anchor="middle">userName / favoriteNumber / interests, encoded six different ways</text>
+
+      <g font-size="10" fill="#C9C7C1">
+        <text x="150" y="66" text-anchor="end">JSON (textual)</text>
+        <rect x="158" y="55" width="324" height="16" rx="3" fill="#7A7A80"/>
+        <text x="490" y="66">81 B</text>
+
+        <text x="150" y="92" text-anchor="end">MessagePack</text>
+        <rect x="158" y="81" width="264" height="16" rx="3" fill="#C9C7C1"/>
+        <text x="430" y="92">66 B</text>
+
+        <text x="150" y="118" text-anchor="end">Thrift BinaryProtocol</text>
+        <rect x="158" y="107" width="236" height="16" rx="3" fill="#C9C7C1"/>
+        <text x="402" y="118">59 B</text>
+
+        <text x="150" y="144" text-anchor="end">Thrift CompactProtocol</text>
+        <rect x="158" y="133" width="136" height="16" rx="3" fill="#F2EFE9"/>
+        <text x="302" y="144">34 B</text>
+
+        <text x="150" y="170" text-anchor="end">Protocol Buffers</text>
+        <rect x="158" y="159" width="132" height="16" rx="3" fill="#F2EFE9"/>
+        <text x="298" y="170">33 B</text>
+
+        <text x="150" y="196" text-anchor="end">Avro</text>
+        <rect x="158" y="185" width="128" height="16" rx="3" fill="#6FCF97"/>
+        <text x="294" y="196">32 B</text>
+      </g>
+      <text x="310" y="230" fill="#7A7A80" font-size="9.5" text-anchor="middle">every format below Thrift BinaryProtocol drops field names in favor of a schema</text>
+    </svg>
+    <figcaption>All six encode the exact same three fields. The gap comes from whether field names travel with the data or live only in a schema.</figcaption>
+  </figure>
+
+  <h3>7. Why schemas earn their keep</h3>
+  <p>Thrift, Protocol Buffers, and Avro all lean on a schema to describe a binary format, and their schema languages are deliberately much simpler than XML Schema or JSON Schema, which support far more detailed validation (things like "this string must match this pattern"). That simplicity is part of why all three have grown to support a wide range of programming languages. This material notes the underlying idea isn't new: ASN.1, a schema definition language first standardized in 1984, works on similar principles and its binary encoding (DER) is still what's used to encode SSL certificates today, though ASN.1 itself is called out as complex and poorly documented enough that it's not a great pick for something new. Beyond the encoding libraries in this digest, most relational databases also implement their own proprietary binary network protocol for talking to the database, decoded on the client side by a driver (the kind of thing ODBC or JDBC provide).</p>
+  <p>Pulled together, this material lists four real advantages a schema-based binary format buys you over the "binary JSON" style variants: it can be far more compact, since field names don't have to travel with every record; the schema itself becomes documentation that's guaranteed to be current, because decoding literally depends on it being accurate, unlike a wiki page that can quietly drift out of date; keeping a database of schema versions lets you check forward and backward compatibility before you ever deploy a change; and in statically typed languages, generating code straight from the schema gets you compile-time type checking for free. The overall conclusion drawn here is that schema evolution gives you a lot of the same flexibility schema-on-read ("schemaless") databases offer, while also giving you stronger guarantees about your data and better tooling around it.</p>
+
+  <h2>Why it matters</h2>
+  <p>This distinction between formats that carry field names and formats that carry only tag numbers or rely on a schema isn't just a size optimization. It's what determines whether you can roll out a new version of a service to a few machines at a time (a rolling upgrade) without the old machines and new machines misunderstanding each other's data, whether a database can hold records written five years apart under completely different schema versions and still make sense of all of them, and whether two teams' services can evolve independently instead of having to deploy in lockstep. Every one of those situations comes down to the same underlying question this part of the material sets up: can the reader make sense of bytes the writer produced, and vice versa, even when they were built from different versions of the same schema.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Encoding turns in-memory data into bytes; decoding reverses it. Your language's own built-in serializer (Java's, Python's <code>pickle</code>, and similar) is convenient but usually the wrong long-term choice: it locks you to one language, and decoding untrusted bytes with some of these libraries has been a real source of security bugs.</li>
+      <li>JSON, XML, and CSV are easy to read but genuinely ambiguous, especially around large numbers and binary data. Binary variants like MessagePack shave off some size but still write every field name into the bytes, since they don't use a schema.</li>
+      <li>Thrift and Protocol Buffers replace field names with small tag numbers defined in a schema. That's what makes them compact, and the tag number is the one thing you can never change once real data has been written with it.</li>
+      <li>Backward compatible means newer code can read older data; forward compatible means older code can read newer data. In practice this comes down to a couple of habits: never reuse a tag or field number, and give every field you add after the first release a default or make it optional.</li>
+      <li>Avro drops tag numbers entirely and instead matches fields by name between the writer's schema (what encoded the data) and the reader's schema (what's decoding it), filling in defaults for anything the reader expects but the writer never had.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Encode the same record two ways and weigh the bytes.</strong> Pick a small record with a couple of strings and a number, write it out as JSON, then hand-pack it into a small custom binary layout (fixed-width integers, length-prefixed strings) using your language's raw byte tools, such as Python's <code>struct</code> module, or just building the byte string directly. <em>Done when:</em> you can print the byte length of both versions side by side and explain in your own words where the size difference actually comes from.</li>
+      <li><strong>Hand-decode a tagged binary blob.</strong> Invent a tiny schema: 3–4 fields, each with a tag number (1, 2, 3…) and a one-byte type code you make up (say, 0 for integer, 1 for string). Hand-encode one record as a sequence of tag/type/length/value bytes in a text file. Set it aside for a day, then decode it back into field names and values using only your schema key, not memory. <em>Done when:</em> you can decode it correctly using nothing but the tag-to-field-name mapping.</li>
+      <li><strong>Break forward compatibility on purpose, then fix it.</strong> Write a small program that reads a JSON record into a few named fields. Feed it a record with one extra field it doesn't expect and see what happens (an error, or a silent drop). Then rewrite the reader so any unrecognized field is captured and preserved instead of lost. <em>Done when:</em> you can pass a record with an unknown field through your reader and get that field back out unchanged.</li>
+      <li><strong>Simulate Avro-style writer/reader schema resolution.</strong> Define an "old" schema and a "new" schema for the same small record, where the new one adds a field with a default value and removes an old field. Write a function that takes a record encoded under the old schema and reads it as if it were the new schema: the missing new field gets its default, and the removed old field is dropped. <em>Done when:</em> an old-schema record comes out looking exactly like it was always in the new shape.</li>
+      <li><strong>Reuse a field tag and watch it break.</strong> Using the tagged format from project 2, take a working record, then simulate reassigning tag 2 to a completely different field type (say, an integer field where it used to be a string). Try decoding an old record with the new tag mapping. <em>Done when:</em> you've reproduced, at a small scale, the exact "old data decodes into the wrong thing" failure this digest describes, and can explain why in your own words.</li>
+      <li><strong>Measure the Base64 tax.</strong> Take a small chunk of binary data (a tiny image file, or just a handful of random bytes), Base64-encode it, and place the result in a JSON field. Compare the size of the raw bytes to the size of the Base64 string. <em>Done when:</em> you can state the percentage size increase and check it against the roughly 33% figure mentioned in this digest.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>If you want a preview of where these ideas get used for real at scale, look up how a schema registry (Confluent's, built around Kafka, is the best-known example) enforces compatibility rules automatically before a new schema is even allowed to be published, instead of leaving it to a code reviewer to catch a broken change. It's a real system built almost entirely around the writer's-schema-versus-reader's-schema idea covered above.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, written to help you build a mental model quickly. It is not a substitute for the source text; verify anything you plan to rely on against the original before using it for real.</p>
+  <ul class="src-list">
+    <li>Martin Kleppmann, <em>Designing Data-Intensive Applications</em> (O'Reilly, 2017), Chapter 4, "Encoding and Evolution" — this part covers the "Formats for Encoding Data" section in full, printed pages 111–127/128 (PDF pages 133–150 of the extracted chapter file).</li>
+  </ul>
+  <p class="src-note">Boundary for this part: it stops immediately before the chapter's "Modes of Dataflow" section, which begins on printed page 128 (PDF page 150) with the line "At the beginning of this chapter we said that whenever you want to send some data to another process…". Everything from there onward (dataflow through databases, through REST/RPC services, and through asynchronous message passing and distributed actor frameworks) is not covered here and is left for a future part.</p>
+  <p class="src-note">Flagged for accuracy: the byte-layout figure in the "Schema-based binary encoding" section above is explicitly a simplified, original illustration of the general tag/type/value idea, not a reproduction of the source's own figures and not a claim about the exact bit-level packing used by any specific format (the source describes the general packing approach in prose but doesn't spell out exact bit positions for CompactProtocol or Protocol Buffers). Everything else above (byte counts, compatibility rules, and the LinkedIn Espresso and Kafka/schema-registry mentions) is grounded directly in the extracted chapter text.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · TikTok
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

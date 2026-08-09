@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>High Performance MySQL — Choosing the Right Data Type (Part 1)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">HIGH PERFORMANCE MYSQL · CH.6 DIGEST (PART 1)</p>
+  <h1>Choosing the Right Data Type in MySQL</h1>
+  <p class="lead">Every column you create is a small, permanent bet: how much space it uses, how fast MySQL can compare and sort it, and how painful it'll be to change later. Once you see the pattern behind MySQL's data types, most of the "which type should I use" questions answer themselves, and you'll also spot the schema habits that quietly cause trouble down the line.</p>
+
+  <h2>In one line</h2>
+  <p>MySQL gives you many ways to store the same kind of value, and the type you pick trades off storage space, comparison speed, and how much room you have to grow, so the smallest, simplest type that can honestly hold your data (and won't box you in later) is almost always the right call.</p>
+
+  <h2>The big idea</h2>
+  <p>Picking a data type isn't just a formality before <code>CREATE TABLE</code> works. The type decides how many bytes each value costs on disk, in memory, and in the CPU cache, how expensive comparisons and sorts on that column are, and what MySQL will and won't let you do with it later. Get it right and queries run faster with less hardware. Get it wrong (a string where an integer would do, a column so generous it wastes memory on every sort) and you pay for it quietly, row after row, until the table is too big to fix without downtime. This first half of the chapter is about making that choice well, and about the handful of specific schema habits that tend to bite people in MySQL.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Signed / unsigned</span> — whether an integer column can hold negative numbers (signed) or only zero and up (unsigned). Both use the same storage space; unsigned just spends the whole range on positive numbers, roughly doubling the usable ceiling.</li>
+    <li><span class="keyterm-term">VARCHAR</span> — a variable-length string type. It only uses as much space as the actual value needs, plus 1 or 2 extra bytes to record the length.</li>
+    <li><span class="keyterm-term">CHAR</span> — a fixed-length string type. MySQL always reserves the full declared width for it and strips trailing spaces when the value is stored.</li>
+    <li><span class="keyterm-term">BLOB / TEXT</span> — string types built for large values (binary data for BLOB, character data with a collation for TEXT). MySQL treats each value as its own object rather than an ordinary column value.</li>
+    <li><span class="keyterm-term">ENUM</span> — a column that can hold exactly one value from a small, predefined list of strings. MySQL stores it internally as a compact integer, not as text.</li>
+    <li><span class="keyterm-term">SET</span> — like ENUM, but the column can hold zero or more values from the list at once, packed together as bits.</li>
+    <li><span class="keyterm-term">BIT</span> — a type for storing raw true/false bits directly in a column, up to 64 of them.</li>
+    <li><span class="keyterm-term">DATETIME / TIMESTAMP</span> — MySQL's two main "date and time together" types. They store the same kind of information but trade off storage size, date range, and time zone awareness against each other.</li>
+    <li><span class="keyterm-term">JSON (data type)</span> — a native MySQL column type that stores a JSON document as a single value and lets you query and index inside its structure.</li>
+    <li><span class="keyterm-term">Generated column</span> — a column MySQL computes automatically from other columns in the same row, instead of you writing to it directly. Useful for pulling a value out of a JSON column so it can be indexed.</li>
+    <li><span class="keyterm-term">Identifier</span> — the column (or columns) you use to refer to a specific row, most often the primary key, and often copied into other tables as a foreign key.</li>
+    <li><span class="keyterm-term">AUTO_INCREMENT</span> — a column attribute that has MySQL generate the next integer automatically each time a row is inserted.</li>
+    <li><span class="keyterm-term">EAV (entity-attribute-value)</span> — a schema pattern that stores every property of every object as its own row instead of its own column. Flexible, but it multiplies the number of joins you need to reassemble one object.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>Before picking any specific type, it helps to know the three habits of mind the chapter keeps coming back to. <strong>Smaller is usually better:</strong> a smaller type is generally faster because it uses less space on disk, in memory, and in the CPU cache, and needs fewer CPU cycles to process. The catch is that changing a type's range later, once it's used across a schema, can be a painful, time-consuming operation, so if you're unsure, pick the smallest type you're confident you won't exceed rather than guessing low on purpose. <strong>Simple is good:</strong> integers are cheaper to compare than characters, because character sets and collations (the rules for sorting and comparing text) make character comparisons more complicated. That's part of why the chapter recommends storing dates, times, and IP addresses in purpose-built types instead of as strings. <strong>Avoid NULL when you can:</strong> a lot of columns end up nullable by default even when the application never stores an absent value there. Nullable columns make indexes, index statistics, and comparisons harder for MySQL to optimize, and use a bit more storage, though the chapter is careful to note the performance gain from fixing existing nullable columns is usually small, so it's not worth chasing unless you know it's causing a real problem.</p>
+  <p>One more housekeeping note before the specifics: MySQL supports aliases for many types for compatibility, like <code>INTEGER</code> (maps to <code>INT</code>), <code>BOOL</code> (maps to <code>TINYINT</code>), and <code>NUMERIC</code> (maps to <code>DECIMAL</code>). These don't affect performance; running <code>SHOW CREATE TABLE</code> will show you the base type MySQL actually stored, not the alias you typed.</p>
+
+  <h3>1. Whole numbers: the integer family</h3>
+  <p>If you're storing whole numbers, MySQL gives you five integer types: <code>TINYINT</code>, <code>SMALLINT</code>, <code>MEDIUMINT</code>, <code>INT</code>, and <code>BIGINT</code>, using 8, 16, 24, 32, and 64 bits of storage respectively (1, 2, 3, 4, and 8 bytes). Each type can hold values from −2<sup>(N−1)</sup> to 2<sup>(N−1)</sup>−1, where N is the number of bits. Add the <code>UNSIGNED</code> attribute and you drop negative numbers entirely, which roughly doubles the positive ceiling: a plain <code>TINYINT</code> holds −128 to 127, while a <code>TINYINT UNSIGNED</code> holds 0 to 255. Signed and unsigned versions use identical storage and have identical performance, so the choice is purely about which range fits your data.</p>
+  <p>A subtlety worth knowing: your column's declared size decides how MySQL stores the value, but the computations MySQL performs on integers generally use 64-bit <code>BIGINT</code> math internally (with a few exceptions, like some aggregate functions that use <code>DECIMAL</code> or <code>DOUBLE</code>). Also, if you see something like <code>INT(11)</code>, that number in parentheses is just a display width hint for MySQL's own interactive tools; it does not restrict the range of values the column can legally hold. For storage and computation, <code>INT(1)</code> and <code>INT(20)</code> are identical.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 270" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="26" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">INTEGER TYPES: BYTES VS. CEILING (SIGNED)</text>
+
+      <text x="90" y="65" fill="#F2EFE9" font-size="12" text-anchor="end">TINYINT</text>
+      <rect x="100" y="53" width="40" height="20" rx="4" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.4"/>
+      <text x="150" y="67" fill="#7A7A80" font-size="11" text-anchor="start">1 byte -&gt; max 127</text>
+
+      <text x="90" y="105" fill="#F2EFE9" font-size="12" text-anchor="end">SMALLINT</text>
+      <rect x="100" y="93" width="80" height="20" rx="4" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.4"/>
+      <text x="190" y="107" fill="#7A7A80" font-size="11" text-anchor="start">2 bytes -&gt; max 32,767</text>
+
+      <text x="90" y="145" fill="#F2EFE9" font-size="12" text-anchor="end">MEDIUMINT</text>
+      <rect x="100" y="133" width="120" height="20" rx="4" fill="#0E0E10" stroke="#C9C7C1" stroke-width="1.4"/>
+      <text x="230" y="147" fill="#7A7A80" font-size="11" text-anchor="start">3 bytes -&gt; max 8,388,607</text>
+
+      <text x="90" y="185" fill="#F2EFE9" font-size="12" text-anchor="end">INT</text>
+      <rect x="100" y="173" width="160" height="20" rx="4" fill="#0E0E10" stroke="#C8453A" stroke-width="1.6"/>
+      <text x="270" y="187" fill="#C8453A" font-size="11" text-anchor="start">4 bytes -&gt; max 2,147,483,647</text>
+
+      <text x="90" y="225" fill="#F2EFE9" font-size="12" text-anchor="end">BIGINT</text>
+      <rect x="100" y="213" width="320" height="20" rx="4" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.4"/>
+      <text x="430" y="227" fill="#7A7A80" font-size="11" text-anchor="start">8 bytes -&gt; ~9.2 x 10^18</text>
+
+      <text x="310" y="256" fill="#7A7A80" font-size="10.5" text-anchor="middle">bar width = relative byte cost. INT's ceiling (in red) is the one people run into first.</text>
+    </svg>
+    <figcaption>Same formula every time: −2^(N−1) to 2^(N−1)−1, where N is the bits of storage. UNSIGNED shifts the whole range positive.</figcaption>
+  </figure>
+
+  <h3>2. Real numbers: FLOAT, DOUBLE, and DECIMAL</h3>
+  <p>Real numbers (numbers with a fractional part) come in two flavors: approximate and exact. <code>FLOAT</code> and <code>DOUBLE</code> do standard floating-point math, which is approximate; <code>FLOAT</code> uses 4 bytes of storage, and <code>DOUBLE</code> uses 8 bytes with greater precision and range. As with integers, the column's type controls storage, but MySQL uses <code>DOUBLE</code> internally for its own floating-point calculations regardless of which one you declared.</p>
+  <p>Because of its extra space and computational cost, the guidance is to reach for <code>DECIMAL</code> only when you need exact results for fractional numbers, the classic example being financial data. Interestingly, for very high-volume cases, the chapter points out an alternative: store the amount as a <code>BIGINT</code> representing a multiple of the smallest currency fraction you care about. If you need to track dollar amounts to the ten-thousandth of a cent, you can multiply every amount by a million and store the result as a <code>BIGINT</code>, which sidesteps both floating-point imprecision and the cost of exact <code>DECIMAL</code> math. <code>DECIMAL</code> can also simply store whole numbers too big for <code>BIGINT</code>, if you ever need that.</p>
+
+  <h3>3. String types: VARCHAR vs. CHAR</h3>
+  <p><em>A caveat before this section: exactly how string values are stored on disk and in memory depends on the storage engine, and this discussion (like the rest of this chapter) assumes InnoDB. If you're on a different engine, check its documentation.</em></p>
+  <p><code>VARCHAR</code> stores variable-length strings and is the most common string type, because it only uses as much space as the value needs. It spends 1 or 2 extra bytes recording each value's length (1 byte if the column's max length is 255 bytes or less, 2 bytes above that): a <code>VARCHAR(10)</code> uses up to 11 bytes in the <code>latin1</code> character set, and a <code>VARCHAR(1000)</code> uses up to 1,002 bytes. The trade-off is that because rows are variable length, updating a value can make the row grow and no longer fit where it was; what happens next is storage-engine dependent (in InnoDB, that can mean splitting a page to fit the row). <code>VARCHAR</code> tends to be the right call when the max length is much bigger than the typical length, updates are rare so fragmentation isn't a concern, or you're using a multi-byte character set like UTF-8.</p>
+  <p><code>CHAR</code> is fixed-length: MySQL always reserves the declared number of characters, strips trailing spaces on storage, and pads with spaces for comparisons. That makes it a good fit for short, uniform-length values, the chapter's example is storing an MD5 hash of a password, where every value really is the same length. <code>CHAR</code> also resists fragmentation on frequent updates (in InnoDB) since the row size never changes, and for very short columns it can beat <code>VARCHAR</code> outright: a <code>CHAR(1)</code> holding only 'Y' or 'N' uses 1 byte in a single-byte character set, while the equivalent <code>VARCHAR(1)</code> uses 2 bytes because of its length byte. One behavior worth remembering: if you store <code>'string3 '</code> (with a trailing space) in a <code>CHAR(10)</code> column, MySQL strips the trailing space when it's stored, so you get back <code>'string3'</code>; store the same value in a <code>VARCHAR(10)</code> and the trailing space survives.</p>
+  <p>Their binary siblings, <code>BINARY</code> and <code>VARBINARY</code>, store raw bytes instead of characters. MySQL pads <code>BINARY</code> with the zero byte (<code>\0</code>) rather than spaces, and doesn't strip it on retrieval, so be careful if the exact byte length matters to you downstream. Binary types compare byte by byte instead of character by character, which sidesteps collation rules entirely and is generally faster.</p>
+
+  <div class="card">
+    <p style="margin-bottom:0;"><strong>Generosity can be unwise.</strong> Storing <code>'hello'</code> takes the same space in a <code>VARCHAR(5)</code> and a <code>VARCHAR(200)</code> column. But the bigger declared column can still cost you: MySQL often allocates fixed-size chunks of memory to hold values internally, so an oversized column can use far more memory than needed, especially for sorting or for operations that build in-memory (or on-disk) temporary tables. The chapter's advice is simple: allocate only as much space as you actually need.</p>
+  </div>
+
+  <h3>4. BLOB and TEXT: large values, handled differently</h3>
+  <p><code>BLOB</code> (binary strings) and <code>TEXT</code> (character strings, with a character set and collation) are each really families of types by size: <code>TINYTEXT</code>, <code>TEXT</code>, <code>MEDIUMTEXT</code>, <code>LONGTEXT</code>, and the matching <code>TINYBLOB</code>, <code>BLOB</code>, <code>MEDIUMBLOB</code>, <code>LONGBLOB</code> (plain <code>BLOB</code> and <code>TEXT</code> are just synonyms for the smallest size in each family). Unlike other types, MySQL handles each BLOB/TEXT value as an object with its own identity; storage engines often store them specially, and InnoDB may move large values into a separate "external" storage area outside the row. Each value costs 1 to 4 bytes inside the row itself, plus whatever external storage the actual value needs.</p>
+  <p>Two limitations worth knowing before you reach for BLOB/TEXT: MySQL sorts these columns by only the first <code>max_sort_length</code> bytes, not the full value, and it can't index their full length or use an index for sorting on them. And a practical caution from the text: if you're tempted to store uploaded images as BLOB data to keep everything in one place, know that as that data grows, operations like schema changes get slower and slower because of it. The chapter's recommendation is to write large binary assets like images to a separate object store and keep only the location or filename in the table.</p>
+
+  <h3>5. ENUM and SET: compact, but with sharp edges</h3>
+  <p>An <code>ENUM</code> column stores one value from a predefined list of strings, packed internally into 1 or 2 bytes as an integer representing that value's position in the list you defined. This has a real, sometimes-surprising consequence: an ENUM column sorts by that internal integer, not alphabetically by the string. If you defined <code>ENUM('fish','apple','dog')</code>, ordering by the column sorts as <code>fish, apple, dog</code> (definition order), not alphabetically. You can work around it by defining the values in the order you want them to sort, or by forcing an explicit order with <code>ORDER BY FIELD(...)</code>, though that prevents MySQL from using an index for the sort.</p>
+  <p><code>SET</code> is the multi-value sibling: a column can hold zero or more values from the predefined list at once, stored as a packed set of bits, with helper functions like <code>FIND_IN_SET()</code> to query it.</p>
+  <p>The chapter backs the "compact but has overhead" trade-off with a real benchmark. Starting from a roughly 110,000-row, ~10 MB InnoDB table (small enough to fit entirely in memory) with a <code>service</code> column (5 distinct values, average length 4 characters) and a <code>method</code> column (71 distinct values, average length 20 characters), they compared joining two copies of the table on those columns, once as <code>VARCHAR</code>, once converted to <code>ENUM</code>:</p>
+  <ul>
+    <li>VARCHAR joined to VARCHAR: 2.6 queries/second</li>
+    <li>VARCHAR joined to ENUM: 1.7 queries/second</li>
+    <li>ENUM joined to VARCHAR: 1.8 queries/second</li>
+    <li>ENUM joined to ENUM: 3.5 queries/second</li>
+  </ul>
+  <p>ENUM-to-ENUM joins came out fastest, but mixing ENUM with VARCHAR was actually slower than plain VARCHAR-to-VARCHAR. Converting also shrank the table's <code>Data_length</code> by about a third and roughly halved the primary key's size, which (being InnoDB) shrinks every other index on the table too, since they all reference the primary key. <em>Caveat: these are the book's own numbers from its own hardware and test table, meant to show the shape of the trade-off, not a guarantee you'll see the same ratios.</em> The takeaway the chapter draws is practical: converting to ENUM is a good idea as long as you're not forced to join it against VARCHAR columns elsewhere. It's also worth flagging early: changing which values are legal in an ENUM always requires a schema change (an <code>ALTER TABLE</code>), which matters if that list changes often and you don't yet have a smooth way to run schema changes (more on that in Part 2).</p>
+
+  <h3>6. Date and time: DATETIME vs. TIMESTAMP</h3>
+  <p>MySQL's finest time granularity is the microsecond, and for most temporal types there's only one real option. The interesting choice is when you need date and time together: MySQL offers <code>DATETIME</code> and <code>TIMESTAMP</code>, which store the same kind of information but differ in range, storage size, and time zone behavior.</p>
+  <p><code>DATETIME</code> covers the year 1000 to the year 9999 at microsecond precision, stores the date and time packed into an integer in <code>YYYYMMDDHHMMSS</code> format independent of time zone, and uses 8 bytes of storage. By default MySQL displays it in a sortable, unambiguous format like <code>2008-01-16 22:37:08</code>.</p>
+  <p><code>TIMESTAMP</code> stores the number of seconds elapsed since midnight, January 1, 1970 GMT (the same idea as a Unix timestamp), using only 4 bytes, which gives it a much smaller range: 1970 to January 19, 2038. The value you see also depends on time zone settings (server, OS, and client connection all play a part), so a stored value of 0 could display as <code>1969-12-31 19:00:00</code> in a five-hour-behind-GMT time zone. That's a meaningful difference from DATETIME: TIMESTAMP preserves the value relative to whatever time zone is in use, while DATETIME preserves the literal text you stored. By default, MySQL also gives the first TIMESTAMP column in a table special behavior: it's set to the current time on insert if you don't specify one, and updated to the current time whenever the row changes, unless you assign a value explicitly (both behaviors are configurable). TIMESTAMP columns are also <code>NOT NULL</code> by default, unlike every other type.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 240" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="26" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">DATETIME VS. TIMESTAMP</text>
+
+      <rect x="20" y="46" width="280" height="176" rx="10" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.4"/>
+      <text x="160" y="76" fill="#F2EFE9" font-size="14" font-weight="700" text-anchor="middle">DATETIME</text>
+      <text x="40" y="106" fill="#C9C7C1" font-size="11">8 bytes</text>
+      <text x="40" y="128" fill="#C9C7C1" font-size="11">range: year 1000-9999</text>
+      <text x="40" y="150" fill="#C9C7C1" font-size="11">time zone independent</text>
+      <text x="40" y="172" fill="#C9C7C1" font-size="11">nullable by default</text>
+      <text x="40" y="194" fill="#7A7A80" font-size="10.5">stores the literal text you gave it</text>
+
+      <rect x="320" y="46" width="280" height="176" rx="10" fill="#0E0E10" stroke="#C8453A" stroke-width="1.4"/>
+      <text x="460" y="76" fill="#F2EFE9" font-size="14" font-weight="700" text-anchor="middle">TIMESTAMP</text>
+      <text x="340" y="106" fill="#C9C7C1" font-size="11">4 bytes</text>
+      <text x="340" y="128" fill="#C9C7C1" font-size="11">range: 1970 - Jan 19, 2038</text>
+      <text x="340" y="150" fill="#C9C7C1" font-size="11">time zone aware</text>
+      <text x="340" y="172" fill="#C9C7C1" font-size="11">NOT NULL by default</text>
+      <text x="340" y="194" fill="#7A7A80" font-size="10.5">auto-fills / auto-updates by default</text>
+    </svg>
+    <figcaption>Half the storage, a much smaller range: TIMESTAMP trades range and independence for size and time zone smarts.</figcaption>
+  </figure>
+
+  <p>There's also a third path some teams take: skip both and store date/time as a plain integer, the Unix epoch in UTC (seconds since 1970-01-01). A signed 32-bit <code>INT</code> gets you to 2038, the same wall TIMESTAMP hits; an unsigned 32-bit <code>INT</code> stretches that to 2106; 64-bit goes well beyond either. The chapter is candid that this is more a matter of taste than a settled best practice, so treat it as one more option to weigh, not a default.</p>
+
+  <h3>7. Bit-packed types: BIT and SET for flags</h3>
+  <p><code>BIT</code> lets a column store one or many true/false values directly as bits (<code>BIT(1)</code> is a single bit, up to <code>BIT(64)</code>). <em>In InnoDB specifically</em>, each BIT column is stored as the smallest integer type large enough to hold the bits, so you don't actually save storage space there. MySQL also treats BIT as a string type rather than a numeric one: retrieving a <code>BIT(1)</code> gives you a string containing the raw binary value, but in a numeric context you get the equivalent number, which the chapter calls out as genuinely confusing and generally recommends using BIT with caution, or avoiding it in favor of <code>TINYINT</code> for most applications.</p>
+  <p><code>SET</code> is the more practical option for combining several true/false flags into one column: it's stored as a packed set of bits internally, uses storage efficiently, and comes with query helpers like <code>FIND_IN_SET()</code>. An alternative some teams prefer is packing bits into a plain integer column (say, a <code>TINYINT</code>) and using bitwise operators, with named constants defined in application code for each bit. The advantage over SET is you can change what each bit means without an <code>ALTER TABLE</code>; the drawback is queries get harder to read, since a bare integer doesn't tell you what bit 5 represents. A classic use case for either approach is an access-control list where each bit or SET element stands for a permission like "can read" or "can write."</p>
+
+  <h3>8. The JSON data type</h3>
+  <p>MySQL has a native <code>JSON</code> column type for storing a JSON document and querying into its structure directly, which is convenient when data genuinely varies in shape. The chapter tests it against typed SQL columns with a real, small dataset: 202 near-Earth asteroids and comets from NASA, tested on MySQL 8.0.22 on a four-core, 16 GB VM. One schema stored the whole record as a single <code>json_data JSON</code> column; the other broke it into 10 properly typed columns (<code>varchar(30)</code>, <code>date</code>, several <code>float</code> columns, <code>char(3)</code>, and so on).</p>
+  <p>On storage, the JSON version used more space: <code>Data_length</code> came out to 81,920 bytes (five 16 KB pages) for the JSON table versus 49,152 bytes (three 16 KB pages) for the typed-columns table, since JSON's braces, brackets, colons, and whitespace all cost extra bytes. On speed, a plain <code>SELECT</code> of one field ran close either way (about 1.14 ms uncached / 0.44 ms cached for the SQL column, versus about 1.13 ms uncached / 0.80 ms cached reading the same field out of the JSON document with the <code>-&gt;</code> operator). The bigger gap showed up on indexed single-row lookups: after adding a normal index to the SQL column, a lookup ran in 0.33 ms. To give JSON a fair shot at the same trick, they added a <strong>generated column</strong> that extracts the field from the JSON document and indexed that instead; with that in place, an indexed JSON lookup ran in about 0.4 ms, close to (but still a bit behind) the SQL column's 0.33 ms.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 300" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="24" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">JSON COLUMN VS. TYPED SQL COLUMNS (202 ROWS)</text>
+
+      <text x="310" y="52" fill="#7A7A80" font-size="10.5" text-anchor="middle">STORAGE (Data_length, bytes)</text>
+      <text x="150" y="76" fill="#F2EFE9" font-size="11" text-anchor="end">json_data JSON</text>
+      <rect x="160" y="64" width="400" height="18" rx="4" fill="#0E0E10" stroke="#C8453A" stroke-width="1.4"/>
+      <text x="570" y="77" fill="#C8453A" font-size="10.5" text-anchor="end">81,920</text>
+      <text x="150" y="104" fill="#F2EFE9" font-size="11" text-anchor="end">typed columns</text>
+      <rect x="160" y="92" width="240" height="18" rx="4" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.4"/>
+      <text x="410" y="105" fill="#6FCF97" font-size="10.5" text-anchor="end">49,152</text>
+
+      <line x1="20" y1="132" x2="600" y2="132" stroke="rgba(242,239,233,0.10)" stroke-width="1"/>
+
+      <text x="310" y="156" fill="#7A7A80" font-size="10.5" text-anchor="middle">INDEXED SINGLE-ROW LOOKUP (ms)</text>
+      <text x="150" y="180" fill="#F2EFE9" font-size="11" text-anchor="end">SQL column</text>
+      <rect x="160" y="168" width="165" height="18" rx="4" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.4"/>
+      <text x="335" y="181" fill="#6FCF97" font-size="10.5" text-anchor="end">0.33 ms</text>
+      <text x="150" y="208" fill="#F2EFE9" font-size="11" text-anchor="end">JSON + generated col.</text>
+      <rect x="160" y="196" width="200" height="18" rx="4" fill="#0E0E10" stroke="#C8453A" stroke-width="1.4"/>
+      <text x="370" y="209" fill="#C8453A" font-size="10.5" text-anchor="end">0.4 ms</text>
+
+      <text x="310" y="245" fill="#7A7A80" font-size="10" text-anchor="middle">Same underlying data, two ways to store it. JSON costs more space and, even</text>
+      <text x="310" y="262" fill="#7A7A80" font-size="10" text-anchor="middle">with an indexed generated column, still trails the plain typed column on lookup speed.</text>
+    </svg>
+    <figcaption>Numbers are the chapter's own small-scale benchmark (202 rows on one test machine); treat them as illustrating a direction, not a universal ratio.</figcaption>
+  </figure>
+
+  <p>The conclusion drawn isn't "never use JSON," it's that the decision comes down to whether the convenience of storing raw JSON is worth more to you than the extra space and the speed gap, and that the speed difference compounds fast if you're running the query millions or billions of times a day.</p>
+
+  <h3>9. Choosing identifiers</h3>
+  <p>An identifier is how you refer to a specific row, often some or all of the primary key. Because identifier columns get compared constantly (joins, lookups) and frequently get copied into other tables as foreign keys, the type you choose here matters more than for an average column, and it's usually worth using the exact same type (including <code>UNSIGNED</code>) in every related table, since mismatched types in a join can cause performance problems or confusing implicit conversions.</p>
+  <p><strong>Integers are usually the best identifier type</strong>, since they're fast to compare and work with <code>AUTO_INCREMENT</code>, the attribute that has MySQL generate the next integer automatically on each insert (handy for something like sequential invoice numbers). Size it for where the data is actually headed: the chapter notes there's more than one real story of system downtime from unexpectedly running out of integers on an identifier column, which is exactly the kind of thing worth checking before a table grows large, not after.</p>
+  <p><strong>ENUM and SET are generally a poor identifier choice</strong>, though they can work fine as the primary key of a small, static "definition" or "lookup" table holding things like status or type values.</p>
+  <p><strong>String identifiers should generally be avoided</strong> because they cost more space and are slower to compare than integers. The chapter is especially pointed about "random" strings, the kind produced by <code>MD5()</code>, <code>SHA1()</code>, or <code>UUID()</code>: each new value lands in an arbitrary spot across a huge space, which slows <code>INSERT</code>s (the new value lands in a random spot in every index, causing page splits and random disk access, and fragmenting the clustered index in engines like InnoDB that physically store rows in primary-key order) and slows lookups too (logically related rows end up scattered across disk and memory instead of sitting near each other, which defeats the locality of reference that makes caching effective in the first place). <em>One nuance worth keeping: for some very large, heavily-written tables, that same randomness can actually help by spreading writes out and avoiding "hot spots," so it's a genuine trade-off, not a flat rule.</em> If you do need to store UUIDs, the chapter's tip is to strip the dashes or, better, convert the value to a 16-byte number with <code>UNHEX()</code> and store it in a <code>BINARY(16)</code> column, reading it back with <code>HEX()</code>.</p>
+
+  <h3>10. A caution about autogenerated schemas</h3>
+  <p>Migration tools and frameworks that autogenerate a schema for you can produce real performance problems: the chapter mentions patterns like defaulting every column to a large <code>VARCHAR</code>, or using mismatched types for columns that get compared in joins. Its advice is to double-check any schema you didn't design by hand. ORMs (object-relational mappers) get a similar caution: some are flexible enough to store any kind of data in any kind of backend, which usually means they don't lean on the strengths of whichever database you're actually using, and some even store every property of every object as its own row (sometimes with timestamp-based versioning, multiplying that further). It's understandable why this appeals to developers who'd rather not think about storage, but the chapter's blunt take is that hiding that complexity usually doesn't scale, so it's worth testing on a realistically large dataset before you trust the abstraction.</p>
+
+  <h3>11. A special case: IP addresses</h3>
+  <p>People often reach for a <code>VARCHAR(15)</code> to store an IPv4 address, but an address is really an unsigned 32-bit integer; the dotted-quad notation (like <code>192.168.1.1</code>) is just a human-readable way to write that same number. Storing it as an unsigned integer shrinks the space from around 16 bytes (VARCHAR) down to 4 bytes, and MySQL provides <code>INET_ATON()</code> and <code>INET_NTOA()</code> to convert between the two representations. If you're worried about losing readability when eyeballing the table, the chapter's suggestion is to build a view that presents the human-readable form.</p>
+
+  <h3>12. Schema design gotchas in MySQL</h3>
+  <p>Past good general database design, there are a handful of problems the chapter has specifically observed showing up in real MySQL schemas.</p>
+  <p><strong>Too many columns.</strong> MySQL's storage engine API copies rows between the server and the storage engine in a row buffer format, which the server then decodes into columns; that decoding has a real cost, and it grows with the number of columns. InnoDB's row format always requires this conversion. The chapter mentions tracing high CPU consumption for a customer with tables that had hundreds of columns, even when only a handful of those columns were actually being used, so if you're planning for very wide tables, expect the server's performance characteristics to shift.</p>
+  <p><strong>Too many joins.</strong> The entity-attribute-value (EAV) pattern, storing every property as its own row instead of its own column, is called out as a universally bad pattern that fits MySQL especially poorly, because EAV designs need many self-joins and MySQL has a hard limit of 61 tables per join; the chapter notes EAV databases sometimes hit that ceiling. Even well below 61 tables, the cost of planning and optimizing a heavily-joined query can become a real problem. As a rough rule of thumb, the chapter suggests a dozen or fewer tables per query if you need queries to run fast under high concurrency.</p>
+  <p><strong>The all-powerful ENUM.</strong> The chapter shares a real example it calls out as a bad pattern: a column defined as something like <code>country ENUM('0','1','2', ... ,'31')</code>, sprinkled throughout a schema. That should almost always be an integer, foreign-keyed to a proper lookup ("dictionary") table instead.</p>
+  <p><strong>ENUM in disguise.</strong> It's easy to reach for <code>SET</code> when you meant <code>ENUM</code>. The chapter's example is a column defined as <code>is_default SET('Y','N') NOT NULL DEFAULT 'N'</code>: if the value genuinely can't be both true and false at once, that should be an <code>ENUM</code>, not a <code>SET</code>.</p>
+  <p><strong>NULL, not invented here.</strong> The earlier advice to avoid NULL where possible doesn't mean avoid it always. Sometimes NULL genuinely is the right way to represent "unknown," and picking a magic constant instead (like <code>-1</code> for an unknown integer) can complicate your code and quietly introduce bugs. One anti-pattern the chapter flags directly: a column like <code>dt DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00'</code>, where the all-zeros default is a bogus stand-in for "no value" that can cause real problems downstream (MySQL's <code>SQL_MODE</code> can be configured to reject nonsense dates like this, which is worth doing especially on a new application). One more difference worth knowing: MySQL does index NULL values, which the chapter contrasts with Oracle, which excludes them from indexes entirely.</p>
+
+  <h2>Why it matters</h2>
+  <p>This is the layer everything else in MySQL performance sits on top of. A table built from small, well-chosen types uses less disk, fits more of itself in memory and cache, and lets comparisons and sorts run faster, all without changing a single query. And because these choices are expensive to reverse (an identifier type used across a dozen foreign-key columns, an ENUM baked into application logic, a random UUID primary key already fragmenting a multi-terabyte table), getting them right early is far cheaper than fixing them once the table matters to production traffic. The next piece of this same puzzle, once your types are sound, is indexing: how MySQL actually finds the rows you asked for fast.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Pick the smallest data type that can honestly hold your data's range, but size identifier columns for real future growth, since changing a type used across a schema later is a painful operation, and running out of room on an AUTO_INCREMENT id has caused real downtime.</li>
+      <li>VARCHAR trims to fit and CHAR doesn't; VARCHAR usually wins except for short, uniform-length, frequently-updated values (like a fixed-length hash).</li>
+      <li>ENUM and SET are compact but store integers under the hood: they sort by definition order, not alphabetically, and every new legal value requires a schema change.</li>
+      <li>DATETIME and TIMESTAMP look interchangeable but trade off storage size (8 vs. 4 bytes), date range, and time zone awareness against each other; pick based on which trade-off you can live with.</li>
+      <li>Integers make the best identifiers. Random string identifiers like UUIDs scatter rows across disk and memory, which slows inserts, lookups, and caching alike (with the narrow exception of deliberately spreading writes on very large, heavily-written tables).</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Reproduce the CHAR vs. VARCHAR trailing-space behavior.</strong> Create one table with a <code>CHAR(10)</code> column and one with a <code>VARCHAR(10)</code> column, insert the same few strings with leading and trailing spaces into each, and select them back wrapped in quotes (for example with <code>CONCAT</code>). <em>Done when:</em> you've seen CHAR strip a trailing space that VARCHAR keeps, and can explain why in your own words.</li>
+      <li><strong>Find an integer type's ceiling for yourself.</strong> Create a table with one column per integer type (TINYINT, SMALLINT, MEDIUMINT, INT, BIGINT), then try inserting a value one past each type's documented max. <em>Done when:</em> you've triggered an out-of-range error on at least one column and can state that type's max value from memory afterward.</li>
+      <li><strong>Run your own mini ENUM-vs-VARCHAR comparison.</strong> Build two small tables that are identical except one status-like column is VARCHAR and the other is the equivalent ENUM, populate each with a few thousand generated rows, and time a query that filters or joins on that column. <em>Done when:</em> you have your own before/after timing, even on a tiny dataset, and can say which was faster for your test.</li>
+      <li><strong>Watch DATETIME and TIMESTAMP disagree across time zones.</strong> Create a table with one DATETIME and one TIMESTAMP column, insert the same moment into both in one row, then change your session's time zone (<code>SET time_zone = ...</code>) and select the row again. <em>Done when:</em> you've watched the TIMESTAMP value shift with the time zone change while the DATETIME value stays exactly as you entered it.</li>
+      <li><strong>Compare a JSON column to typed columns on a tiny dataset.</strong> Take 15-20 small JSON records of your own, load them once into a single JSON column and once into properly typed columns, then compare each table's size and the time of a simple SELECT against each. <em>Done when:</em> you have your own size and speed comparison written down, even if the numbers are small and noisy.</li>
+      <li><strong>Store an IP address the space-efficient way.</strong> Add one VARCHAR(15) column and one INT UNSIGNED column to a test table, insert the same address into both (using <code>INET_ATON()</code> for the integer version), and read the integer one back with <code>INET_NTOA()</code>. <em>Done when:</em> you can convert an address to its integer form and back again without looking anything up.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>A natural next question once your types are solid: how does MySQL actually use them to find rows quickly? Several choices made here directly shape how well an index performs later, a small identifier type makes for a smaller, faster index; an ENUM's internal integer affects how it can be indexed and joined; a random string identifier fragments the very index built on top of it. That's the subject this chapter sets up next.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, written to help you build a mental model quickly. It is not a substitute for the book itself; verify anything you plan to rely on (exact syntax, current version behavior, precise limits) against the source or the official MySQL documentation before using it for real.</p>
+  <ul class="src-list">
+    <li><em>High Performance MySQL</em>, 4th Edition — Chapter 6, "Schema Design and Management." This digest (Part 1) covers the chapter's printed pages 125–146 (PDF pages 147–168 of the source file): "Choosing Optimal Data Types" in full (whole numbers, real numbers, string types, BLOB/TEXT, ENUM/SET with their benchmarks, date and time types, bit-packed types, the JSON data type with its own benchmark, choosing identifiers, autogenerated schemas, and IP addresses) plus "Schema Design Gotchas in MySQL" (too many columns, too many joins, ENUM misuse, NULL).</li>
+  </ul>
+  <p class="src-note">Stopped precisely where the chapter turns to "Schema Management": source control for schemas, paid vs. open source tooling, and running schema changes in production (native DDL, pt-online-schema-change, gh-ost, and a CI/CD pipeline for schema changes). That material is planned for Part 2 and isn't covered here. Also flagged: the ENUM/VARCHAR join benchmark and the JSON-vs-SQL-columns benchmark are both the book's own results from its own test hardware and small datasets; they're included to show the shape and direction of the trade-off, not as numbers you should expect to reproduce exactly.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · TikTok
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
