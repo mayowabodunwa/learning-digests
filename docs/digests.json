@@ -82,33 +82,5 @@
     "ch": "Topic 3 (Part 1)",
     "title": "EC2 Instances & AMIs",
     "date": "2026-07-30"
-  },
-  {
-    "slug": "ddia-ch04-part1-encoding-schema-formats",
-    "book": "Designing Data-Intensive Applications",
-    "ch": "Ch.4 (Part 1)",
-    "title": "Encoding and Evolution, Part 1: Formats and Schema Evolution",
-    "date": "2026-08-09"
-  },
-  {
-    "slug": "ai-eng-ch05-part1-prompting-fundamentals",
-    "book": "AI Engineering",
-    "ch": "Ch.5 (Part 1)",
-    "title": "Prompt Engineering, Part 1: Prompts, In-Context Learning & Best Practices",
-    "date": "2026-08-09"
-  },
-  {
-    "slug": "hpmysql-ch06-part1-data-types",
-    "book": "High Performance MySQL",
-    "ch": "Ch.6 (Part 1)",
-    "title": "Schema Design and Management, Part 1: Data Types & Identifiers",
-    "date": "2026-08-09"
-  },
-  {
-    "slug": "aws-04-asg-elb",
-    "book": "AWS",
-    "ch": "Topic 3 (Part 2, final)",
-    "title": "Auto Scaling Groups & Elastic Load Balancing",
-    "date": "2026-08-09"
   }
 ]
