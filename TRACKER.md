@@ -5,97 +5,133 @@ Kept alongside the books so it travels with them.
 
 ## Reading plan
 
-Self-paced batches. Each batch is the next unit for all four tracks (three books plus
-AWS). New content only arrives once you've ticked off the current batch below, so it
-never piles up. Work sequentially inside a book: finish a chapter before the next, and
-a long chapter can span several batches (kept "in progress").
+**Focused scope (set 2026-08-09).** Batches draw ONLY from the topics listed below.
+Everything else in these books is **parked**, including chapters that were left part-way
+through. Do not resume a parked chapter, and do not "finish" a book sequentially: the
+scope below replaces the old cover-to-cover plan.
 
-**Track A: Systems design (chapter by chapter)**
-1. *Designing Data-Intensive Applications*: 12 chapters
-2. *AI Engineering* (Chip Huyen): 10 chapters
-3. *High Performance MySQL, 4th ed.*: 13 chapters
+**Track A: books**
+1. *Designing Data-Intensive Applications*: **Ch.4, Ch.10, Ch.11** (in that order)
+2. *AI Engineering* (Chip Huyen): **Ch.5 onwards** (5, 6, 7, 8, 9, 10 in order)
+3. *High Performance MySQL, 4th ed.*: **Ch.6, Ch.7, Ch.8** (in that order)
 
-**Track B: AWS, beyond the basics (topic by topic)**
-Core networking → Transit Gateway → EC2 → S3 → Lambda → Queueing/messaging → CloudWatch.
-Source is the official AWS docs: https://docs.aws.amazon.com/ . These are web pages,
-not PDFs, so for Track B the agent reads the relevant service docs online (fetching
-the right pages for each topic) instead of pulling a PDF from Drive. Each topic is
-still treated like a chapter: one digest, one carousel.
+**Track B: AWS** — four service areas, covered **concept by concept** and revisited in
+**rotation**: `S3 → EC2 → VPC → CloudWatch → S3 → …`. Each batch takes the next unstarted
+concept from whichever area is next in the rotation (finish any in-progress concept
+first). These four areas are the standing scope; keep circling them until every concept
+listed is covered, then go deeper on the same services rather than moving to new ones.
+
+**Parked, do not produce:** AI Engineering Ch.2 Part 3, High Performance MySQL Ch.3
+Part 2, DDIA Ch.3, and every chapter not named above. They stay published in the library
+for reference, they are simply not continued.
 
 ## Current batch: tick each when you've studied it
 
-- [ ] DDIA — Ch.2 (Part 2 of 2): Data Models and Query Languages — graph-like data models, property graphs, Cypher, SQL recursive-CTE graph queries, triple-stores/SPARQL, Datalog, comparison to the old CODASYL network model. **This finishes Ch.2.**
-- [ ] AI Engineering — Ch.2 (Part 2 of 3): Understanding Foundation Models — post-training, specifically supervised finetuning (SFT) and preference finetuning (RLHF/DPO/RLAIF) — how a raw next-token predictor becomes a helpful assistant
-- [ ] High Performance MySQL — Ch.3 (Part 1 of 2): Performance Schema — instruments vs. consumers, consumer table families, resource cost/limitations, the sys schema, THREAD_ID vs. PROCESSLIST_ID, and all configuration methods
-- [ ] AWS — Topic 3 (Part 1 of 2): EC2 Instances & AMIs — instance types/families, what an AMI is, the instance lifecycle state machine, creating a custom AMI, stop vs. terminate
-
-<!-- Gate is LOCKED until every box above is ticked. Once cleared, the next run continues
-     the in-progress chapters: DDIA Ch.3 (Storage and Retrieval, pp.91-132 — Ch.2 is now
-     fully done, so this is a fresh chapter), AI Engineering Ch.2 Part 3 of 3 (pp.112-136:
-     Sampling, The Probabilistic Nature of AI, Summary — finishes Ch.2), High Performance
-     MySQL Ch.3 Part 2 of 2 (pp.74-96: statement/lock/memory/variable/error instrumentation
-     deep-dives — finishes Ch.3), and AWS Topic 3 Part 2 of 2 (Auto Scaling Groups & Elastic
-     Load Balancing — finishes the EC2 topic). -->
+<!-- Empty, so the gate is CLEAR and the next run produces the first focused batch:
+     DDIA Ch.4, AI Engineering Ch.5, High Performance MySQL Ch.6, and AWS EC2 (finishing
+     the in-progress EC2 topic with Auto Scaling Groups & Elastic Load Balancing). It then
+     writes the new checklist here for you to tick. -->
 
 ## Track A: Designing Data-Intensive Applications
 
+Focus: Ch.4, Ch.10, Ch.11. Nothing else from this book.
+
 | Ch | Title | Pages | Digested | Carousel | Notes |
 |---:|-------|-------|----------|----------|-------|
-| 1 | Reliable, Scalable, and Maintainable Applications | 25–48 | 2026-07-20 | 2026-07-20 | |
-| 2 | Data Models and Query Languages | 49–90 | 2026-07-27 (Part 1, pp.49-70); 2026-07-30 (Part 2, pp.71-90) | 2026-07-27; 2026-07-30 | **Done, both parts.** Part 1 covers relational vs. document model, birth of NoSQL, object-relational mismatch, many-to-one/many-to-many, schema-on-read vs. schema-on-write, declarative vs. imperative query languages, MapReduce. Part 2 covers graph-like data models: property graphs, Cypher, SQL recursive-CTE graph queries, triple-stores/SPARQL, Datalog, and the comparison to the CODASYL network model. Verify flags: vendor/version-specific claims from Part 1 (RethinkDB joins, MongoDB driver-side refs, Spanner/Oracle row interleaving) are as stated in the source, not independently re-verified; Part 2's printed-page footers (49-67) run lower than its PDF page range (71-90, with pp.87-90 being bibliography, not teaching content) and numerically overlap Part 1's cited range, likely an estimation artifact between the two parts rather than a content gap, worth reconciling against a physical copy. |
-| 3 | Storage and Retrieval | 91–132 | | | |
-| 4 | Encoding and Evolution | 133–166 | | | |
-| 5 | Replication | 173–220 | | | |
-| 6 | Partitioning | 221–242 | | | |
-| 7 | Transactions | 243–294 | | | |
-| 8 | The Trouble with Distributed Systems | 295–342 | | | |
-| 9 | Consistency and Consensus | 343–406 | | | |
+| 4 | Encoding and Evolution | 133–166 | | | **Next up.** |
 | 10 | Batch Processing | 411–460 | | | |
 | 11 | Stream Processing | 461–510 | | | |
-| 12 | The Future of Data Systems | 511–574 | | | |
 
+*Already published (do not redo):* Ch.1; Ch.2 Parts 1 and 2.
+*Parked:* Ch.3, 5, 6, 7, 8, 9, 12.
 
 ## Track A: AI Engineering (Chip Huyen)
 
+Focus: Ch.5 onwards, in order. Ch.2 is parked mid-chapter on purpose (Part 3 will not
+be produced); Ch.3 and Ch.4 are skipped.
+
 | Ch | Title | Pages | Digested | Carousel | Notes |
 |---:|-------|-------|----------|----------|-------|
-| 1 | Introduction to Building AI Applications with Foundation Models | 25-72 | 2026-07-20 | 2026-07-20 | |
-| 2 | Understanding Foundation Models | 73-136 | 2026-07-27 (Part 1 of 3, pp.73-100); 2026-07-30 (Part 2 of 3, pp.101-112) | 2026-07-27; 2026-07-30 | In progress — turned out to need 3 parts, not 2. Part 1 covers training data (general-purpose/multilingual/domain-specific), the transformer architecture (attention, MLP module, embedding/output layers, other architectures), and model size/scaling laws (incl. inverse scaling). Part 2 covers Post-Training: supervised finetuning (SFT) and preference finetuning (RLHF/DPO/RLAIF), including real named data-collection efforts (InstructGPT, Llama 2, ChatGPT/GPT). Next: Part 3, pp.112-136 (Sampling: temperature/top-k/top-p/logprobs/test-time compute/structured outputs, The Probabilistic Nature of AI: inconsistency + two hallucination hypotheses, Summary) — finishes Ch.2. Verify flags: Part 1's worked GPT-3 cost example has an internal inconsistency (236 vs. 256 training days), reproduced and flagged rather than silently resolved; Part 2's RLAIF-for-Claude claim is preserved as the source's own hedge ("potentially"), not stated as fact, and several secondhand findings (InstructGPT labeling stats, DPO paper, Llama 2's RLHF claim, LMSYS timing study, LAION/HH-RLHF dataset, cost figures) are reported from the source, not independently re-verified. |
-| 3 | Evaluation Methodology | 137-182 | | | |
-| 4 | Evaluate AI Systems | 183-234 | | | |
-| 5 | Prompt Engineering | 235-276 | | | |
+| 5 | Prompt Engineering | 235-276 | | | **Next up.** |
 | 6 | RAG and Agents | 277-330 | | | |
 | 7 | Finetuning | 331-386 | | | |
 | 8 | Dataset Engineering | 387-428 | | | |
 | 9 | Inference Optimization | 429-472 | | | |
 | 10 | AI Engineering Architecture and User Feedback | 473-518 | | | |
 
+*Already published (do not redo):* Ch.1; Ch.2 Parts 1 and 2.
+*Parked:* Ch.2 Part 3, Ch.3, Ch.4.
+
 ## Track A: High Performance MySQL (4th ed.)
+
+Focus: Ch.6, Ch.7, Ch.8. Nothing else from this book.
 
 | Ch | Title | Pages | Digested | Carousel | Notes |
 |---:|-------|-------|----------|----------|-------|
-| 1 | MySQL Architecture | 23-40 | 2026-07-20 | 2026-07-20 | |
-| 2 | Monitoring in a Reliability Engineering World | 41-62 | 2026-07-27 | 2026-07-27 | Whole chapter, no split needed. Covers SLI/SLO/SLA, what to measure, monitoring solutions, proactive monitoring (disk/connection growth, replication lag, I/O), learning your own business's traffic cadence, and why percentiles beat averages for query latency. Verify flags: the source's single worked SLI example gives a millisecond figure that reads as an implausible/likely OCR artifact (only the shape of the example was used, not the number); availability-by-nines figures are the source's own citation of an external chart, not original data; MySQL replication topology claim bounded as the common source/replica setup (multi-source and other topologies exist). |
-| 3 | Performance Schema | 63-96 | 2026-07-30 (Part 1 of 2, pp.63-74) | 2026-07-30 | In progress. Chapter is 34 pages and reference-dense (dozens of specific table/instrument/column names), so split at its own natural section boundary rather than thin it out. Part 1 covers instruments vs. consumers, consumer table families (current/history/history_long, summary/digest, instances, setup, other), resource cost/limitations, the sys schema, THREAD_ID vs. PROCESSLIST_ID, and every configuration method (enabling PS/instruments/consumers, setup_objects/setup_threads/setup_actors, memory sizing, version-bounded defaults). Next: Part 2, pp.~74-96 ("Using Performance Schema" deep dives: statement/prepared-statement/stored-routine instrumentation, statement profiling, metadata locks, memory usage, variables, error digests) — finishes Ch.3. Verify flags: several version-tied specifics (8.0.25's exact table count, the default-enabled instrumentation split by version, the "15 possible consumers" count, default history-size/text-length caps) are the source's own figures and worth checking against a live instance or the current MySQL Reference Manual since these shift by version; every table/column name used (setup_instruments, setup_consumers, setup_objects, setup_threads, setup_actors, threads, file_instances, metadata_locks, memory_summary_by_thread_by_event_name) was traced directly to the extracted text. |
-| 4 | Operating System and Hardware Optimization | 97-120 | | | |
-| 5 | Optimizing Server Settings | 121-146 | | | |
-| 6 | Schema Design and Management | 147-176 | | | |
+| 6 | Schema Design and Management | 147-176 | | | **Next up.** |
 | 7 | Indexing for High Performance | 177-212 | | | |
 | 8 | Query Performance Optimization | 213-248 | | | |
-| 9 | Replication | 249-278 | | | |
-| 10 | Backup and Recovery | 279-308 | | | |
-| 11 | Scaling MySQL | 309-334 | | | |
-| 12 | MySQL in the Cloud | 335-346 | | | |
-| 13 | Compliance with MySQL | 347-364 | | | |
 
-## Track B: AWS beyond the basics
+*Already published (do not redo):* Ch.1; Ch.2; Ch.3 Part 1.
+*Parked:* Ch.3 Part 2, Ch.4, Ch.5, Ch.9–13.
 
-| # | Topic | Source | Digested | Carousel | Notes |
-|--:|-------|--------|----------|----------|-------|
-| 1 | Core networking (VPC, subnets, route tables, NAT, IGW) | docs.aws.amazon.com | 2026-07-20 | 2026-07-20 | Sources: what-is-amazon-vpc, configure-subnets, vpc-cidr-blocks, VPC_Route_Tables, RouteTables, VPC_Internet_Gateway, vpc-nat-gateway (all docs.aws.amazon.com/vpc/latest/userguide/) |
-| 2 | Transit Gateway & multi-VPC connectivity | docs.aws.amazon.com | 2026-07-27 | 2026-07-27 | Sources: vpc/latest/tgw/{what-is-transit-gateway,how-transit-gateways-work,tgw-transit-gateways,tgw-vpc-attachments,tgw-route-tables}.html, vpc/latest/peering/{what-is-vpc-peering,vpc-peering-basics}.html (all docs.aws.amazon.com). Verify flag: the transit gateway quotas page didn't render usable content via fetch, so no numeric quotas/limits are cited anywhere in the digest (flagged explicitly); Direct Connect gateway and Transit Gateway Connect attachments covered only at the depth the fetched pages gave. |
-| 3 | EC2 (instances, AMIs, ASGs, load balancing) | docs.aws.amazon.com | 2026-07-30 (Part 1 of 2) | 2026-07-30 | In progress. Split into Part 1: EC2 Instances & AMIs (instance types/families, AMI characteristics incl. root volume and virtualization type, the full instance lifecycle state machine incl. stop vs. terminate and reboot/hibernate, the AMI-creation workflow). Next: Part 2 (Auto Scaling Groups & Elastic Load Balancing) — finishes the EC2 topic. Sources: AWSEC2/latest/UserGuide/{concepts,instance-types,AMIs,ComponentsAMIs,ec2-instance-lifecycle,creating-an-ami-ebs,terminating-instances,EC2_GetStarted}.html, ec2/latest/instancetypes/instance-type-names.html (all docs.aws.amazon.com). Verify flag: the instance-type naming-conventions page's "Series"/"Options" reference table didn't render usable content via fetch (returned a placeholder), so family-letter examples come from the instance-types page's own hypervisor/family lists instead, flagged explicitly in the digest. |
-| 4 | S3 (storage classes, lifecycle, security) | docs.aws.amazon.com | | | |
-| 5 | Lambda (event model, cold starts, limits) | docs.aws.amazon.com | | | |
-| 6 | Queueing/messaging (SQS, SNS, EventBridge) | docs.aws.amazon.com | | | |
-| 7 | CloudWatch (metrics, logs, alarms, dashboards) | docs.aws.amazon.com | | | |
+## Track B: AWS — four areas, in rotation
+
+Cover the next unstarted concept from the next area in the rotation each batch. Finish an
+in-progress concept before starting the next. Source is the official AWS docs
+(https://docs.aws.amazon.com/); fetch the relevant service pages for each concept.
+
+### S3 (every concept)
+| # | Concept | Digested | Carousel | Notes |
+|--:|---------|----------|----------|-------|
+| 1 | Buckets, objects, keys, the flat namespace, durability & consistency model | | | |
+| 2 | Storage classes & lifecycle policies (incl. Intelligent-Tiering, Glacier tiers) | | | |
+| 3 | Versioning, delete markers, MFA delete | | | |
+| 4 | Encryption: SSE-S3, SSE-KMS, DSSE-KMS, SSE-C, bucket keys | | | |
+| 5 | Access control: bucket policies, IAM, ACLs, Block Public Access, access points | | | |
+| 6 | Replication: CRR/SRR, Replication Time Control, batch replication | | | |
+| 7 | Presigned URLs, CORS, static website hosting | | | |
+| 8 | Event notifications and EventBridge integration | | | |
+| 9 | Multipart upload, Transfer Acceleration, byte-range fetches | | | |
+| 10 | Object Lock, retention & legal hold, Inventory, Storage Lens | | | |
+
+### EC2 (every concept)
+| # | Concept | Digested | Carousel | Notes |
+|--:|---------|----------|----------|-------|
+| 1 | Instances & AMIs: types/families, lifecycle, custom AMIs, stop vs. terminate | 2026-07-30 | 2026-07-30 | Part 1 done. **In progress:** Part 2 = Auto Scaling Groups & Elastic Load Balancing, which is the next AWS unit. |
+| 2 | Purchasing options: on-demand, reserved, savings plans, spot | | | |
+| 3 | EBS volumes, snapshots, instance store | | | |
+| 4 | Elastic Load Balancing in depth: ALB vs. NLB vs. GWLB, target groups, health checks | | | |
+| 5 | Auto Scaling in depth: launch templates, scaling policies, lifecycle hooks, warm pools | | | |
+| 6 | Systems Manager (SSM): Session Manager, Run Command, Patch Manager, Parameter Store | | | |
+| 7 | Instance metadata (IMDSv2), user data, instance profiles & IAM roles | | | |
+| 8 | Placement groups, Nitro, dedicated hosts vs. dedicated instances | | | |
+| 9 | Security groups & key pairs from the instance's point of view | | | |
+| 10 | Instance monitoring, status checks, auto recovery | | | |
+
+### VPC (every concept)
+| # | Concept | Digested | Carousel | Notes |
+|--:|---------|----------|----------|-------|
+| 1 | Core networking: VPC, subnets, route tables, IGW, NAT gateway | 2026-07-20 | 2026-07-20 | Done. |
+| 2 | Transit Gateway & multi-VPC connectivity | 2026-07-27 | 2026-07-27 | Done. |
+| 3 | Security groups and network ACLs in depth | | | |
+| 4 | VPC endpoints: gateway vs. interface, and PrivateLink | | | |
+| 5 | DNS in a VPC: Route 53 Resolver, private hosted zones, DHCP option sets | | | |
+| 6 | Flow Logs and traffic mirroring | | | |
+| 7 | IPv6 in a VPC, egress-only internet gateway | | | |
+| 8 | VPC peering in depth: limits, CIDR overlap, cross-account/region | | | |
+| 9 | Site-to-Site VPN, Direct Connect, hybrid routing | | | |
+| 10 | VPC sharing with RAM, prefix lists, route evaluation order | | | |
+
+### CloudWatch (every concept)
+| # | Concept | Digested | Carousel | Notes |
+|--:|---------|----------|----------|-------|
+| 1 | Metrics: namespaces, dimensions, resolution, custom metrics | | | |
+| 2 | Alarms: static, anomaly detection, composite, and alarm actions | | | |
+| 3 | Logs: log groups/streams, retention, metric filters, subscription filters | | | |
+| 4 | Logs Insights query language | | | |
+| 5 | Dashboards and cross-account / cross-region observability | | | |
+| 6 | The CloudWatch agent and Embedded Metric Format | | | |
+| 7 | EventBridge: rules, patterns, schedules, and its relation to CloudWatch Events | | | |
+| 8 | Synthetics canaries and RUM | | | |
+| 9 | Container/Lambda Insights, ServiceLens, X-Ray tracing | | | |
