@@ -132,8 +132,11 @@ def lint_deck(path, root, errors, warnings):
                 errors.append((rel, f"slide {i}: terminal `{term}` (must be `{want_term}`)"))
         cover = (slides[0].get("fields") or {}) if slides else {}
         counter = cover.get("counter", "")
-        if counter and not counter.upper().startswith(want_prefix):
-            errors.append((rel, f"cover counter `{counter}` (must start with `{want_prefix}`)"))
+        # Bare prefix only. A trailing chapter/topic number ("SQL · 06") means nothing to
+        # a viewer who isn't following a reading order, and hints at study material.
+        if counter and counter.strip().upper() != want_prefix:
+            errors.append((rel, f"cover counter `{counter}` (must be exactly `{want_prefix}`, "
+                                f"with no chapter/topic number)"))
     else:
         warnings.append((rel, f"unknown track folder `{book}`, skipped chrome check"))
 

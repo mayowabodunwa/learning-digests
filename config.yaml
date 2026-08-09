@@ -18,7 +18,9 @@ carousel_fonts: "./.claude/skills/book-digest-carousels/assets/fonts.json"
 digest:
   email_to: "bodunwamayowa@gmail.com"         # EDIT ME: where the link email is sent
   # Full HTML digests are hosted on GitHub Pages; the email is a lightweight link.
-  site_base_url: "https://cloudsenseing.github.io/learning-digests"   # EDIT ME
+  site_base_url: "https://mayowabodunwa.github.io/learning-digests"   # EDIT ME
+  # NOTE: the emailed links come from the SITE_BASE_URL repo *variable* in GitHub
+  # Actions, not from this file. Keep both in sync if the repo ever moves again.
   docs_dir: "./docs"                           # GitHub Pages source (main /docs)
 
 carousels:
