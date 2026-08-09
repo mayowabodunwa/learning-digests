@@ -174,12 +174,14 @@ identical.
 
 Trigger phrases: "today's digest", "digest chapter N of <book>", "catch me up on <book>".
 
-1. Read `config.yaml` and `TRACKER.md`. Work through the plan **sequentially and
-   finish the current chapter before starting the next**. Don't force a whole chapter
-   into one day: if a chapter is long, cover a coherent section, mark it "in progress"
-   in the tracker, and pick up where you left off next time. Only move to the next
-   chapter once the current one is done. **There is no rush to finish a book — depth
-   over speed.** Prefer splitting a chapter across several batches to bring out real
+1. Read `config.yaml` and `TRACKER.md`. **`TRACKER.md`'s reading plan defines the scope
+   and always wins.** It may be a focused list (specific chapters, or service concepts
+   in rotation) rather than a whole book: cover only what it lists, in its order, and
+   **never resume anything it marks parked**, even a chapter left part-way through.
+   Within that scope, work **sequentially and finish the current unit before starting
+   the next**. Don't force a whole chapter into one day: if a chapter is long, cover a
+   coherent section, mark it "in progress" in the tracker, and pick up where you left
+   off next time. **There is no rush — depth over speed.** Prefer splitting a chapter across several batches to bring out real
    detail (clear explanations, concrete examples, and a real named case study) over
    racing ahead; only advance when the current unit is genuinely thorough.
 2. Locate and extract the chapter text (see above).
