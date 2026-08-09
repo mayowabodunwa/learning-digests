@@ -76,7 +76,10 @@ jobs:
         run: |
           claude -p "Use the book-digest-carousels skill. Read TRACKER.md, then follow its Content \
           guardrails exactly. Produce the NEXT unit for each of the four tracks (DDIA, AI Engineering, \
-          High Performance MySQL, AWS), finishing an in-progress chapter before starting a new one. \
+          High Performance MySQL, AWS). TRACKER.md's focused scope decides what counts as the next \
+          unit and always wins: take only chapters/concepts it lists as in scope, in its order, and \
+          NEVER resume anything it marks parked, even if that chapter is part-way done. Within the \
+          scope, finish an in-progress unit before starting a new one. \
           Treat each book as its OWN independent job, carried through all six stages in order: (1) Source \
           - pin the exact chapter/AWS docs section and record citations; (2) Teaching - beginner-friendly \
           explanation, examples, caveats, recall questions; (3) Visual - original schematics from first \
