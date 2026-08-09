@@ -27,10 +27,10 @@ for reference, they are simply not continued.
 
 ## Current batch: tick each when you've studied it
 
-<!-- Empty, so the gate is CLEAR and the next run produces the first focused batch:
-     DDIA Ch.4, AI Engineering Ch.5, High Performance MySQL Ch.6, and AWS EC2 (finishing
-     the in-progress EC2 topic with Auto Scaling Groups & Elastic Load Balancing). It then
-     writes the new checklist here for you to tick. -->
+- [ ] DDIA Ch.4 (Part 1) — Encoding and Evolution: compatibility, encoding formats (JSON/XML/CSV, binary), and schema evolution in Thrift/Protobuf/Avro
+- [ ] AI Engineering Ch.5 (Part 1) — Prompt Engineering: what a prompt is, in-context learning, and best-practice techniques
+- [ ] High Performance MySQL Ch.6 (Part 1) — Schema Design and Management: choosing data types, identifiers, and MySQL-specific gotchas
+- [ ] AWS Topic 3 (Part 2, final) — Auto Scaling Groups & Elastic Load Balancing (finishes the Instances & AMIs unit)
 
 ## Track A: Designing Data-Intensive Applications
 
@@ -38,7 +38,7 @@ Focus: Ch.4, Ch.10, Ch.11. Nothing else from this book.
 
 | Ch | Title | Pages | Digested | Carousel | Notes |
 |---:|-------|-------|----------|----------|-------|
-| 4 | Encoding and Evolution | 133–166 | | | **Next up.** |
+| 4 | Encoding and Evolution | 133–166 | 2026-08-09 (Pt.1) | 2026-08-09 (Pt.1) | Part 1: compatibility, encoding formats (JSON/XML/CSV, binary), and schema evolution in Thrift/Protobuf/Avro. **Part 2 next up:** the three dataflow modes (databases, REST/RPC, message-passing). |
 | 10 | Batch Processing | 411–460 | | | |
 | 11 | Stream Processing | 461–510 | | | |
 
@@ -52,7 +52,7 @@ be produced); Ch.3 and Ch.4 are skipped.
 
 | Ch | Title | Pages | Digested | Carousel | Notes |
 |---:|-------|-------|----------|----------|-------|
-| 5 | Prompt Engineering | 235-276 | | | **Next up.** |
+| 5 | Prompt Engineering | 235-276 | 2026-08-09 (Pt.1) | 2026-08-09 (Pt.1) | Part 1: what a prompt is, in-context learning, system vs. user prompts, and best-practice techniques. **Part 2 next up:** context efficiency and defensive prompt engineering (prompt attacks). |
 | 6 | RAG and Agents | 277-330 | | | |
 | 7 | Finetuning | 331-386 | | | |
 | 8 | Dataset Engineering | 387-428 | | | |
@@ -68,7 +68,7 @@ Focus: Ch.6, Ch.7, Ch.8. Nothing else from this book.
 
 | Ch | Title | Pages | Digested | Carousel | Notes |
 |---:|-------|-------|----------|----------|-------|
-| 6 | Schema Design and Management | 147-176 | | | **Next up.** |
+| 6 | Schema Design and Management | 147-176 | 2026-08-09 (Pt.1) | 2026-08-09 (Pt.1) | Part 1: choosing data types, identifiers, and MySQL-specific schema gotchas. **Part 2 next up:** schema management (the extracted source doesn't develop normalization/denormalization further, so that thread stays flagged rather than invented). |
 | 7 | Indexing for High Performance | 177-212 | | | |
 | 8 | Query Performance Optimization | 213-248 | | | |
 
@@ -98,7 +98,7 @@ in-progress concept before starting the next. Source is the official AWS docs
 ### EC2 (every concept)
 | # | Concept | Digested | Carousel | Notes |
 |--:|---------|----------|----------|-------|
-| 1 | Instances & AMIs: types/families, lifecycle, custom AMIs, stop vs. terminate | 2026-07-30 | 2026-07-30 | Part 1 done. **In progress:** Part 2 = Auto Scaling Groups & Elastic Load Balancing, which is the next AWS unit. |
+| 1 | Instances & AMIs: types/families, lifecycle, custom AMIs, stop vs. terminate | 2026-07-30 (Pt.1); 2026-08-09 (Pt.2, final) | 2026-07-30 (Pt.1); 2026-08-09 (Pt.2, final) | Done. Part 1 = Instances & AMIs. Part 2 = Auto Scaling Groups & Elastic Load Balancing fundamentals (capacity settings, health-check-driven replacement, ALB vs. NLB, target groups, and how the two connect). |
 | 2 | Purchasing options: on-demand, reserved, savings plans, spot | | | |
 | 3 | EBS volumes, snapshots, instance store | | | |
 | 4 | Elastic Load Balancing in depth: ALB vs. NLB vs. GWLB, target groups, health checks | | | |

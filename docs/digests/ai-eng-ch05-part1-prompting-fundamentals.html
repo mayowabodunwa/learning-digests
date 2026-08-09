@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Engineering — Prompt Engineering, Part 1 (Ch.5)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AI ENGINEERING · CH.5 DIGEST (PART 1)</p>
+  <h1>Prompt Engineering: Prompts, In-Context Learning &amp; Best Practices</h1>
+  <p class="lead">A prompt is the whole instruction you hand a model, and prompt engineering is just getting good at writing that instruction. This part covers what a prompt is actually made of, why models can "learn" from examples without being retrained, and the handful of techniques (clear instructions, examples, breaking tasks down, asking the model to think step by step) that keep showing up across every model provider's own guides.</p>
+
+  <h2>In one line</h2>
+  <p>Prompt engineering is the cheapest way to change what a model does: no retraining, just better instructions, and a small set of techniques (clarity, examples, decomposition, "think step by step") consistently move the needle across a wide range of models.</p>
+
+  <h2>The big idea</h2>
+  <p>Before a model can help you, you have to tell it what you want, and it turns out that <em>how</em> you tell it matters a lot. Models can pick up new behavior just from what you put in the prompt itself, no weight updates required, which is called in-context learning. On top of that, a handful of prompting habits (being explicit, giving examples, breaking big tasks into small ones, asking the model to reason before answering) show up again and again in guidance from OpenAI, Anthropic, Meta, and Google, because they tend to help across a wide range of models, not just one.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Prompt engineering</span> — crafting an instruction that gets a model to produce the outcome you want, without changing the model's own weights. It's usually the first, cheapest thing to try before more resource-intensive techniques like finetuning.</li>
+    <li><span class="keyterm-term">Prompt</span> — the whole input you send to a model. This digest uses the word this way (some teams use "prompt" and "context" interchangeably, more on that below).</li>
+    <li><span class="keyterm-term">Context</span> — the information you give a model so it can actually do the task (a paper to answer questions about, a disclosure document, prior conversation). Think of it as the supporting material inside the prompt, separate from the instruction itself.</li>
+    <li><span class="keyterm-term">In-context learning</span> — a model changing its behavior based on what's in the prompt, with no retraining involved. Introduced by the GPT-3 paper (Brown et al., 2020).</li>
+    <li><span class="keyterm-term">Shot</span> — one worked example included in a prompt.</li>
+    <li><span class="keyterm-term">Zero-shot</span> — a prompt with no examples, just an instruction (and maybe context).</li>
+    <li><span class="keyterm-term">Few-shot (n-shot)</span> — a prompt that includes n worked examples before the real task. "5-shot" means 5 examples.</li>
+    <li><span class="keyterm-term">System prompt</span> — in APIs that split a prompt into parts, the slot usually used for the task description, persona, and rules set by the application developer.</li>
+    <li><span class="keyterm-term">User prompt</span> — the slot usually used for the actual question or task, often filled in by (or on behalf of) the end user.</li>
+    <li><span class="keyterm-term">Chat template</span> — the exact, model-specific format used to stitch a system prompt and user prompt into one final string of tokens. It's defined by whoever built the model, not by you.</li>
+    <li><span class="keyterm-term">Prompt template</span> — different from a chat template: a reusable structure an application developer writes to fill in ("hydrate") with real data for each query.</li>
+    <li><span class="keyterm-term">Chain-of-thought (CoT) prompting</span> — explicitly asking a model to work through steps before giving a final answer, instead of jumping straight to one.</li>
+    <li><span class="keyterm-term">Self-critique (self-eval)</span> — asking a model to check or critique its own generated output.</li>
+    <li><span class="keyterm-term">Prompt decomposition</span> — breaking one large, complicated task prompt into a chain of smaller prompts, each handling one subtask.</li>
+    <li><span class="keyterm-term">Prompt catalog</span> — a shared, versioned store of prompts (with metadata like model, creator, date) kept separate from application code, so multiple apps can reuse and track prompt versions independently.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>Here's the grounding picture before the details: a prompt is nothing exotic, it's just the text you feed a model, and the model responds by predicting what should come next given that text. That's it. What makes prompt engineering worth a whole chapter is that the model has to actually follow what you wrote, and small differences in wording, structure, or ordering can change the output a surprising amount, especially for weaker models. Prompt engineering is the cheapest model-adaptation technique there is: you're not touching the model's weights at all, just getting better at asking. Everything below unpacks how prompts are put together, why models can "learn" from a prompt alone, and the practices that consistently help.</p>
+
+  <h3>1. The three ingredients of a prompt</h3>
+  <p>A prompt is generally made of up to three parts: a <strong>task description</strong> (what you want done, including any role you want the model to play and the format you want back), one or more <strong>examples</strong> of how to do the task, and <strong>the task</strong> itself (the concrete question or input to act on). Not every prompt uses all three. A one-off question like "What's the boiling point of water at sea level?" is really just the task, no description or examples needed. A more involved prompt might read: "You're a strict copyeditor. Flag any sentence over 25 words. Text: [paste article]" — that's a task description (the persona and the rule) plus the task (the article). Later sections add the third ingredient, examples, back in.</p>
+
+  <h3>2. In-context learning: zero-shot vs. few-shot</h3>
+  <p>Traditionally, a model only does what it was trained to do, and changing its behavior means retraining or finetuning it (updating its weights). The GPT-3 paper showed something different: a model can pick up a new desired behavior just from examples placed in the prompt, with no weight updates at all. This is called <strong>in-context learning</strong>, and it's a form of continual learning, since it lets a model act on information it never saw during training. For example, a model trained before some new library's documentation existed still won't know that library's newest functions from memory, but you can paste relevant docs into its context and it can often work with them anyway.</p>
+  <p>Each example you put in the prompt is a <strong>shot</strong>. A prompt with no examples is <strong>zero-shot</strong>. A prompt with, say, three worked examples is <strong>3-shot</strong> (the general term is <strong>few-shot</strong>). In general, more examples tend to help a model understand what you want, but two things push back against piling on examples: a longer prompt costs more (most APIs charge per token) and, per one 2023 analysis from Microsoft, stronger models like GPT-4 sometimes showed only limited extra improvement from few-shot examples compared to zero-shot, likely because a more capable model is already better at following plain instructions. That result probably doesn't hold evenly everywhere, though: if a model rarely saw examples of some narrow, specific format in its training data, a few well-chosen examples in the prompt can still make a big difference for that specific case.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="26" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">ZERO-SHOT VS. FEW-SHOT</text>
+
+      <rect x="20" y="50" width="270" height="170" rx="8" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.2"/>
+      <text x="155" y="72" fill="#C9C7C1" font-size="11" font-weight="700" text-anchor="middle">ZERO-SHOT</text>
+      <text x="40" y="98" fill="#7A7A80" font-size="9.5">Task: translate to French</text>
+      <text x="40" y="118" fill="#7A7A80" font-size="9.5">Text: "How are you?"</text>
+      <text x="40" y="150" fill="#F2EFE9" font-size="9.5" font-weight="700">no examples, just ask</text>
+      <text x="155" y="200" fill="#7A7A80" font-size="8.5" text-anchor="middle">0 shots</text>
+
+      <rect x="330" y="50" width="270" height="170" rx="8" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="465" y="72" fill="#6FCF97" font-size="11" font-weight="700" text-anchor="middle">FEW-SHOT (3-shot)</text>
+      <text x="350" y="94" fill="#7A7A80" font-size="9">Ex1: "Hello" -&gt; "Bonjour"</text>
+      <text x="350" y="110" fill="#7A7A80" font-size="9">Ex2: "Yes" -&gt; "Oui"</text>
+      <text x="350" y="126" fill="#7A7A80" font-size="9">Ex3: "No" -&gt; "Non"</text>
+      <text x="350" y="150" fill="#F2EFE9" font-size="9.5" font-weight="700">Task: "How are you?" -&gt; ?</text>
+      <text x="465" y="200" fill="#6FCF97" font-size="8.5" text-anchor="middle">3 shots, same task</text>
+    </svg>
+    <figcaption>Same task, more shots: few-shot adds worked examples before the real question, at the cost of a longer (pricier) prompt.</figcaption>
+  </figure>
+
+  <h3>3. System prompts vs. user prompts, and the chat template underneath</h3>
+  <p>Many model APIs let you split a prompt into a <strong>system prompt</strong> and a <strong>user prompt</strong>. In a common setup, the system prompt carries the task description or persona (set by whoever built the application), and the user prompt carries the actual question or task (often coming from the end user). Picture a chatbot that helps someone read a home inspection report: the system prompt might say "you're an experienced home inspector, answer succinctly," while the user prompt carries the uploaded report and the question "is the roof in good shape?" Almost every generative AI product you've used, including consumer chatbots, has a system prompt working behind the scenes, even if you never see it.</p>
+  <p>Here's the part that surprises people: under the hood, the system prompt and user prompt don't stay separate. They get combined into one single string of text (and special marker tokens) using a <strong>chat template</strong> that's specific to that model, not something an application developer invents. Different models use different templates, and the same provider can change the template between versions of their own model. Get the template wrong (an extra line break, the wrong marker tokens) and a model's behavior can degrade in ways that are genuinely hard to notice, because the model usually still produces a plausible-looking answer even with a mismatched template; it just performs worse than it should. A practical habit worth borrowing: before sending a request in production, print the exact final prompt your code assembled and check it matches what the model actually expects.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 220" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <rect x="20" y="20" width="180" height="54" rx="7" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.2"/>
+      <text x="110" y="42" fill="#F2EFE9" font-size="10.5" text-anchor="middle" font-weight="700">SYSTEM PROMPT</text>
+      <text x="110" y="60" fill="#7A7A80" font-size="8.5" text-anchor="middle">persona + rules</text>
+
+      <rect x="20" y="100" width="180" height="54" rx="7" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.2"/>
+      <text x="110" y="122" fill="#F2EFE9" font-size="10.5" text-anchor="middle" font-weight="700">USER PROMPT</text>
+      <text x="110" y="140" fill="#7A7A80" font-size="8.5" text-anchor="middle">question + data</text>
+
+      <line x1="200" y1="47" x2="270" y2="87" stroke="#6FCF97" stroke-width="1.3"/>
+      <line x1="200" y1="127" x2="270" y2="97" stroke="#6FCF97" stroke-width="1.3"/>
+
+      <rect x="270" y="65" width="200" height="60" rx="7" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="370" y="88" fill="#6FCF97" font-size="9.5" text-anchor="middle" font-weight="700">CHAT TEMPLATE</text>
+      <text x="370" y="104" fill="#7A7A80" font-size="8" text-anchor="middle">model-specific, not yours to design</text>
+
+      <line x1="470" y1="95" x2="540" y2="95" stroke="#C8453A" stroke-width="1.4" marker-end="url(#c1)"/>
+
+      <rect x="540" y="65" width="60" height="60" rx="7" fill="#0E0E10" stroke="#C8453A" stroke-width="1.4"/>
+      <text x="570" y="90" fill="#C8453A" font-size="9" text-anchor="middle" font-weight="700">ONE</text>
+      <text x="570" y="103" fill="#C8453A" font-size="9" text-anchor="middle" font-weight="700">STRING</text>
+
+      <text x="310" y="180" fill="#7A7A80" font-size="9" text-anchor="middle">the model only ever sees the combined result, not two separate boxes</text>
+
+      <defs>
+        <marker id="c1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#C8453A"/></marker>
+      </defs>
+    </svg>
+    <figcaption>System and user prompts feel separate in your API call, but a model-specific chat template stitches them into one string before the model ever "sees" either one.</figcaption>
+  </figure>
+  <p>Why does a system prompt often seem to boost performance? The chapter points to two likely, non-exclusive reasons rather than one guaranteed cause: the system prompt comes first in the final combined prompt, and a model might simply be better at processing instructions that come first; and some models are specifically post-trained to pay more attention to system-level instructions (this is also part of how model developers try to make prompt attacks harder, more on that in a later part). Neither reason is a hard guarantee for every model, so it's worth testing on whichever model you're actually using.</p>
+
+  <h3>4. Writing instructions the model can't misread</h3>
+  <p>Communicating with a model is a lot like communicating with a person: vague instructions get vague results. A few habits help. First, remove ambiguity about exactly what you want: if you're asking a model to score something, say the scale (1 to 5? 1 to 100?) and say what to do about edge cases (should it guess, or say "I don't know"?). If you notice an undesired pattern, like the model returning "4.5" when you wanted whole numbers, that's a sign to update the instruction, not just hope it stops.</p>
+  <p>Second, giving the model a persona can shift its perspective in a useful way. Asking a model to act as, say, a supportive kindergarten teacher rather than a harsh critic when reviewing a young child's writing sample can noticeably change the tone and generosity of its feedback, even though nothing about the actual writing changed. Third, examples (the few-shot idea from above) work as a best practice too, not just a learning trick: showing the model one or two examples of the tone or stance you want can steer it away from a generic, hedge-everything answer and toward the kind of response you're actually looking for.</p>
+  <p>Finally, be explicit about output format. If you want a concise answer, say so (long answers cost more per token and take longer to generate). If you don't want a throat-clearing preamble like "Based on this text, I'd say...", say that too. If you want structured output like JSON, name the exact keys you expect, and give an example if the shape is at all ambiguous. For tasks like classification where you expect the model to emit something short right after your input, add a clear end-of-input marker. Without one, a model can sometimes drift into continuing your input instead of answering it, since a language model, left alone, doesn't strictly separate "what you gave it" from "what it's generating."</p>
+
+  <h3>5. Giving the model what it needs: context and breaking big tasks down</h3>
+  <p>Just like a student does better on an exam with the right reference material, a model does better with the right context. If you want good answers about a specific paper, put that paper in the prompt. Context also cuts down on made-up answers: when a model doesn't have the facts it needs, it falls back on its own internal (and possibly outdated or wrong) knowledge, which is one common source of hallucination. You can supply context directly, or give the model tools to go fetch it itself (retrieval, web search), though that's a bigger topic for another day.</p>
+  <p>One tricky variant: restricting a model to <em>only</em> use the context you gave it, and nothing from its general training. This shows up a lot in roleplay-style products, like a chatbot playing a fictional character who shouldn't know anything outside that fictional world. Clear instructions ("answer using only the information below") plus a couple of examples of questions it should refuse can nudge a model in that direction, but there's no guarantee it always sticks to the boundary. Prompting alone can't promise a hard wall here; that's a limitation worth remembering rather than a solved problem.</p>
+  <p>For genuinely complex tasks, it often helps to break one big prompt into a chain of smaller ones, called <strong>prompt decomposition</strong>. Picture an email-triage assistant: instead of one giant prompt trying to read an email, decide what it's about, and draft a reply all at once, you could split it into two prompts, one that classifies the email's category, and a second, category-specific prompt that drafts the reply. Decomposition brings a few real benefits: you can monitor each intermediate step, debug a broken step without touching the others, run independent steps in parallel to save time, and each individual prompt is simply easier to write than one sprawling one. GoDaddy reported in 2024 that their customer support chatbot's prompt had grown to more than 1,500 tokens after iterating on it, and that decomposing it into smaller, targeted prompts improved performance while cutting token costs. The trade-off is real too: more steps usually means more model calls (more latency, and users waiting longer before seeing a first output token if they don't see intermediate steps), though decomposed prompts aren't necessarily twice the cost of one big prompt, since smaller prompts often use fewer tokens each and you can route simpler subtasks to a cheaper model.</p>
+
+  <h3>6. Giving the model time to think: chain-of-thought and self-critique</h3>
+  <p>You can also nudge a model to spend more effort working through a problem instead of answering instantly. <strong>Chain-of-thought (CoT) prompting</strong> means explicitly asking the model to reason step by step before it commits to a final answer. It's one of the older prompting tricks that's held up well across many different models; it was described in a 2022 research paper (well before ChatGPT existed) and shown to noticeably improve performance on math and reasoning benchmarks, especially for larger models. The simplest version is just adding a phrase like "think step by step" or "explain your reasoning before answering" to a prompt; a more guided version spells out the exact steps you want followed, or shows one worked example of stepped reasoning. One team (LinkedIn, per the chapter) also reported that CoT reduced how often their model hallucinated, though how much this generalizes likely depends on the task and model.</p>
+  <p><strong>Self-critique</strong> (also called self-eval) is a related idea: asking the model to check its own output before finalizing it. Both techniques share a real cost, though: extra reasoning steps mean the user waits longer before seeing any output at all, which matters more for tasks where people don't see those intermediate steps and are just watching a loading spinner.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="24" fill="#F2EFE9" font-size="12.5" font-weight="700" text-anchor="middle">"THINK STEP BY STEP" IN ACTION</text>
+      <text x="20" y="46" fill="#7A7A80" font-size="9.5">Q: had 5 apples, ate 2, bought 4. How many now?</text>
+
+      <rect x="20" y="60" width="270" height="80" rx="7" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.2"/>
+      <text x="155" y="80" fill="#C9C7C1" font-size="10" font-weight="700" text-anchor="middle">NO "THINK STEP BY STEP"</text>
+      <text x="40" y="105" fill="#F2EFE9" font-size="11" font-weight="700">A: 9</text>
+      <text x="90" y="105" fill="#C8453A" font-size="9">&lt;- guessed, wrong</text>
+
+      <rect x="330" y="60" width="270" height="140" rx="7" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="465" y="80" fill="#6FCF97" font-size="10" font-weight="700" text-anchor="middle">+ "THINK STEP BY STEP"</text>
+      <text x="350" y="100" fill="#7A7A80" font-size="9">1. start: 5</text>
+      <text x="350" y="116" fill="#7A7A80" font-size="9">2. ate 2  -&gt; 3</text>
+      <text x="350" y="132" fill="#7A7A80" font-size="9">3. bought 4 -&gt; 7</text>
+      <text x="350" y="155" fill="#F2EFE9" font-size="11" font-weight="700">A: 7</text>
+      <text x="390" y="155" fill="#6FCF97" font-size="9">&lt;- worked, right</text>
+
+      <text x="310" y="220" fill="#7A7A80" font-size="8.5" text-anchor="middle">an illustrative example, not a benchmark result</text>
+    </svg>
+    <figcaption>Spelling out the steps often keeps the arithmetic in order; it's a nudge that tends to help, not a guarantee for every question or model.</figcaption>
+  </figure>
+
+  <h3>7. Iterating, evaluating tools, and treating prompts like versioned code</h3>
+  <p>Prompt engineering is rarely a one-shot activity. As you learn how a model actually behaves, you revise. If you ask a model to recommend "the best" programming language and it hedges with "it depends on your use case," and that's not what you wanted, you can revise the prompt to force a pick anyway. Each model also has its own quirks: one might prefer the instructions up front, another at the end; one might be stronger with numbers, another with roleplay. Reading a model's own prompting guide (when one exists) and testing the same prompt across a couple of different models is a fast way to build intuition for a specific model's quirks. When you do iterate, do it systematically: version your prompts, use a consistent evaluation set and metric so you can actually compare one version to the next, and judge a change by its effect on the whole system's output, not just one subtask, since a prompt tweak that improves one step can quietly hurt another.</p>
+  <p>Because the space of possible prompts for any task is enormous, tools exist to help automate parts of this process, from libraries that try to search for a strong prompt automatically, to simply asking a model to draft or critique a prompt for you. These tools can genuinely help, but they come with real risks worth knowing about: many make several hidden API calls per prompt you're testing (one to generate a candidate, another to validate its output, another to score it), so costs can climb faster than expected; and tool developers make mistakes too, from using the wrong chat template for a given model to typos baked into a default prompt template. A sensible default is to write your own prompts by hand first to build a real feel for the model and your requirements, and if you do use a tool, actually read what it produces rather than trusting it blindly.</p>
+  <p>Finally, it's worth treating prompts less like scratch text and more like code you maintain. A simple version of this: keep prompts in their own file or module, separate from application logic, so they're independently readable, testable, and reusable across projects. A more mature version, useful once you have prompts scattered across several applications: a shared <strong>prompt catalog</strong> that tracks each prompt's metadata (which model it targets, who owns it, when it was last changed) and lets different applications intentionally use different, pinned versions of a prompt instead of being forced onto whatever the latest edit happens to be.</p>
+
+  <h2>Why it matters</h2>
+  <p>Prompt engineering is the technique you'll use before every other one, because it costs nothing but time and doesn't require any special infrastructure. It's also everywhere already: the system-versus-user prompt split underlies essentially every consumer AI chatbot, and decomposition plus "think step by step" show up constantly inside production systems that chain multiple model calls together (an area often called agents, which builds directly on the ideas here). Getting comfortable with these fundamentals is also what makes the next layer worth learning: how far you can actually push a prompt before length becomes a real constraint, and how attackers try to break a well-crafted system prompt from the outside, both of which build directly on what a "prompt," "context," and "system prompt" actually mean.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>A prompt = task description + examples + the task itself. In-context learning lets a model change its behavior from what's in the prompt alone, no retraining needed.</li>
+      <li>Zero-shot means no examples; few-shot (n-shot) means n worked examples included. More examples generally help, but cost more tokens, and stronger models often need fewer.</li>
+      <li>System and user prompts feel separate in your code, but get concatenated into one string by a model-specific chat template before the model ever processes them. A wrong template causes quiet, hard-to-spot performance drops.</li>
+      <li>Clear instructions, personas, examples, sufficient context, breaking work into smaller chained subtasks, and asking the model to "think step by step" are the highest-leverage, broadly-applicable techniques across models.</li>
+      <li>Treat prompts like code: version them, test changes against a consistent eval set, and evaluate at the whole-system level, not just one subtask.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Zero-shot vs. few-shot showdown.</strong> Pick a small classification or formatting task (like labeling short reviews as positive/negative). Write a zero-shot prompt and a 3-shot version of the same task, then run both on 5 identical inputs. <em>Done when:</em> you can point to at least one input where the examples visibly changed the model's answer or its format.</li>
+      <li><strong>Build a two-part persona bot.</strong> Using any API (or playground) that separates system and user prompts, write a system prompt giving the model a persona and a rule, then ask the same question with and without that system prompt active. <em>Done when:</em> you can describe in your own words how the persona changed the tone or content of the answer.</li>
+      <li><strong>Print the assembled prompt.</strong> Before sending a request, print out the exact final text (or as close as your API exposes) your system and user prompts get combined into. <em>Done when:</em> you've confirmed it matches what you expected, or found a surprise (an odd line break, an unexpected order) that would've been invisible otherwise.</li>
+      <li><strong>Test "think step by step" head to head.</strong> Pick 5 questions that require a bit of reasoning (simple word problems, comparisons). Ask each one plain, then again with "think step by step" appended. <em>Done when:</em> you've logged whether the answer, correctness, or quality changed for each of the 5, including any cases where it made no difference.</li>
+      <li><strong>Decompose one task into a chain.</strong> Take a task with two logical stages (classify, then respond) and build it two ways: as one big prompt, and as two chained prompts. <em>Done when:</em> you can compare both on the same 5 inputs and note any difference in quality, latency, or how easy each was to debug.</li>
+      <li><strong>Version a prompt like code.</strong> Put a prompt in its own file with a short header noting the model it targets and the date, make one deliberate change, and diff the two versions with <code>git diff</code>. <em>Done when:</em> you have a clean, readable diff of exactly what changed and why.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>One thread worth pulling on next: how far a prompt can stretch before context length becomes the real bottleneck (and why a model isn't equally attentive to every part of a long prompt), and how attackers try to pry a well-crafted system prompt open from the outside. Both build directly on the "prompt," "context," and "system prompt" ideas covered here.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, written to help you build a mental model quickly. It is not a substitute for the book itself; verify anything you plan to rely on against the original text before using it for real work.</p>
+  <ul class="src-list">
+    <li>Chip Huyen, <em>AI Engineering</em>, Chapter 5: "Prompt Engineering," pages 235–276 (this digest covers the first portion of the chapter: what a prompt is, in-context learning, system vs. user prompts, and prompt engineering best practices).</li>
+  </ul>
+  <p class="src-note">Flagged for accuracy: the chapter attributes the "limited few-shot improvement on GPT-4" finding to "Microsoft's 2023 analysis" and the CoT-reduces-hallucination finding to "LinkedIn," without naming the specific paper or write-up in either case, so those two claims are repeated here at the same level of detail the source gives, no more. All examples in this digest (the copyeditor persona, the email-triage bot, the apples word problem, the home-inspection chatbot) are original illustrations written for this digest, not reproductions of the book's own worked examples. This part deliberately stops short of context length limits, the needle-in-a-haystack test, and defensive prompt engineering (prompt attacks and defenses); those are planned for a later digest and aren't covered here.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · TikTok
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
