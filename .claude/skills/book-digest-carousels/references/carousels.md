@@ -159,7 +159,10 @@ becomes `~/learning/ddia`. Always use exactly these:
 | High Performance MySQL | `~/learning/sql` | `SQL` |
 | AWS | `~/learning/aws` | `AWS` |
 
-The cover's `counter` is `<PREFIX> · NN` (the chapter/topic number, e.g. `AI · 03`).
+**The cover's `counter` is the bare prefix, nothing else** — `SQL`, `AWS`, `SYSTEMS`, `AI`.
+Never append a chapter or topic number (no `SQL · 06`, no `AI · 03`): the number means
+nothing to a viewer who isn't following a reading order, and it hints at study material.
+This applies to every track's cover.
 
 **Every other slide uses `NN / TOTAL`, where `TOTAL` is the number of NON-cover slides**
 and `NN` is that slide's position among them, starting at `01`. The cover is an unnumbered
@@ -204,7 +207,7 @@ Any field left empty is simply omitted, so slides degrade gracefully.
 {
   "slides": [
     { "template": "cover", "fields": {
-        "terminal": "~/learning/sql", "counter": "SQL · 01",
+        "terminal": "~/learning/sql", "counter": "SQL",
         "title": "The 3 SQL joins I kept mixing up",
         "subtitle": "The mental model that finally made them stick.",
         "swipe": "SWIPE →" } },
