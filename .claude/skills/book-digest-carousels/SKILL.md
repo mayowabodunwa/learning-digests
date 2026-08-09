@@ -201,6 +201,13 @@ Trigger phrases: "today's digest", "digest chapter N of <book>", "catch me up on
 4. Publish and notify:
    - Append the digest's entry (`slug, book, ch, title, date`) to `docs/digests.json`
      and rebuild the index with `scripts/build_index.py --docs docs`.
+   - **Never promise a part total in the `ch` label.** A split chapter is labelled
+     `Ch.2 (Part 1)`, `Ch.2 (Part 2)`, and the one that completes it `Ch.2 (Part 3, final)`.
+     Write `Ch.2` alone when the chapter fits in one unit. **Do not write "Part 1 of 2"**:
+     how many parts a chapter needs only becomes clear while working through it (depth
+     over speed), so a total published on Part 1 goes stale the moment the estimate
+     changes, leaving the library contradicting itself. The renderers strip any
+     ` of N` they find, so a stray total is dropped rather than displayed.
    - Build the **lightweight link email** with `scripts/build_email.py --docs docs
      --site-base-url <site_base_url> --logo assets/brand/logo.png --out build/email.html`
      (Gmail-safe: inline styles, embedded avatar, a button per new digest). Don't

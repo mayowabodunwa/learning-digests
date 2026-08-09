@@ -93,7 +93,10 @@ jobs:
           following references/digest-template.md exactly (a full 'How it works' that opens with a grounding \
           section, one labelled sub-section per concept with inline-SVG schematics, every term defined, and a \
           4-6 item 'Try it yourself'); do NOT thin it out or shorten it - err long. Append \
-          docs/digests.json, and render its carousel PNGs to build/carousels/<book>/<slug>/ (keep that \
+          docs/digests.json using a 'ch' label that NEVER promises a part total: write 'Ch.2 (Part 2)' \
+          and 'Ch.2 (Part 3, final)' for the one that completes the chapter, or plain 'Ch.2' when it \
+          fits in one unit - never 'Part 1 of 2', since that total goes stale and the library then \
+          contradicts itself. Then render its carousel PNGs to build/carousels/<book>/<slug>/ (keep that \
           unit's deck.json in the same folder, the lint step reads it) where <book> \
           is a clean folder name (DDIA, AI-Engineering, High-Performance-MySQL, AWS) so the zip is \
           foldered per book. Do NOT write the email yourself; a later step builds a Gmail-safe one \

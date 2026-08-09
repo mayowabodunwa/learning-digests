@@ -30,6 +30,17 @@ TRACK_ORDER = [
 ]
 
 
+def norm_ch(ch):
+    """Drop any promised part total: 'Ch.2 (Part 1 of 3)' -> 'Ch.2 (Part 1)'.
+
+    How many parts a chapter needs only becomes clear while working through it, so a
+    total published on Part 1 goes stale as soon as the estimate changes and the library
+    ends up showing 'Part 1 of 2' beside 'Part 2 of 3'. Rendering without the total is
+    always correct, so strip it here rather than trusting every run to agree.
+    """
+    return re.sub(r"(?i)\s+of\s+\d+\s*(?=[),]|$)", "", ch or "").strip()
+
+
 def chap_num(ch):
     """First integer in the chapter/topic label ('Ch.2 (Part 1 of 2)' -> 2)."""
     m = re.search(r"\d+", ch or "")
@@ -45,7 +56,7 @@ def part_num(ch):
 def card(d):
     return (f'<a href="digests/{d["slug"]}.html" style="display:block;text-decoration:none;'
             f'background:{C["card"]};border:1px solid {C["line"]};border-radius:12px;padding:18px 20px;margin:12px 0">'
-            f'<div style="font-family:\'JetBrains Mono\',monospace;color:{C["red"]};font-size:12px;letter-spacing:2px">{d["book"]} · {d["ch"]}</div>'
+            f'<div style="font-family:\'JetBrains Mono\',monospace;color:{C["red"]};font-size:12px;letter-spacing:2px">{d["book"]} · {norm_ch(d["ch"])}</div>'
             f'<div style="font-family:\'Bricolage Grotesque\',sans-serif;font-weight:700;color:{C["ink"]};font-size:22px;margin:6px 0 2px">{d["title"]}</div>'
             f'<div style="color:{C["mut"]};font-size:13px;font-family:\'JetBrains Mono\',monospace">{d.get("date","")} · read →</div></a>')
 
