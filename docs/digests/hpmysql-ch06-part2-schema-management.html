@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>High Performance MySQL — Schema Management (Part 2, Final)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">SQL &middot; CH.6 DIGEST (PART 2, FINAL)</p>
+  <h1>Schema Management: Making Schema Changes Safe, Not Scary</h1>
+  <p class="lead">Picking good data types (Part 1) is a design problem. Rolling out a change to that design, on a live table, in production, without taking anything down, is a completely different problem: an operational one. This half of the chapter is about closing the gap between "we decided the schema should change" and "the schema changed, safely, everywhere it needs to."</p>
+
+  <h2>In one line</h2>
+  <p>Once you're running more than a handful of databases, schema changes stop being a one-off command someone types by hand and become a process: tracked in source control, reviewed like code, and applied by tools built to avoid locking a live table, all wired into the same CI/CD habits your organization already trusts.</p>
+
+  <h2>The big idea</h2>
+  <p>A schema change on a small table on your laptop is nothing: you run <code>ALTER TABLE</code>, it finishes in a blink, you move on. That same change on a huge, busy production table can be genuinely dangerous: depending on how it's applied, it can lock the table for reads or writes long enough to look like an outage. The chapter's answer isn't one tool or one rule, it's a set of building blocks you combine: put your schema definitions in source control like code, pick a way to apply changes that won't hurt uptime (native MySQL features or an external tool), and glue both into a pipeline with guardrails so any team can ship a schema change safely without the database team becoming a bottleneck for the whole company.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Schema management</span> — the ongoing discipline of tracking, reviewing, and safely applying changes to a database's structure over time, instead of running ad hoc <code>ALTER TABLE</code> statements by hand whenever someone needs a new column.</li>
+    <li><span class="keyterm-term">DDL (Data Definition Language)</span> — the category of SQL statements that change a schema's structure, like <code>CREATE TABLE</code>, <code>ALTER TABLE</code>, and <code>DROP TABLE</code>, as opposed to statements that just read or write rows.</li>
+    <li><span class="keyterm-term">Online schema change</span> — a way of changing a table's structure while it stays readable and writable for the rest of the application, instead of locking it for the whole operation.</li>
+    <li><span class="keyterm-term">Native DDL</span> — a schema change MySQL runs itself, with no external tool involved. Depending on the specific change, MySQL 8.0 can run many of these using the <code>INPLACE</code> or <code>INSTANT</code> algorithm.</li>
+    <li><span class="keyterm-term">INPLACE / INSTANT algorithm</span> — two ways MySQL can apply certain DDL changes without doing a full table rebuild. <code>INSTANT</code> is closer to a metadata-only change; <code>INPLACE</code> still touches the table's data but skips copying the whole thing. Which changes qualify depends on the exact change and the MySQL version.</li>
+    <li><span class="keyterm-term">Schema-change tool</span> — general term for software that helps track a schema's definition, apply changes, or both. Flyway, Liquibase, and Skeema are all examples the chapter discusses.</li>
+    <li><span class="keyterm-term">Trigger</span> — a small piece of logic MySQL runs automatically whenever a row is inserted, updated, or deleted in a table. <code>pt-online-schema-change</code> uses triggers to keep a shadow copy of a table in sync while it works.</li>
+    <li><span class="keyterm-term">Binary log (binlog) / replication log</span> — the record of row-level changes MySQL keeps so replicas can copy them. <code>gh-ost</code> reads this log as its changelog instead of installing triggers.</li>
+    <li><span class="keyterm-term">gh-ost</span> — an open source, trigger-free tool built at GitHub for running schema changes without a long table lock, built around reading the replication log rather than adding triggers.</li>
+    <li><span class="keyterm-term">pt-online-schema-change (pt-osc)</span> — Percona's trigger-based tool for running schema changes without a long table lock; one of the longer-established tools of its kind.</li>
+    <li><span class="keyterm-term">Foreign key</span> — a column whose value is required to match a value in another table's primary key, used to enforce that related data actually exists. Several online schema-change tools handle foreign keys awkwardly or refuse to, which is a real part of choosing between them.</li>
+    <li><span class="keyterm-term">Source control for schema</span> — keeping a copy of what your schema is supposed to look like inside a version-control repository (like git), the same way you already do for application code, so changes get reviewed and leave a history.</li>
+    <li><span class="keyterm-term">Pull-request model</span> — using the same review workflow you use for code (propose a change, get it reviewed, merge it) for schema changes too, instead of someone running an <code>ALTER TABLE</code> by hand against production.</li>
+    <li><span class="keyterm-term">CI/CD pipeline for schema changes</span> — an automated pipeline that checks (lints and tests) a proposed schema change, then applies it across a sequence of environments (say, staging, then production) as it's promoted.</li>
+    <li><span class="keyterm-term">Baseline configuration / safety net</span> — a default, opinionated set of guardrails a team's schema-change tooling always runs with (say, a maximum allowed system load), so a single risky change can't easily take the database down.</li>
+    <li><span class="keyterm-term">Vitess</span> — a system for scaling MySQL through sharding and clustering that, as an aside in the chapter, also manages schema changes for you if you're already running on it.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>"Schema management" names something specific once you notice the shift in scale it's describing. Designing one table for one app is a design problem: what type should this column be. Running schema changes across dozens or hundreds of database instances, owned by many different teams, is an operations problem: how do we change types and structures over time, safely, without one careless <code>ALTER TABLE</code> taking down someone else's database or someone else's business. That operations problem breaks into three layers you can reason about separately: tracking what the schema is supposed to look like (source control), choosing how to physically apply a change without hurting availability (native DDL versus external tools), and wiring both into the continuous-delivery habits your organization already uses for code. The rest of this section walks through those layers in order, starting with the last two loose ends from data-type gotchas.</p>
+
+  <h3>1. The last two gotchas: ENUM in disguise, and NULL not invented here</h3>
+  <p>Before the chapter turns fully to schema management, it closes out its list of MySQL schema gotchas with two smaller but easy-to-miss ones. First, <strong>ENUM in disguise</strong>: it's surprisingly easy to reach for <code>SET</code> when you actually meant <code>ENUM</code>, because the two look similar in a <code>CREATE TABLE</code> statement. The chapter's example is a column defined as <code>is_default SET('Y','N') NOT NULL DEFAULT 'N'</code>. Remember from Part 1 that <code>SET</code> is built to hold zero or more values from its list <em>at once</em>, while <code>ENUM</code> holds exactly one. A yes/no flag like <code>is_default</code> is, by definition, a single fact: it can't honestly be both true and false at the same time. Defining it as <code>SET</code> means MySQL will happily let you store the nonsense value <code>'Y,N'</code> in that column and never complain, because as far as <code>SET</code> is concerned that's a perfectly legal combination. Defining it as <code>ENUM('Y','N')</code> instead makes the column itself enforce that only one of the two values is ever stored.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="24" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">ENUM VS. SET: HOW MANY VALUES CAN THE COLUMN HOLD?</text>
+
+      <rect x="20" y="44" width="280" height="166" rx="10" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.4"/>
+      <text x="160" y="70" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">ENUM('Y','N')</text>
+      <text x="40" y="96" fill="#C9C7C1" font-size="11">stored value: 'Y'</text>
+      <text x="40" y="116" fill="#7A7A80" font-size="10.5">...or stored value: 'N'</text>
+      <text x="40" y="146" fill="#6FCF97" font-size="10.5">exactly one, always</text>
+      <text x="40" y="166" fill="#7A7A80" font-size="10.5">matches what a yes/no</text>
+      <text x="40" y="184" fill="#7A7A80" font-size="10.5">flag actually means</text>
+
+      <rect x="320" y="44" width="280" height="166" rx="10" fill="#0E0E10" stroke="#C8453A" stroke-width="1.4"/>
+      <text x="460" y="70" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">SET('Y','N')</text>
+      <text x="340" y="96" fill="#C9C7C1" font-size="11">stored value: 'Y'</text>
+      <text x="340" y="116" fill="#C9C7C1" font-size="11">or 'N', or...</text>
+      <text x="340" y="140" fill="#C8453A" font-size="11" font-weight="700">or 'Y,N'  &lt;- legal!</text>
+      <text x="340" y="164" fill="#7A7A80" font-size="10.5">SET allows both bits on</text>
+      <text x="340" y="182" fill="#7A7A80" font-size="10.5">at once, no error raised</text>
+    </svg>
+    <figcaption>If the value can never honestly be "both," ENUM enforces that for you. SET won't.</figcaption>
+  </figure>
+
+  <p>Second, <strong>NULL, not invented here.</strong> Part 1 covered the general advice to avoid NULL where you reasonably can, since nullable columns are a bit harder for MySQL to optimize around. This section is careful to add the other half of that advice: don't take it to the extreme of being afraid of NULL. Sometimes NULL genuinely is the right way to represent "this value is unknown," and reaching for a magic constant instead, like using <code>-1</code> to mean "no integer here," can complicate your application code and quietly introduce bugs, because now every reader of that column has to remember that <code>-1</code> is secretly special. The chapter's concrete anti-pattern is a column like <code>dt DATETIME NOT NULL DEFAULT '0000-00-00 00:00:00'</code>: forcing the column to be non-null, then papering over "no real date yet" with an all-zeros date that isn't a real calendar date at all. Downstream code that treats that value as a real date (sorting by it, computing an age from it) can misbehave in ways that are hard to trace back to "oh, it's actually a placeholder." MySQL lets you configure its <code>SQL_MODE</code> to reject nonsense dates like this outright, which is worth turning on early, especially for a new application that hasn't yet accumulated bad data. One more detail worth knowing, mostly as trivia: MySQL does index NULL values, which is a difference from Oracle's implementation, which excludes them from indexes. That's a property of those two specific database engines, not a universal rule about how NULL and indexes relate.</p>
+
+  <h3>2. Why schema changes need to be a first-class, source-controlled process</h3>
+  <p>As an organization grows into running many database instances across many teams, a subtle trap opens up: if the database team is the only group allowed to run schema changes, that team becomes a bottleneck standing between every other team and shipping their feature. The chapter frames the fix as two habits of mind. The first is to "set up your partner teams for success": be the enabler of other teams' schema changes, not the gate they have to clear. The second is to integrate schema management with continuous integration, meaning schema changes should be proposed and run by the feature teams themselves, using a workflow that looks as close as possible to how those teams already deploy application code, not a special separate process only the database team understands.</p>
+  <p>The starting point for either habit is source control: keep the definition of what each schema should look like inside a repository like git, exactly like you already do for application code. This gets you versioning, code review, and a history of who changed what and why, none of which exist if changes are just typed by hand into a production console. Beyond being good engineering practice on its own, the chapter also notes it's often something a compliance team will require in a regulated organization, though which specific regulations apply will depend on your own industry and jurisdiction.</p>
+
+  <h3>3. Picking a tool to track schema definitions: paid options vs. open source</h3>
+  <p>Once you've decided schema definitions belong in source control, you still need something that turns a source-controlled definition into an actually-applied change across your environments. The chapter walks through both paid and open source paths, framed as considerations rather than a single winner.</p>
+  <p>For <strong>paid, off-the-shelf tools</strong>, it flags a few things worth weighing: the cost model (some vendors charge per "target," meaning per schema managed, which can add up fast as you grow); whether the tool has a clear path to running the change in a nonblocking, online way (as of when the chapter was written, it specifically contrasts Flyway, which it says did not have a clear path to running schema changes for you in a nonblocking manner, against its competitor Liquibase, which has a supported plug-in for Percona's online schema-change tooling; treat this as a snapshot in time, not a permanent ranking, and check each vendor's current documentation before relying on it); and out-of-the-box integrations, since many of these tools assume a particular language or stack for hooking into your existing delivery process, which can be a real mismatch if your organization is highly polyglot or mid-migration between languages.</p>
+  <p>For the <strong>open source path</strong>, the chapter's example is Skeema, described as a prominent tool for tracking schema changes in version control across multiple environments, per database cluster. Skeema itself does not run the schema changes against production for you (that's the next layer, covered below); its job is tracking and diffing schema definitions, and its CLI is flexible enough to plug into whichever CI system you're already using (the chapter points to a blog post from Twilio SendGrid describing how they integrated Skeema with Buildkite this way). Whichever tool you pick, paid or open source, it will need real access to run against every environment including production, so this is also a conversation with your security team about access control, not just a database-team decision.</p>
+  <p>The chapter closes this part with three practical takeaways worth holding onto regardless of which tool you pick: stay as close as possible to the software-deploy tooling and workflow your engineering organization already uses, so schema changes feel familiar rather than like a separate process; use a tool that can run basic linting checks against a proposed schema change, so a pull request automatically fails if, say, a new table uses the wrong charset or introduces a foreign key your organization has decided not to allow; and if your organization is polyglot and growing fast, be careful not to introduce an accidental bottleneck like one single repository holding every database's schema changes, since the whole point is giving teams the flexibility to move at their own pace. As a smaller aside: if you're already scaling your database infrastructure with Vitess, it's worth knowing it manages schema changes for you as part of the platform, so check its documentation specifically before building something in parallel to it.</p>
+
+  <h3>4. Running the change itself, without taking the database down</h3>
+  <p>Tracking a schema's definition is one problem. Actually applying an <code>ALTER TABLE</code> against a live, busy table without hurting uptime is a separate one, and the chapter treats it as such.</p>
+  <p><strong>Native DDL.</strong> MySQL introduced nonblocking schema changes starting in version 5.6, but in that version the feature came with enough caveats that it was only usable for a narrow set of change types. By the time MySQL 8.0 became generally available, native support had expanded a lot, though the chapter is clear it's "still not universal": as of the source, changes to your primary key, changes to character sets, turning on per-table encryption, and adding or removing foreign keys are all examples of changes you still can't do with a native <code>INPLACE</code> alter. The practical habit the chapter recommends is getting familiar, through MySQL's own documentation, with exactly which changes are allowed using the <code>INPLACE</code> or <code>INSTANT</code> algorithms, since that list is specific to your MySQL version. Even when a change is technically supported natively, on a very large table you can still run into trouble: if the change takes long enough, InnoDB's internal log of in-progress table changes can grow large enough to force a rollback, undoing hours or days of work. Native DDL also gives you no throttling control over how fast the change runs against the live table, which some teams need and which is exactly what the external tools below are built to offer.</p>
+  <p><strong>External tools.</strong> If you can't yet run a MySQL version with the native DDL flexibility you need, or you specifically need throttling control, you can combine your CI tooling with an external open source tool to run schema changes automatically in production. The chapter focuses on two: Percona's <code>pt-online-schema-change</code> and GitHub's <code>gh-ost</code>. One thing both share: unlike native DDL, an external tool has to make an entire copy of the table you're changing. It just does that copy in a way that avoids a disruptive, long-held write lock, which is genuinely different from "no cost at all."</p>
+  <p><code>pt-online-schema-change</code>'s main draw is stability and how long it's been used in the MySQL community. It works by using triggers to keep a shadow copy of the table in sync with live writes while it copies data across in the background, then swaps the tables at the end. That trigger-based design brings real trade-offs: before MySQL 8.0, you can't have more than one trigger of the same type (say, two separate insert triggers) on one table, so if a table already has a business-logic trigger, <code>pt-online-schema-change</code> can fail outright trying to add its own (the chapter generally discourages using triggers for business logic in the first place, but acknowledges legacy systems exist where this is a real constraint). Triggers also carry a measurable per-write performance cost, backed by Percona's own benchmarks; that cost is usually invisible at moderate transaction rates but worth watching closely, and tuning the tool to abort more conservatively, if you're running at very high transactions-per-second. Because of the same trigger limitations, you also can't run more than one schema change on the same table with <code>pt-online-schema-change</code> at a time, which is a minor inconvenience by itself but can become a real bottleneck once schema changes are fully automated in a pipeline. It has some support for tables involved in foreign-key relationships, but the trade-offs there need careful reading of the documentation.</p>
+  <p><code>gh-ost</code> was built at GitHub specifically to avoid triggers altogether. Instead of triggers, it connects as a replica to one of your cluster's existing replicas and consumes the row-based replication log as its changelog for keeping the shadow table in sync. The trade-off worth knowing up front is foreign keys: <code>gh-ost</code> mostly refuses to operate on a table that has them, essentially bailing out entirely rather than attempting the complex trade-offs <code>pt-online-schema-change</code> takes on. Its primary author, Shlomi Noach, has written publicly that combining foreign keys with an externally-run online schema-change tool creates trade-offs (uptime versus consistency) that are genuinely hard to reason about, and he recommends not using foreign keys at all if you also want to run online schema changes this way. For a team new to building this kind of pipeline, the chapter's own stated opinion is that <code>gh-ost</code> is the better starting point, provided you're also disciplined about not introducing foreign keys, since it sidesteps trigger overhead entirely, works across a wider range of MySQL versions (with some caveats under statement-based replication), and has already been proven at large-scale deployments. That said, <code>pt-online-schema-change</code> is still the more realistic option if your existing databases already depend heavily on foreign keys and removing them isn't practical, or if the replication logs <code>gh-ost</code> needs simply aren't accessible in your environment for some reason.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 300" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">THREE WAYS TO CHANGE A LIVE TABLE</text>
+
+      <rect x="20" y="42" width="180" height="238" rx="10" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.4"/>
+      <text x="110" y="66" fill="#F2EFE9" font-size="11.5" font-weight="700" text-anchor="middle">NATIVE DDL</text>
+      <text x="34" y="90" fill="#7A7A80" font-size="9.5">(INPLACE / INSTANT)</text>
+      <text x="34" y="114" fill="#C9C7C1" font-size="9.5">no full table copy</text>
+      <text x="34" y="130" fill="#C9C7C1" font-size="9.5">for supported changes</text>
+      <text x="34" y="156" fill="#C9C7C1" font-size="9.5">fastest, when it</text>
+      <text x="34" y="172" fill="#C9C7C1" font-size="9.5">actually applies</text>
+      <text x="34" y="198" fill="#C8453A" font-size="9.5">not universal:</text>
+      <text x="34" y="214" fill="#C8453A" font-size="9.5">PK, charset, FKs...</text>
+      <text x="34" y="240" fill="#C9C7C1" font-size="9.5">can roll back on very</text>
+      <text x="34" y="256" fill="#C9C7C1" font-size="9.5">large tables</text>
+
+      <rect x="220" y="42" width="180" height="238" rx="10" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.4"/>
+      <text x="310" y="66" fill="#F2EFE9" font-size="11.5" font-weight="700" text-anchor="middle">PT-ONLINE-</text>
+      <text x="310" y="80" fill="#F2EFE9" font-size="11.5" font-weight="700" text-anchor="middle">SCHEMA-CHANGE</text>
+      <text x="234" y="104" fill="#7A7A80" font-size="9.5">copies table, uses</text>
+      <text x="234" y="118" fill="#7A7A80" font-size="9.5">triggers to stay in sync</text>
+      <text x="234" y="144" fill="#C9C7C1" font-size="9.5">long track record,</text>
+      <text x="234" y="160" fill="#C9C7C1" font-size="9.5">stable</text>
+      <text x="234" y="186" fill="#C8453A" font-size="9.5">triggers cost some</text>
+      <text x="234" y="202" fill="#C8453A" font-size="9.5">write throughput</text>
+      <text x="234" y="228" fill="#C9C7C1" font-size="9.5">one change per table</text>
+      <text x="234" y="244" fill="#C9C7C1" font-size="9.5">at a time</text>
+
+      <rect x="420" y="42" width="180" height="238" rx="10" fill="#0E0E10" stroke="#C8453A" stroke-width="1.4"/>
+      <text x="510" y="66" fill="#F2EFE9" font-size="11.5" font-weight="700" text-anchor="middle">GH-OST</text>
+      <text x="434" y="90" fill="#7A7A80" font-size="9.5">copies table, reads</text>
+      <text x="434" y="104" fill="#7A7A80" font-size="9.5">binlog, no triggers</text>
+      <text x="434" y="130" fill="#C9C7C1" font-size="9.5">no trigger overhead,</text>
+      <text x="434" y="146" fill="#C9C7C1" font-size="9.5">proven at scale</text>
+      <text x="434" y="172" fill="#C8453A" font-size="9.5">mostly refuses tables</text>
+      <text x="434" y="188" fill="#C8453A" font-size="9.5">that have foreign keys</text>
+      <text x="434" y="214" fill="#C9C7C1" font-size="9.5">good default starting</text>
+      <text x="434" y="230" fill="#C9C7C1" font-size="9.5">point per the chapter</text>
+    </svg>
+    <figcaption>All three avoid a long blocking lock. What differs is whether they need a full copy, what they cost per write, and what they refuse to touch.</figcaption>
+  </figure>
+
+  <h3>5. Putting it together: a CI/CD pipeline for schema changes</h3>
+  <p>With a way to track definitions and a way to apply changes safely, the last piece is wiring both into an actual pipeline. The chapter lays out three habits for building one.</p>
+  <p>First, <strong>organize schema definitions per database cluster</strong>, each in its own repository, rather than combining every database's schema changes into one shared repository. This matters because it's what lets different teams move at different speeds and define their own linting rules; one team might require a very specific character set and collation, another might be fine with the defaults, and forcing everyone into one repository forces everyone into one set of rules too. Document the whole path an engineer follows, from a schema change written on their laptop to it running, tested, across every environment on the way to production. A pull-request model works well here: it lets each team define what automated tests should run before their change is promoted further, the same way a code pull request triggers a test suite.</p>
+  <p>Second, <strong>define a baseline configuration as a safety net</strong> for whichever online schema-change tool you've standardized on, since you're the team providing this tooling for every partner team that depends on it. This is also where earlier tool trade-offs become organization-wide policy: if you pick <code>gh-ost</code> for its trigger-free design, that decision effectively also means becoming a database platform without foreign keys, since <code>gh-ost</code> mostly won't touch tables that have them. That constraint needs to be enforced somewhere concrete, like a precommit hook or a check in your Skeema repository, so a well-meaning team doesn't accidentally introduce a foreign key deep enough into your environment hierarchy that walking it back later is painful. Beyond that, set basic safety limits for how the tool executes a change in production, like a maximum number of MySQL threads it's allowed to use or a maximum system load before it throttles or aborts. Repository templates that bake all of this in by default, for any team spinning up a new database, make the safe path the easy path instead of something every team has to remember on their own.</p>
+  <p>Third, <strong>allow pipeline flexibility per team.</strong> Because each database's schema now lives in its own repository, each owning team gets to decide how automated or how human-gated its own pipeline should be. A team still iterating on a new product might be fine letting a schema pull request auto-promote the moment its tests pass. A team owning a more mission-critical database might require a human operator to explicitly approve the pull request before CI is allowed to promote it any further. Neither is more "correct"; the point of the whole design is giving teams that choice instead of forcing one policy on every database in the company.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 220" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">A SCHEMA CHANGE'S PATH TO PRODUCTION</text>
+
+      <rect x="14" y="70" width="132" height="90" rx="8" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.3"/>
+      <text x="80" y="98" fill="#F2EFE9" font-size="10" text-anchor="middle">engineer's</text>
+      <text x="80" y="112" fill="#F2EFE9" font-size="10" text-anchor="middle">laptop</text>
+      <text x="80" y="134" fill="#7A7A80" font-size="9" text-anchor="middle">schema repo,</text>
+      <text x="80" y="148" fill="#7A7A80" font-size="9" text-anchor="middle">one change</text>
+
+      <text x="164" y="120" fill="#7A7A80" font-size="14" text-anchor="middle">-&gt;</text>
+
+      <rect x="176" y="70" width="132" height="90" rx="8" fill="#0E0E10" stroke="#C9C7C1" stroke-width="1.3"/>
+      <text x="242" y="92" fill="#F2EFE9" font-size="10" text-anchor="middle">pull request</text>
+      <text x="242" y="110" fill="#7A7A80" font-size="9" text-anchor="middle">+ CI lint</text>
+      <text x="242" y="124" fill="#7A7A80" font-size="9" text-anchor="middle">+ tests</text>
+      <text x="242" y="146" fill="#7A7A80" font-size="9" text-anchor="middle">fails on FK / bad</text>
+      <text x="242" y="158" fill="#7A7A80" font-size="9" text-anchor="middle">charset, etc.</text>
+
+      <text x="326" y="120" fill="#7A7A80" font-size="14" text-anchor="middle">-&gt;</text>
+
+      <rect x="338" y="70" width="132" height="90" rx="8" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="404" y="92" fill="#F2EFE9" font-size="10" text-anchor="middle">staging</text>
+      <text x="404" y="110" fill="#7A7A80" font-size="9" text-anchor="middle">gh-ost / pt-osc /</text>
+      <text x="404" y="124" fill="#7A7A80" font-size="9" text-anchor="middle">native DDL</text>
+      <text x="404" y="146" fill="#7A7A80" font-size="9" text-anchor="middle">under baseline</text>
+      <text x="404" y="158" fill="#7A7A80" font-size="9" text-anchor="middle">safety config</text>
+
+      <text x="488" y="120" fill="#7A7A80" font-size="14" text-anchor="middle">-&gt;</text>
+
+      <rect x="500" y="70" width="118" height="90" rx="8" fill="#0E0E10" stroke="#C8453A" stroke-width="1.4"/>
+      <text x="559" y="98" fill="#F2EFE9" font-size="10" text-anchor="middle">production</text>
+      <text x="559" y="120" fill="#7A7A80" font-size="9" text-anchor="middle">auto-promote or</text>
+      <text x="559" y="134" fill="#7A7A80" font-size="9" text-anchor="middle">operator approval,</text>
+      <text x="559" y="148" fill="#7A7A80" font-size="9" text-anchor="middle">per team's choice</text>
+
+      <text x="310" y="196" fill="#7A7A80" font-size="10" text-anchor="middle">Same shape as a code deploy pipeline. That's the point: nothing new to learn.</text>
+    </svg>
+    <figcaption>Source control, review, a safe execution tool, and a promotion path, the same ingredients as shipping code, applied to schema.</figcaption>
+  </figure>
+
+  <h3>6. Wrapping the whole chapter</h3>
+  <p>The chapter closes with a short summary that doesn't introduce new ideas, it restates the through-line of both halves at once. Avoid extremes in your design: neither a schema that forces enormously complex queries nor a table with an oversized pile of columns. Use small, simple, appropriate data types, and reach for NULL only when it's actually modeling something true about your data, not by default. Try to use matching data types for columns that get compared to each other, especially in a join condition, since mismatched types there can cause performance problems. Watch out for variable-length string columns, since MySQL can pessimistically allocate their full declared length when it builds an in-memory temporary table or sorts. Prefer integers for identifiers where you reasonably can. Skip legacy MySQL-isms like specifying a precision on a floating-point column or a display width on an integer column, since neither changes storage or behavior, just what MySQL's own tools display. And treat ENUM and SET with some caution: they're handy, but easy to misuse, and BIT is generally best avoided in favor of simpler types. The chapter also points out, fairly, that dedicated database-design material exists if schema design itself is a gap you want to go deeper on; this chapter's job was layering MySQL's own implementation details on top of general good design, not replacing it. Its very last note is the one worth carrying forward past this whole chapter: your schema is never really "done," it keeps evolving with both the business and what you learn from real users, and that's exactly why having a safe, repeatable process for running that evolution matters as much as getting the design right the first time.</p>
+
+  <h2>Why it matters</h2>
+  <p>This is the part of schema work that decides whether "changing a table" is routine or terrifying at your organization. Every idea from Part 1, the right integer type, VARCHAR vs. CHAR, ENUM's sharp edges, eventually needs to actually get applied to a live table, and that's exactly the moment a badly-run schema change can turn a small design fix into a real outage. Getting this layer right is what lets a growing engineering organization keep shipping schema changes as routinely as code changes, instead of every table alteration becoming a scheduled, all-hands, fingers-crossed event. It's also the natural close of the chapter: Part 1 was about designing a schema well the first time, and this half is about the reality that your schema will keep changing as the business and its users teach you things you didn't know at the start, so the process for changing it safely matters just as much as the design itself.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>A yes/no fact belongs in ENUM, not SET; SET will silently allow "both at once," which is nonsense for a value that can only ever be one or the other.</li>
+      <li>Don't be afraid of NULL when a value is genuinely unknown; a magic constant like <code>-1</code>, or a bogus placeholder date, tends to complicate code and hide bugs more than NULL does.</li>
+      <li>Native DDL (INPLACE/INSTANT) is the fastest path when a change qualifies, but coverage isn't universal and it offers no throttling; external tools trade a full table copy for the ability to run on unsupported changes and control speed.</li>
+      <li><code>pt-online-schema-change</code> (trigger-based, mature, some foreign-key support) and <code>gh-ost</code> (binlog-based, no triggers, mostly refuses foreign keys) solve the same problem with different trade-offs; the chapter leans toward gh-ost as a starting point if you can commit to a no-foreign-keys platform.</li>
+      <li>Schema changes get safer at scale the same way code does: source control, pull-request review, automated linting/tests, a shared safety-net configuration, and a promotion path that each team can tune to how much risk they're willing to automate away.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Version a schema change like code.</strong> Create a small <code>.sql</code> migration file for a toy table (say, adding a column), commit it to a fresh git repo, and write a one-line commit message explaining why the change is happening. <em>Done when:</em> you can run <code>git log</code> on that repo and see a clear history of what your schema looked like at each step.</li>
+      <li><strong>Time a native ALTER TABLE against a bigger table.</strong> Create a table with a few hundred thousand generated rows, then run a plain <code>ALTER TABLE ... ADD COLUMN</code> against it and time how long it takes and whether other queries can still read/write the table while it runs. <em>Done when:</em> you've watched (or timed) whatever blocking behavior you got, and can explain in your own words why a much bigger table would make that worse.</li>
+      <li><strong>Read up on one external tool and sketch its trade-off.</strong> Pick either <code>pt-online-schema-change</code> or <code>gh-ost</code>, read its official "how it works" documentation, and write two or three sentences in your own words explaining how it avoids a long table lock. <em>Done when:</em> you can explain, without looking, whether your chosen tool uses triggers or the replication log, and one situation where it would refuse to run.</li>
+      <li><strong>Write a tiny CI check that blocks a risky ALTER.</strong> In any scripting language, write a short script that reads a <code>.sql</code> migration file and exits with an error if it contains <code>FOREIGN KEY</code> or doesn't specify a charset. <em>Done when:</em> your script correctly passes a clean migration file and fails a deliberately risky one.</li>
+      <li><strong>Reproduce the ENUM-vs-SET nonsense value.</strong> Create one table with <code>is_default SET('Y','N') NOT NULL DEFAULT 'N'</code> and try inserting <code>'Y,N'</code> into it; then create the same column as <code>ENUM('Y','N')</code> and try the same insert. <em>Done when:</em> you've seen the SET version accept the nonsense value and the ENUM version reject it.</li>
+      <li><strong>Turn on strict SQL_MODE and watch it catch a bogus date.</strong> On a test database, try inserting <code>'0000-00-00 00:00:00'</code> into a DATETIME column with default settings, then enable a stricter <code>SQL_MODE</code> and try the same insert again. <em>Done when:</em> you've seen the insert succeed under the default mode and get rejected under the stricter one.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>A natural next question once schema changes feel safe to run: how does MySQL actually find rows fast once your schema is in place? That's indexing, the subject the chapter turns to next, and several choices from Part 1 (a small identifier type, an ENUM's internal integer, avoiding random string identifiers) turn out to matter directly for how well an index performs.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <ul class="src-list">
+    <li><em>High Performance MySQL</em>, 4th Edition — Chapter 6, "Schema Design and Management." This digest (Part 2, and the final part of this chapter) covers the chapter's printed pages 146–154 (PDF pages 168–176 of the source file): the closing two schema gotchas (ENUM in disguise, NULL not invented here), then "Schema Management" in full (schema management as part of the data-store platform, source control for schema changes, paid vs. open source tooling including Flyway, Liquibase, Skeema, and Vitess, running schema changes in production with native DDL vs. pt-online-schema-change vs. gh-ost, and building a CI/CD pipeline for schema changes), and the chapter's own Summary. Chapter 7, "Indexing for High Performance," begins immediately after and is out of scope here.</li>
+  </ul>
+  <p class="src-note">This digest is a teaching draft, written to help you build a mental model quickly. It is not a substitute for the book itself; verify anything you plan to rely on (exact tool flags, current MySQL version behavior around INPLACE/INSTANT support, current vendor capabilities for Flyway/Liquibase) against the source or official documentation before using it for real. Flagged specifically as uncertain or time-sensitive: the Flyway-vs-Liquibase online-schema-change comparison and the "still not universal" list of unsupported native DDL changes are both snapshots from when the book was written, tool and MySQL-version capabilities move fast, so double-check current docs rather than treating either as a permanent fact. The Percona trigger-overhead benchmark and the Twilio SendGrid/Skeema/Buildkite blog post are both referenced in the source rather than reproduced in detail here.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · TikTok
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

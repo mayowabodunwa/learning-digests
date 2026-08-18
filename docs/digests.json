@@ -110,5 +110,33 @@
     "ch": "Topic 3 (Part 2, final)",
     "title": "Auto Scaling Groups & Elastic Load Balancing",
     "date": "2026-08-09"
+  },
+  {
+    "slug": "ddia-ch04-part2-modes-of-dataflow",
+    "book": "Designing Data-Intensive Applications",
+    "ch": "Ch.4 (Part 2, final)",
+    "title": "Modes of Dataflow",
+    "date": "2026-08-18"
+  },
+  {
+    "slug": "ai-eng-ch05-part2-defensive-prompting",
+    "book": "AI Engineering",
+    "ch": "Ch.5 (Part 2, final)",
+    "title": "Defensive Prompt Engineering: Attacks, Extraction & Defenses",
+    "date": "2026-08-18"
+  },
+  {
+    "slug": "hpmysql-ch06-part2-schema-management",
+    "book": "High Performance MySQL",
+    "ch": "Ch.6 (Part 2, final)",
+    "title": "Schema Management: Making Schema Changes Safe, Not Scary",
+    "date": "2026-08-18"
+  },
+  {
+    "slug": "aws-04-security-groups-nacls",
+    "book": "AWS",
+    "ch": "Topic 4",
+    "title": "Security Groups and Network ACLs in Depth",
+    "date": "2026-08-18"
   }
 ]
