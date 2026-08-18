@@ -27,10 +27,10 @@ for reference, they are simply not continued.
 
 ## Current batch: tick each when you've studied it
 
-- [ ] DDIA — Ch.4 (Part 1): Formats for Encoding Data (`docs/digests/ddia-ch04-part1-encoding-formats.html`)
-- [ ] AI Engineering — Ch.5 (Part 1): Prompt Engineering — Prompts, In-Context Learning & Best Practices (`docs/digests/ai-eng-ch05-part1-prompting-fundamentals.html`)
-- [ ] High Performance MySQL — Ch.6 (Part 1): Choosing the Right Data Type in MySQL (`docs/digests/hpmysql-ch06-part1-data-types.html`)
-- [ ] AWS — Topic 3 (Part 2, final): Auto Scaling Groups & Elastic Load Balancing (`docs/digests/aws-03-part2-auto-scaling-load-balancing.html`)
+- [x] DDIA — Ch.4 (Part 1): Formats for Encoding Data (`docs/digests/ddia-ch04-part1-encoding-formats.html`)
+- [x] AI Engineering — Ch.5 (Part 1): Prompt Engineering — Prompts, In-Context Learning & Best Practices (`docs/digests/ai-eng-ch05-part1-prompting-fundamentals.html`)
+- [x] High Performance MySQL — Ch.6 (Part 1): Choosing the Right Data Type in MySQL (`docs/digests/hpmysql-ch06-part1-data-types.html`)
+- [x] AWS — Topic 3 (Part 2, final): Auto Scaling Groups & Elastic Load Balancing (`docs/digests/aws-03-part2-auto-scaling-load-balancing.html`)
 
 
 ## Track A: Designing Data-Intensive Applications
