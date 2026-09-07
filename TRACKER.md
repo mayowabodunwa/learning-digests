@@ -27,10 +27,10 @@ for reference, they are simply not continued.
 
 ## Current batch: tick each when you've studied it
 
-- [ ] DDIA — Ch.4 (Part 2, final): Modes of Dataflow (`docs/digests/ddia-ch04-part2-modes-of-dataflow.html`)
-- [ ] AI Engineering — Ch.5 (Part 2, final): Defensive Prompt Engineering — Attacks, Extraction & Defenses (`docs/digests/ai-eng-ch05-part2-defensive-prompting.html`)
-- [ ] High Performance MySQL — Ch.6 (Part 2, final): Schema Management (`docs/digests/hpmysql-ch06-part2-schema-management.html`)
-- [ ] AWS — Topic 4: Security Groups and Network ACLs in Depth (`docs/digests/aws-04-security-groups-nacls.html`)
+- [x] DDIA — Ch.4 (Part 2, final): Modes of Dataflow (`docs/digests/ddia-ch04-part2-modes-of-dataflow.html`)
+- [x] AI Engineering — Ch.5 (Part 2, final): Defensive Prompt Engineering — Attacks, Extraction & Defenses (`docs/digests/ai-eng-ch05-part2-defensive-prompting.html`)
+- [x] High Performance MySQL — Ch.6 (Part 2, final): Schema Management (`docs/digests/hpmysql-ch06-part2-schema-management.html`)
+- [x] AWS — Topic 4: Security Groups and Network ACLs in Depth (`docs/digests/aws-04-security-groups-nacls.html`)
 
 ## Track A: Designing Data-Intensive Applications
 
