@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Engineering — RAG (Part 1): How Retrieval-Augmented Generation Actually Works</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AI &middot; CH.6 DIGEST (PART 1 OF 2)</p>
+  <h1>RAG: How Retrieval-Augmented Generation Actually Works</h1>
+  <p class="lead">A model is only as good as the information it has in front of it when you ask it something. RAG is the main technique for handing a model exactly the right slice of information, out of a much bigger pile, for each individual question. This part covers what RAG is, how retrieval algorithms actually rank documents, and how real systems squeeze more accuracy out of the pipeline. Agents (the other big pattern in this chapter) get their own part next.</p>
+
+  <h2>In one line</h2>
+  <p>RAG fetches the small number of relevant documents (or chunks, images, or table rows) out of a much larger external store, and hands only those to the model, instead of hoping the model already "knows" the answer or trying to stuff everything into one giant prompt.</p>
+
+  <h2>The big idea</h2>
+  <p>A model needs two things to answer a question well: instructions on how to behave, and the actual information needed to answer correctly. Instructions are usually the same for every query (that's the system prompt), but the information a specific question needs is different every time. RAG is the standard way to build that per-query information on the fly: a retriever searches an external source (a document database, a user's chat history, the internet) for the pieces most relevant to this exact question, and only those pieces get added to the prompt before the model generates a response. It sounds simple, but almost all of the engineering difficulty in RAG lives in one question: out of everything in the database, how do you reliably find the handful of pieces that are actually relevant?</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">RAG (retrieval-augmented generation)</span> — a technique where a model's response is grounded by first retrieving relevant information from an external source and adding it to the prompt.</li>
+    <li><span class="keyterm-term">Retriever</span> — the component that searches an external source and returns the pieces of data most relevant to a query.</li>
+    <li><span class="keyterm-term">Generator</span> — the model that produces the final response, using the retrieved information plus the original query.</li>
+    <li><span class="keyterm-term">External memory source</span> — wherever the retrievable data lives: an internal document database, a user's past chat sessions, the internet, a SQL table, and so on.</li>
+    <li><span class="keyterm-term">Context construction</span> — the general job of assembling the information a model needs for a specific query. RAG is one way of doing this; it plays the same role for a foundation model that feature engineering plays for a classical ML model.</li>
+    <li><span class="keyterm-term">Indexing</span> — processing your data ahead of time so it can be searched quickly later (the opposite of scanning everything from scratch on every query).</li>
+    <li><span class="keyterm-term">Querying</span> — the act of sending a request to the index to fetch the data relevant to it.</li>
+    <li><span class="keyterm-term">Chunk</span> — a manageable-sized piece of a larger document. Documents get split into chunks so you never have to retrieve (and pay for, and fit in context) an entire huge document at once.</li>
+    <li><span class="keyterm-term">Term-based / lexical retrieval</span> — ranking documents by matching the literal words (terms) in the query, not their meaning.</li>
+    <li><span class="keyterm-term">Term frequency (TF)</span> — how many times a given term appears in a document; used as a rough signal of relevance.</li>
+    <li><span class="keyterm-term">Inverse document frequency (IDF)</span> — a measure of how rare (and therefore informative) a term is across the whole document collection; common words like "the" score low, rare words score high.</li>
+    <li><span class="keyterm-term">TF-IDF</span> — a scoring formula that multiplies a term's frequency in a document by its rarity across all documents, so a document scores higher when it contains query terms often <em>and</em> those terms are actually distinctive.</li>
+    <li><span class="keyterm-term">Inverted index</span> — a lookup table that maps each term straight to the list of documents that contain it, so you don't have to scan every document to answer "which documents contain X?".</li>
+    <li><span class="keyterm-term">BM25</span> — a widely used, improved version of TF-IDF that also accounts for document length, so a long document doesn't win purely by containing more words.</li>
+    <li><span class="keyterm-term">Tokenization</span> — breaking text into individual units (terms) before indexing or searching it. A naive word-split can break multi-word phrases like "hot dog" apart and lose their meaning.</li>
+    <li><span class="keyterm-term">Embedding-based / semantic retrieval</span> — ranking documents by how close their <em>meaning</em> is to the query's meaning, using embeddings, rather than by matching literal words.</li>
+    <li><span class="keyterm-term">Vector database</span> — a database built to store embeddings (vectors) and search them efficiently.</li>
+    <li><span class="keyterm-term">Vector search / nearest-neighbor search</span> — given a query embedding, finding the stored embeddings that are closest to it.</li>
+    <li><span class="keyterm-term">k-nearest neighbors (k-NN)</span> — the exact (but slow) way to do vector search: compare the query to every single vector in the database and keep the closest k.</li>
+    <li><span class="keyterm-term">Approximate nearest neighbor (ANN)</span> — a family of faster algorithms that find <em>almost</em> the closest vectors instead of guaranteeing the exact closest ones, trading a little accuracy for a lot of speed at scale.</li>
+    <li><span class="keyterm-term">Sparse vs. dense vector</span> — a sparse vector is mostly zeros (a one-hot term vector is a classic example); a dense vector has mostly non-zero values (typical embeddings are dense).</li>
+    <li><span class="keyterm-term">Hybrid search</span> — combining term-based and embedding-based retrieval in the same system, to get the strengths of both.</li>
+    <li><span class="keyterm-term">Reranking</span> — taking an initial, cheaply-produced list of candidate documents and re-scoring them with a more precise (usually more expensive) method to improve the final order.</li>
+    <li><span class="keyterm-term">Reciprocal rank fusion (RRF)</span> — a formula for merging several different ranked lists (say, one from a term-based retriever and one from an embedding-based retriever) into a single combined ranking.</li>
+    <li><span class="keyterm-term">Query rewriting</span> — rephrasing a query (often using another model) so it stands on its own before it's used to retrieve documents, especially useful when a query only makes sense in the context of an earlier conversation.</li>
+    <li><span class="keyterm-term">Contextual retrieval</span> — enriching a chunk with extra context (metadata, keywords, a short summary of where it sits in the original document) before indexing it, so it's easier to find later.</li>
+    <li><span class="keyterm-term">Context precision / context recall</span> — precision asks "of what I retrieved, how much was actually relevant?"; recall asks "of everything that was relevant, how much did I actually retrieve?".</li>
+    <li><span class="keyterm-term">Multimodal RAG</span> — RAG where the retrieved material can be images, video, or audio, not just text.</li>
+    <li><span class="keyterm-term">Text-to-SQL</span> — automatically turning a natural-language question into a SQL query, so a model can pull an answer out of a structured data table instead of unstructured text.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>Here's the grounding picture before the details: a model that lacks the right information is a lot like a person answering a question with no notes and no ability to look anything up. It'll do its best, and its best might be a confident, wrong answer (a hallucination). RAG's whole premise is that if you hand the model a short, accurate set of notes right before it answers, it doesn't need to know everything in advance, it just needs to be handed the right slice of information at the right moment. The one detail that shapes everything else in this section: the "right slice" has to be found automatically, out of a store that could hold anything from a few dozen documents to hundreds of millions, which is exactly why retrieval is a whole engineering discipline of its own.</p>
+
+  <h3>1. What RAG actually is, and why a bigger context window doesn't replace it</h3>
+  <p>RAG's original motivation, as introduced in the 2020 paper that coined the term, was straightforward: some tasks need knowledge that simply can't fit into a model's prompt all at once, so instead of trying to cram everything in, you retrieve only the pieces most relevant to the current query and feed the model those. An earlier 2017 paper had already shown the basic shape of this idea (called "retrieve-then-generate" there): given a question, first retrieve a handful of the most relevant documents, then have a second model read those documents and generate an answer from them.</p>
+  <p>A simple example: imagine a customer support assistant gets asked "Can Acme's fancy-printer-A300 print 100 pages per second?" The model has no way of knowing that answer on its own, it was never trained on Acme's product spec sheet. But if a retriever pulls up the actual printer-A300 spec document and hands it to the model alongside the question, the model can now read the real number and answer correctly. That's the entire trick: instead of a generic prompt, each query gets its own custom-built context.</p>
+  <p>It's tempting to think that as models support longer and longer context windows, RAG will simply become unnecessary; just paste everything in. Two things push back on that. First, however long a context window gets, the amount of data organizations want to draw on tends to grow just as fast (or faster), since people keep generating new data and rarely delete old data. There will pretty much always be applications with more relevant information available than fits in even a very large context window. Second, and just as important, a model that <em>can</em> technically accept a huge context doesn't necessarily <em>use</em> all of it well. Feeding a model more tokens than it needs adds cost and latency on every single call, and models can end up focusing on the wrong parts of a long context instead of the genuinely relevant bit. RAG's job is to hand over less, but make sure what's handed over is the right less. One useful data point: Anthropic has publicly suggested that if your entire knowledge base is under roughly 200,000 tokens (about 500 pages), you may not need RAG at all and can just put the whole thing in the prompt. That's a real, useful rule of thumb for a small knowledge base on a model with a large context window, but it's specific to Anthropic's own guidance and their models at the time it was written, not a universal cutoff for every model or every use case.</p>
+
+  <h3>2. The RAG architecture: a retriever and a generator, doing two different jobs</h3>
+  <p>Structurally, a RAG system has exactly two moving parts: a <strong>retriever</strong> that searches an external source and returns the most relevant material, and a <strong>generator</strong> (a regular language model) that turns that material plus the original query into a final answer. In the original RAG paper these two parts were trained together end-to-end. Most real systems today take a simpler, more modular route: pick an off-the-shelf retriever and an off-the-shelf model and wire them together, which is far less work, even though training the whole pipeline jointly can improve accuracy further if you have the resources for it.</p>
+  <p>A retriever itself does two separate jobs. <strong>Indexing</strong> happens ahead of time: it processes your raw data (say, a company's memos, contracts, and meeting notes) so it can be found quickly later. Because a single document could be 10 tokens or a million tokens, documents usually get split into smaller <strong>chunks</strong> first, so retrieval never has to hand over something unmanageably huge. <strong>Querying</strong> happens at request time: given the user's question, the retriever searches the index and returns the chunks judged most relevant, which then get merged with the user's original prompt (with a little formatting/cleanup) before that combined prompt goes to the generator.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 240" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">A BASIC RAG PIPELINE</text>
+
+      <rect x="20" y="40" width="150" height="56" rx="8" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.2"/>
+      <text x="95" y="62" fill="#C9C7C1" font-size="9.5" text-anchor="middle">external data</text>
+      <text x="95" y="76" fill="#7A7A80" font-size="8.5" text-anchor="middle">(docs, chats, web)</text>
+
+      <line x1="170" y1="68" x2="200" y2="68" stroke="#7A7A80" stroke-width="1.2" marker-end="url(#arr1)"/>
+      <defs>
+        <marker id="arr1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7A7A80"/></marker>
+      </defs>
+
+      <rect x="200" y="40" width="150" height="56" rx="8" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/>
+      <text x="275" y="62" fill="#C8453A" font-size="9.5" text-anchor="middle" font-weight="700">INDEXING</text>
+      <text x="275" y="78" fill="#C9C7C1" font-size="8.5" text-anchor="middle">chunk + store</text>
+
+      <text x="420" y="30" fill="#7A7A80" font-size="8.5" text-anchor="middle">(done ahead of time, not per-query)</text>
+
+      <line x1="95" y1="96" x2="95" y2="130" stroke="#7A7A80" stroke-width="1.2"/>
+      <rect x="20" y="134" width="150" height="50" rx="8" fill="#131316" stroke="#F2EFE9" stroke-width="1"/>
+      <text x="95" y="154" fill="#F2EFE9" font-size="9.5" text-anchor="middle">user query</text>
+      <text x="95" y="168" fill="#7A7A80" font-size="8" text-anchor="middle">"can A300 print</text>
+      <text x="95" y="179" fill="#7A7A80" font-size="8" text-anchor="middle">100pps?"</text>
+
+      <line x1="170" y1="159" x2="200" y2="159" stroke="#7A7A80" stroke-width="1.2" marker-end="url(#arr1)"/>
+
+      <rect x="200" y="134" width="150" height="50" rx="8" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/>
+      <text x="275" y="154" fill="#C8453A" font-size="9.5" text-anchor="middle" font-weight="700">RETRIEVER</text>
+      <text x="275" y="170" fill="#C9C7C1" font-size="8.5" text-anchor="middle">finds top-k chunks</text>
+
+      <line x1="275" y1="96" x2="275" y2="130" stroke="#7A7A80" stroke-width="1" stroke-dasharray="3 2"/>
+
+      <line x1="350" y1="159" x2="380" y2="159" stroke="#7A7A80" stroke-width="1.2" marker-end="url(#arr1)"/>
+
+      <rect x="380" y="134" width="220" height="50" rx="8" fill="#131316" stroke="#7A7A80" stroke-width="1"/>
+      <text x="490" y="150" fill="#C9C7C1" font-size="8.5" text-anchor="middle">query + retrieved chunks</text>
+      <text x="490" y="164" fill="#7A7A80" font-size="8" text-anchor="middle">merged into one prompt</text>
+
+      <line x1="490" y1="184" x2="490" y2="200" stroke="#7A7A80" stroke-width="1.2" marker-end="url(#arr1)"/>
+
+      <rect x="400" y="200" width="180" height="34" rx="8" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="490" y="221" fill="#6FCF97" font-size="9.5" text-anchor="middle" font-weight="700">GENERATOR -&gt; answer</text>
+    </svg>
+    <figcaption>Indexing happens once, ahead of time. Retrieval and generation happen fresh for every single query.</figcaption>
+  </figure>
+
+  <h3>3. Two families of retrieval algorithm: matching words versus matching meaning</h3>
+  <p>Retrieval isn't new or unique to RAG, it's the same core problem search engines, recommender systems, and log search tools have solved for decades: given a query, rank a pile of documents by relevance. There are two broad families worth knowing well.</p>
+  <p><strong>Term-based (lexical) retrieval</strong> matches literal words. Given the query "AI engineering," it looks for documents that literally contain those words. The obvious problem is that lots of documents might contain a term, so you need a way to rank them. <strong>Term frequency (TF)</strong> counts how often a term shows up in a document, on the assumption that a document mentioning "vietnamese" ten times is probably more about Vietnamese food than one mentioning it once. But raw frequency alone isn't enough, because some words (like "for" or "at") appear everywhere and carry little meaning. <strong>Inverse document frequency (IDF)</strong> fixes that by scoring a term higher the <em>rarer</em> it is across the whole collection: if 5 out of 10 documents contain a term, its IDF is 10/5 = 2; a term that appears in only 1 document scores far higher. <strong>TF-IDF</strong> multiplies the two together, so a document scores well when it repeats a term that's also genuinely distinctive. <strong>BM25</strong>, still an industry workhorse today, improves on plain TF-IDF mainly by normalizing for document length, so a long document doesn't automatically win just by containing more words overall. Term-based systems typically store an <strong>inverted index</strong>, essentially a dictionary from each term straight to the list of documents (and how often it appears in each) that contain it, which makes lookups fast. One wrinkle worth knowing: <strong>tokenization</strong>, the step of splitting text into terms, can break multi-word phrases apart (splitting "hot dog" into "hot" and "dog" loses the original meaning of either word), which is why some systems also track common multi-word phrases (n-grams) as their own terms.</p>
+  <p><strong>Embedding-based (semantic) retrieval</strong> matches meaning instead of literal words. This matters because word overlap doesn't equal relevance: searching "transformer architecture" with a term-based system might return documents about the electrical device or the movie franchise, since they share the literal word "transformer." An embedding-based retriever instead converts both the documents and the query into embeddings (dense numeric vectors that aim to capture meaning) using the same embedding model, and then looks for document embeddings that sit close to the query's embedding in that vector space. The store for these vectors is called a <strong>vector database</strong>, and finding the closest vectors to a query is called <strong>vector search</strong>, framed as a nearest-neighbor problem. The exact way to do this, <strong>k-nearest neighbors (k-NN)</strong>, compares the query to literally every vector in the database and keeps the closest k; it's precise but far too slow once a database gets large. That's why large-scale systems use <strong>approximate nearest neighbor (ANN)</strong> algorithms instead, which sacrifice a little precision for a lot of speed. A few well-known ANN approaches, so the names aren't a mystery if you run into them: <strong>LSH</strong> hashes similar vectors into the same buckets; <strong>HNSW</strong> builds a multi-layer graph and searches by walking its edges (generally high accuracy and fast queries, but slower and heavier to build); <strong>IVF</strong> clusters vectors with k-means and only searches the nearest clusters; <strong>product quantization</strong> compresses each vector into a simpler, lower-dimensional form to speed up distance calculations; and <strong>Annoy</strong> builds multiple random binary trees to narrow the search space. None of this usually needs to be built from scratch: libraries like FAISS, Google's ScaNN, Spotify's Annoy, and Hnswlib implement these for you.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 260" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">TERM-BASED VS. EMBEDDING-BASED RETRIEVAL</text>
+
+      <rect x="30" y="42" width="260" height="180" rx="9" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/>
+      <text x="160" y="64" fill="#C8453A" font-size="10.5" text-anchor="middle" font-weight="700">TERM-BASED</text>
+      <text x="160" y="84" fill="#C9C7C1" font-size="8.5" text-anchor="middle">query: "transformer"</text>
+      <text x="160" y="102" fill="#7A7A80" font-size="8" text-anchor="middle">matches literal word</text>
+      <text x="160" y="122" fill="#C9C7C1" font-size="8" text-anchor="middle">-&gt; neural net docs</text>
+      <text x="160" y="136" fill="#C9C7C1" font-size="8" text-anchor="middle">-&gt; electrical device docs</text>
+      <text x="160" y="150" fill="#C9C7C1" font-size="8" text-anchor="middle">-&gt; movie docs</text>
+      <text x="160" y="172" fill="#7A7A80" font-size="8" text-anchor="middle">fast, cheap, works</text>
+      <text x="160" y="184" fill="#7A7A80" font-size="8" text-anchor="middle">out of the box</text>
+      <text x="160" y="202" fill="#6FCF97" font-size="8" text-anchor="middle">weak: can't tell them apart</text>
+
+      <rect x="330" y="42" width="260" height="180" rx="9" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="460" y="64" fill="#6FCF97" font-size="10.5" text-anchor="middle" font-weight="700">EMBEDDING-BASED</text>
+      <text x="460" y="84" fill="#C9C7C1" font-size="8.5" text-anchor="middle">query: "transformer</text>
+      <text x="460" y="96" fill="#C9C7C1" font-size="8.5" text-anchor="middle">architecture"</text>
+      <text x="460" y="116" fill="#7A7A80" font-size="8" text-anchor="middle">matches MEANING</text>
+      <text x="460" y="136" fill="#C9C7C1" font-size="8" text-anchor="middle">-&gt; neural net docs only</text>
+      <text x="460" y="156" fill="#7A7A80" font-size="8" text-anchor="middle">slower, costs more,</text>
+      <text x="460" y="168" fill="#7A7A80" font-size="8" text-anchor="middle">tunable via finetuning</text>
+      <text x="460" y="188" fill="#C8453A" font-size="8" text-anchor="middle">weak: can hide exact</text>
+      <text x="460" y="200" fill="#C8453A" font-size="8" text-anchor="middle">keywords/codes</text>
+
+      <text x="310" y="244" fill="#7A7A80" font-size="8.5" text-anchor="middle">real systems often combine both: hybrid search</text>
+    </svg>
+    <figcaption>Neither approach dominates; production systems commonly combine both instead of picking one.</figcaption>
+  </figure>
+
+  <p>Because each approach has real weaknesses, production retrieval systems commonly combine them, called <strong>hybrid search</strong>. One pattern runs them in sequence: a cheap, fast retriever (typically term-based) fetches a broad set of candidates first, then a more precise, more expensive method (typically embedding-based) re-scores just those candidates. This second step is called <strong>reranking</strong>. Another pattern runs both retrievers in parallel and merges their two ranked lists into one, using an algorithm called <strong>reciprocal rank fusion (RRF)</strong>: intuitively, a document ranked #1 by a retriever contributes a score of 1/1 = 1, ranked #2 contributes 1/2 = 0.5, and so on, and a document's final score is the sum of its contributions across every retriever it appeared in. (The real formula divides by <code>k + rank</code> rather than just <code>rank</code>, where <code>k</code> is a constant, commonly 60, that keeps the fusion from being dominated purely by whoever ranked first and avoids dividing by zero — but the rank-1-beats-rank-2 intuition above is the core idea.) A document that two different retrievers both rank highly ends up outranking a document only one retriever liked, which is exactly the point of combining signals.</p>
+
+  <h3>4. Squeezing more accuracy out of retrieval: chunking, reranking, rewriting, and enrichment</h3>
+  <p>Beyond picking an algorithm, four practical tactics have an outsized effect on whether a retrieval system actually finds the right thing.</p>
+  <p><strong>Chunking strategy.</strong> How you split documents up front shapes everything retrieval can do later. The simplest approach splits by a fixed unit (say, every 2,048 characters, or every 512 words, or every 20 sentences). A more careful approach splits recursively: try sections first, and only fall back to splitting a section into paragraphs (and a paragraph into sentences) if it's still too big, which keeps related text together longer. The catch with any hard split is that it can cut a chunk off mid-thought. Take the sentence "I left my wife a note": split naively into "I left my wife" and "a note," and neither half means anything on its own. That's why chunks are usually given a small overlap (say, 20 characters of overlap on a 2,048-character chunk) so a boundary detail doesn't just vanish. Chunk size itself is a real trade-off: smaller chunks let you fit more distinct pieces of information into the model's context window (halve the chunk size and you can fit roughly twice as many), but a chunk that's too small can separate a fact from the context it needs to make sense, and more chunks also means more embeddings to generate, store, and search, which costs more compute and can slow queries down. There's no universally correct chunk size; it has to be tuned per use case.</p>
+  <p><strong>Reranking.</strong> Beyond the "cheap retriever, then precise reranker" pattern mentioned above, documents can also be reranked by recency, useful for anything time-sensitive like a news aggregator, an email assistant, or stock analysis, where a stale but topically-perfect match should often lose to a slightly-less-perfect but current one. Worth knowing: ranking position matters less in this "context reranking" setting than in classic search. In a search engine, whether a result is #1 or #5 is everything. In RAG, as long as a genuinely relevant chunk makes it into the context at all, exactly where it sits matters less, though models can still process information at the very start or end of a long context somewhat better than the middle, so order isn't completely irrelevant either.</p>
+  <p><strong>Query rewriting</strong> (also called query reformulation or expansion) matters most in multi-turn conversations. Picture this exchange: "When did John Doe last buy something from us?" -> "He bought a hat two weeks ago." -> "How about Emily Doe?" That last question is meaningless on its own; used as-is to retrieve documents, it would likely return junk. A rewriting step (often just another model call, prompted with the conversation so far) turns it into a standalone query like "When did Emily Doe last buy something from us?" before it ever reaches the retriever. This gets genuinely tricky when it requires knowledge the system doesn't have yet, for example if someone asks "How about his wife?" and the system would need to first look up who "his wife" actually is. In that case, the honest and correct behavior is for the rewriting step to recognize the query can't be resolved yet, rather than guessing a name and confidently retrieving the wrong person's data.</p>
+  <p><strong>Contextual retrieval</strong> means enriching a chunk before you index it, so it's easier to find later. The simplest version tags a chunk with metadata like keywords, product descriptions, or captions. A more targeted version pulls out specific entities that matter to your domain, for instance a distinctive error code, and adds it explicitly as searchable metadata, since converting a chunk into an embedding can otherwise bury an exact string like that inside a fuzzy vector where literal-keyword search can no longer find it. You can also enrich a support-article chunk with the actual questions it answers ("how do I reset my password," "I forgot my password," "I can't log in"), so a retriever matches on how users actually phrase things, not just the article's own wording. A more thorough version, described by Anthropic in 2024, uses an AI model to generate a short (roughly 50-100 token) note that situates a chunk within its original document (what document is this from, what's it about) and prepends that note to the chunk before indexing it, so an isolated-looking chunk still carries enough context to be found and understood correctly.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 200" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">CHUNKING WITHOUT OVERLAP LOSES MEANING</text>
+
+      <rect x="60" y="38" width="500" height="34" rx="6" fill="#131316" stroke="#F2EFE9" stroke-width="1"/>
+      <text x="310" y="60" fill="#F2EFE9" font-size="10" text-anchor="middle">original: "I left my wife a note"</text>
+
+      <line x1="200" y1="72" x2="140" y2="100" stroke="#7A7A80" stroke-width="1.1"/>
+      <line x1="420" y1="72" x2="480" y2="100" stroke="#7A7A80" stroke-width="1.1"/>
+
+      <rect x="40" y="104" width="200" height="44" rx="6" fill="#0E0E10" stroke="#C8453A" stroke-width="1.2"/>
+      <text x="140" y="122" fill="#C8453A" font-size="9" text-anchor="middle">chunk A: "I left my wife"</text>
+      <text x="140" y="138" fill="#7A7A80" font-size="8" text-anchor="middle">reads like an ending, alone</text>
+
+      <rect x="380" y="104" width="200" height="44" rx="6" fill="#0E0E10" stroke="#C8453A" stroke-width="1.2"/>
+      <text x="480" y="122" fill="#C8453A" font-size="9" text-anchor="middle">chunk B: "a note"</text>
+      <text x="480" y="138" fill="#7A7A80" font-size="8" text-anchor="middle">means nothing alone</text>
+
+      <text x="310" y="176" fill="#6FCF97" font-size="9" text-anchor="middle">fix: overlap a few words/chars across the cut point</text>
+    </svg>
+    <figcaption>Neither half-chunk preserves the meaning of the original sentence; a small overlap prevents this.</figcaption>
+  </figure>
+
+  <h3>5. Judging whether your retriever is actually any good</h3>
+  <p>Two metrics anchor most retrieval evaluation. <strong>Context precision</strong> (also called context relevance) asks: of everything retrieved, what fraction was actually relevant to the query? <strong>Context recall</strong> asks the reverse: of everything in the database that <em>was</em> relevant, what fraction did the retriever actually find? To measure these you build an evaluation set of test queries with documents labeled relevant or not (by humans or by an AI judge), then score the retriever against it. Recall is more expensive to compute in practice, since it technically requires labeling every document in the whole database against every test query, which is why some production RAG frameworks only track precision. If the exact order of results matters (not just whether the right document showed up, but whether it showed up near the top), ranking-aware metrics like NDCG, MAP, and MRR are used instead. For the embedding side specifically, embedding quality itself gets evaluated too, either independently (do similar things get similar embeddings?) or against benchmarks built for the purpose, like MTEB, which scores embeddings across many tasks including retrieval, classification, and clustering. Zooming out, a retriever should ultimately be judged three ways: on its own retrieval quality, as part of the whole RAG system's final output quality, and (for embedding-based systems specifically) on the embeddings themselves. It's also worth weighing cost and latency honestly: generating embeddings costs money and gets expensive fast if your underlying data changes often and needs re-embedding regularly, and vector storage and search have their own operating costs on top of whatever you're already paying for model calls.</p>
+
+  <h3>6. RAG beyond plain text: images and tables</h3>
+  <p>Everything above assumed the external source was text documents, but the same core idea, retrieve the relevant piece, then generate from it, extends to other data types. In <strong>multimodal RAG</strong>, if the generator model can understand images (or audio, or video), the retriever can fetch those too. For example, asked "what's the color of the house in the Pixar movie Up?", a multimodal RAG system could retrieve an actual picture of the house to hand to the model alongside the question, rather than relying purely on text descriptions. Doing this by content (not just by caption or tag) requires a multimodal embedding model, one that can place both images and text into the same shared embedding space, so a text query and an image can be compared directly. CLIP is a well-known example of this kind of model: everything (text and images) gets embedded into one shared space ahead of time, the query gets embedded the same way at request time, and the vector database returns whichever texts and images land closest to it.</p>
+  <p>RAG can also pull from structured, tabular data instead of unstructured documents. Picture a small e-commerce store with a <code>Sales</code> table (order ID, timestamp, product, price, units). A question like "how many units of a given product sold in the last 7 days?" can't be answered by retrieving a document, it needs an actual database query. The workflow here is: <strong>text-to-SQL</strong> (a model turns the natural-language question into a real SQL query, using the table's schema), then <strong>execution</strong> (that query actually runs against the table), then <strong>generation</strong> (a model turns the raw query result back into a natural-language answer). If there are more tables than could ever fit into the model's context at once, an extra step is usually needed first, to narrow down which specific tables are even relevant to the question, before generating SQL against just those.</p>
+
+  <h2>Why it matters</h2>
+  <p>Retrieval quality is very often the actual bottleneck in a "the AI gave a wrong answer" complaint, even though it's easy to blame the generator model instead. If the retriever hands over the wrong chunk (or nothing at all), a perfectly capable model has no real chance of answering correctly, since it's reasoning from missing or irrelevant information rather than the model being "bad." That's also why the tactics in this part (chunking, hybrid search, reranking, query rewriting, contextual retrieval) matter so much in practice: they're where the real, compounding gains in a RAG system's quality tend to come from, often more so than swapping to a bigger or newer generator model. And it sets up the next big idea directly: a text retriever and a SQL executor are both, quietly, examples of giving a model a <strong>tool</strong> it can call to go get information it doesn't already have. That's exactly the concept the next part (agents) builds on, just with a much wider range of tools than retrieval alone.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>RAG's whole job is context construction: finding the small subset of external information relevant to <em>this specific query</em> and handing only that to the model, instead of hoping the model already knows the answer.</li>
+      <li>Longer context windows don't make RAG obsolete. Data grows faster than context limits, and models don't necessarily use very long context well even when it fits.</li>
+      <li>Term-based retrieval (TF-IDF, BM25) matches literal words: fast and cheap, but blind to meaning. Embedding-based retrieval matches meaning via vectors: smarter about semantics, but slower, costlier, and can bury exact keywords. Real systems often combine both (hybrid search).</li>
+      <li>Chunking strategy, reranking, query rewriting, and contextual retrieval are where a lot of real-world RAG quality is actually won or lost, often more than which specific algorithm or model you pick.</li>
+      <li>A retriever should be evaluated on its own (precision, recall, ranking metrics), not just judged by whether the final generated answer sounded right.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Build a tiny TF-IDF retriever by hand.</strong> Take 8-10 short text snippets (a paragraph each), write a few test queries, and compute TF-IDF scores manually or in a short script (no library) to rank the snippets for each query. <em>Done when:</em> you can show, for one query, exactly which snippet won and why, using the actual TF and IDF numbers.</li>
+      <li><strong>Compare term-based vs. embedding-based retrieval on the same small dataset.</strong> Use the same snippets from the previous exercise. Run a keyword search library (or your own script) and an embedding-based search (any small embedding model or API) against the same queries. <em>Done when:</em> you've found at least one query where the two approaches disagree, and can explain why.</li>
+      <li><strong>Build a chunking-with-overlap demo.</strong> Take a multi-paragraph document, write a function that splits it into fixed-size chunks with and without overlap, and manually inspect a few boundary chunks. <em>Done when:</em> you can show a specific example where the no-overlap version loses meaning that the overlap version preserves.</li>
+      <li><strong>Implement reciprocal rank fusion.</strong> Manually create two different ranked lists of the same 6-8 items (pretend they came from two different retrievers), then write a short script implementing the RRF formula (with k=60) to merge them into one ranking. <em>Done when:</em> you can point to an item that moved up because both lists ranked it reasonably well, even though neither ranked it #1.</li>
+      <li><strong>Write a query rewriter.</strong> Simulate a short multi-turn conversation (3-4 turns) where later questions depend on earlier context (like the "How about Emily Doe?" example), and write a prompt that gets a model to rewrite each ambiguous follow-up into a standalone query. <em>Done when:</em> you have at least one example where the rewritten query would clearly retrieve something correct that the raw query would not.</li>
+      <li><strong>Measure context precision and recall on a toy retrieval set.</strong> Build a tiny document set (15-20 short documents) and 3 test queries, manually label which documents are relevant to each query, then run a retriever and compute precision and recall against your labels. <em>Done when:</em> you can report both numbers for at least one query and explain one concrete way you could change the retriever to improve recall.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>If you build anything real with RAG, spend extra time on chunking strategy and contextual retrieval specifically. They're unglamorous compared to picking a fancier vector database or a newer embedding model, but they tend to move real-world answer quality the most, precisely because a great generator model still can't recover from being handed the wrong chunk, or a chunk missing the context it needed to make sense.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, written to help you build a mental model quickly. It is not a substitute for the source text; verify anything you plan to rely on, especially specific vendor guidance, benchmark numbers, and library/API details, against current documentation before depending on it.</p>
+  <ul class="src-list">
+    <li><em>AI Engineering</em> by Chip Huyen (O'Reilly), Chapter 6, "RAG and Agents." This digest (Part 1 of 2) covers pages 253-274: RAG, RAG Architecture, Retrieval Algorithms (term-based and embedding-based, comparing and combining them), Retrieval Optimization (chunking, reranking, query rewriting, contextual retrieval), Evaluating Retrieval Solutions, and RAG Beyond Texts (multimodal RAG and RAG with tabular data). Part 2 will cover the chapter's Agents section (pages 275 onward).</li>
+    <li>Chen et al., "Reading Wikipedia to Answer Open-Domain Questions" (2017) — the original retrieve-then-generate pattern cited in the source material.</li>
+    <li>Lewis et al., "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks" (2020) — the paper that coined the term RAG, cited in the source material.</li>
+    <li>Anthropic, "Introducing Contextual Retrieval" (2024) — the chunk-context-generation technique and the ~200,000-token/no-RAG-needed guidance, both cited in the source material.</li>
+    <li>Cormack et al. (2009) — reciprocal rank fusion (RRF), cited in the source material.</li>
+    <li>Muennighoff et al., "MTEB: Massive Text Embedding Benchmark" (2023); Thakur et al., "BEIR" (2021) — the embedding and retrieval benchmarks named in the source material.</li>
+  </ul>
+  <p class="src-note">Flagged for accuracy: a few figures here are anecdotal or setup-specific rather than universal facts, and the source material itself treats them that way. The claim that vector database spend can run "one-fifth to half" of a company's model API spend is described in the source as a general industry observation, not a benchmarked statistic, so it's presented here only as an illustrative caution about cost, not a number to plan a budget around. Anthropic's "200,000 tokens / no RAG needed" guidance is specific to Anthropic's own models and stated as of 2024; check current guidance before relying on it for a real system. Specific ANN library and vector database names move fast in this space, so verify current tooling before adopting any of the ones named here.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · TikTok
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

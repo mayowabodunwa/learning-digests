@@ -138,5 +138,33 @@
     "ch": "Topic 4",
     "title": "Security Groups and Network ACLs in Depth",
     "date": "2026-08-18"
+  },
+  {
+    "slug": "ddia-ch10-part1-unix-philosophy",
+    "book": "Designing Data-Intensive Applications",
+    "ch": "Ch.10 (Part 1)",
+    "title": "Batch Processing with Unix Tools",
+    "date": "2026-09-07"
+  },
+  {
+    "slug": "ai-eng-ch06-part1-rag-fundamentals",
+    "book": "AI Engineering",
+    "ch": "Ch.6 (Part 1)",
+    "title": "RAG: How Retrieval-Augmented Generation Actually Works",
+    "date": "2026-09-07"
+  },
+  {
+    "slug": "hpmysql-ch07-part1-how-indexes-work",
+    "book": "High Performance MySQL",
+    "ch": "Ch.7 (Part 1)",
+    "title": "How MySQL Indexes Actually Work: B-Trees, Types, and Why They Help",
+    "date": "2026-09-07"
+  },
+  {
+    "slug": "aws-05-cloudwatch-metrics",
+    "book": "AWS",
+    "ch": "Topic 5",
+    "title": "CloudWatch Metrics: Namespaces, Dimensions, Resolution & Custom Metrics",
+    "date": "2026-09-07"
   }
 ]

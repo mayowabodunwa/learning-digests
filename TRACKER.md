@@ -27,10 +27,10 @@ for reference, they are simply not continued.
 
 ## Current batch: tick each when you've studied it
 
-- [x] DDIA — Ch.4 (Part 2, final): Modes of Dataflow (`docs/digests/ddia-ch04-part2-modes-of-dataflow.html`)
-- [x] AI Engineering — Ch.5 (Part 2, final): Defensive Prompt Engineering — Attacks, Extraction & Defenses (`docs/digests/ai-eng-ch05-part2-defensive-prompting.html`)
-- [x] High Performance MySQL — Ch.6 (Part 2, final): Schema Management (`docs/digests/hpmysql-ch06-part2-schema-management.html`)
-- [x] AWS — Topic 4: Security Groups and Network ACLs in Depth (`docs/digests/aws-04-security-groups-nacls.html`)
+- [ ] DDIA — Ch.10 (Part 1): Batch Processing with Unix Tools (`docs/digests/ddia-ch10-part1-unix-philosophy.html`)
+- [ ] AI Engineering — Ch.6 (Part 1): RAG — How Retrieval-Augmented Generation Actually Works (`docs/digests/ai-eng-ch06-part1-rag-fundamentals.html`)
+- [ ] High Performance MySQL — Ch.7 (Part 1): How MySQL Indexes Actually Work — B-Trees, Types & Why They Help (`docs/digests/hpmysql-ch07-part1-how-indexes-work.html`)
+- [ ] AWS — Topic 5: CloudWatch Metrics — Namespaces, Dimensions, Resolution & Custom Metrics (`docs/digests/aws-05-cloudwatch-metrics.html`)
 
 ## Track A: Designing Data-Intensive Applications
 
@@ -38,8 +38,8 @@ Focus: Ch.4, Ch.10, Ch.11. Nothing else from this book.
 
 | Ch | Title | Pages | Digested | Carousel | Notes |
 |---:|-------|-------|----------|----------|-------|
-| 4 | Encoding and Evolution | 133–166 | 2026-08-09 (Pt.1, pp.133–150); 2026-08-18 (Pt.2, final, pp.150–162) | 2026-08-09 (Pt.1); 2026-08-18 (Pt.2, final) | Done. Part 2 = Modes of Dataflow (databases, REST/RPC, message brokers, distributed actor frameworks) through the chapter's own Summary. Chapter 4 is fully covered; PDF pages 162–166 are references/Part II divider, not chapter content. **Next DDIA unit:** Chapter 10, Batch Processing. |
-| 10 | Batch Processing | 411–460 | | | |
+| 4 | Encoding and Evolution | 133–166 | 2026-08-09 (Pt.1, pp.133–150); 2026-08-18 (Pt.2, final, pp.150–162) | 2026-08-09 (Pt.1); 2026-08-18 (Pt.2, final) | Done. Part 2 = Modes of Dataflow (databases, REST/RPC, message brokers, distributed actor frameworks) through the chapter's own Summary. Chapter 4 is fully covered; PDF pages 162–166 are references/Part II divider, not chapter content. |
+| 10 | Batch Processing | 411–460 | 2026-09-07 (Pt.1, pp.411–419) | 2026-09-07 (Pt.1) | In progress. Part 1 = chapter framing (services vs. batch vs. stream systems) plus "Batch Processing with Unix Tools" in full (log analysis pipeline, sort vs. in-memory aggregation, the Unix Philosophy: uniform interface, separation of logic/wiring, transparency/experimentation). Stops at the boundary before "MapReduce and Distributed Filesystems". **Next DDIA unit:** Ch.10 Part 2, MapReduce and Distributed Filesystems. |
 | 11 | Stream Processing | 461–510 | | | |
 
 *Already published (do not redo):* Ch.1; Ch.2 Parts 1 and 2.
@@ -52,8 +52,8 @@ be produced); Ch.3 and Ch.4 are skipped.
 
 | Ch | Title | Pages | Digested | Carousel | Notes |
 |---:|-------|-------|----------|----------|-------|
-| 5 | Prompt Engineering | 235-276 | 2026-08-09 (Pt.1, pp.235–258); 2026-08-18 (Pt.2, final, pp.259–276) | 2026-08-09 (Pt.1); 2026-08-18 (Pt.2, final) | Done. Part 2 = Defensive Prompt Engineering (prompt extraction, jailbreaking/injection, information extraction, prompt-level and system-level defenses) through the chapter's own Summary. **Next AI Engineering unit:** Chapter 6, RAG and Agents. |
-| 6 | RAG and Agents | 277-330 | | | |
+| 5 | Prompt Engineering | 235-276 | 2026-08-09 (Pt.1, pp.235–258); 2026-08-18 (Pt.2, final, pp.259–276) | 2026-08-09 (Pt.1); 2026-08-18 (Pt.2, final) | Done. Part 2 = Defensive Prompt Engineering (prompt extraction, jailbreaking/injection, information extraction, prompt-level and system-level defenses) through the chapter's own Summary. |
+| 6 | RAG and Agents | 277-330 | 2026-09-07 (Pt.1, pp.277–298) | 2026-09-07 (Pt.1) | In progress. Part 1 = the RAG half of the chapter in full (what RAG is, RAG architecture, term-based vs. embedding-based retrieval, hybrid search/RRF, retrieval optimization, evaluating retrieval, RAG beyond text). Stops at the boundary before "Agents" begins. **Next AI Engineering unit:** Ch.6 Part 2, Agents (tools, planning, evaluation). |
 | 7 | Finetuning | 331-386 | | | |
 | 8 | Dataset Engineering | 387-428 | | | |
 | 9 | Inference Optimization | 429-472 | | | |
@@ -68,8 +68,8 @@ Focus: Ch.6, Ch.7, Ch.8. Nothing else from this book.
 
 | Ch | Title | Pages | Digested | Carousel | Notes |
 |---:|-------|-------|----------|----------|-------|
-| 6 | Schema Design and Management | 147-176 | 2026-08-09 (Pt.1, pp.147–168); 2026-08-18 (Pt.2, final, pp.168–176) | 2026-08-09 (Pt.1); 2026-08-18 (Pt.2, final) | Done. Part 2 = the closing ENUM/NULL gotchas plus Schema Management (source control, Flyway/Liquibase/Skeema/Vitess, native DDL vs. pt-online-schema-change vs. gh-ost, CI/CD pipeline design) through the chapter's own Summary. **Next High Performance MySQL unit:** Chapter 7, Indexing for High Performance. |
-| 7 | Indexing for High Performance | 177-212 | | | |
+| 6 | Schema Design and Management | 147-176 | 2026-08-09 (Pt.1, pp.147–168); 2026-08-18 (Pt.2, final, pp.168–176) | 2026-08-09 (Pt.1); 2026-08-18 (Pt.2, final) | Done. Part 2 = the closing ENUM/NULL gotchas plus Schema Management (source control, Flyway/Liquibase/Skeema/Vitess, native DDL vs. pt-online-schema-change vs. gh-ost, CI/CD pipeline design) through the chapter's own Summary. |
+| 7 | Indexing for High Performance | 177-212 | 2026-09-07 (Pt.1, pp.177–184) | 2026-09-07 (Pt.1) | In progress. Part 1 = chapter opener, "If I Use an ORM, Do I Need to Care?" sidebar, and all of "Indexing Basics" (B-tree indexes incl. adaptive hash index and leftmost-prefix behavior, full-text indexes, benefits of indexes). Stops before "Indexing Strategies for High Performance" begins. **Next High Performance MySQL unit:** Ch.7 Part 2, Indexing Strategies for High Performance. |
 | 8 | Query Performance Optimization | 213-248 | | | |
 
 *Already published (do not redo):* Ch.1; Ch.2; Ch.3 Part 1.
@@ -115,7 +115,7 @@ in-progress concept before starting the next. Source is the official AWS docs
 | 1 | Core networking: VPC, subnets, route tables, IGW, NAT gateway | 2026-07-20 | 2026-07-20 | Done. |
 | 2 | Transit Gateway & multi-VPC connectivity | 2026-07-27 | 2026-07-27 | Done. |
 | 3 | Security groups and network ACLs in depth | 2026-08-18 | 2026-08-18 | Done. Stateful security groups (instance/ENI level, allow-only) vs. stateless network ACLs (subnet level, allow+deny, ordered rules), ephemeral return-traffic ports, and default vs. custom rule sets, grounded in the live AWS VPC User Guide. |
-| 4 | VPC endpoints: gateway vs. interface, and PrivateLink | | | |
+| 4 | VPC endpoints: gateway vs. interface, and PrivateLink | | | Not yet reached this cycle: the rotation moved on to CloudWatch after concept 3. This is next in line when the rotation cycles back to VPC (not "parked" in the permanent-scope sense). |
 | 5 | DNS in a VPC: Route 53 Resolver, private hosted zones, DHCP option sets | | | |
 | 6 | Flow Logs and traffic mirroring | | | |
 | 7 | IPv6 in a VPC, egress-only internet gateway | | | |
@@ -126,7 +126,7 @@ in-progress concept before starting the next. Source is the official AWS docs
 ### CloudWatch (every concept)
 | # | Concept | Digested | Carousel | Notes |
 |--:|---------|----------|----------|-------|
-| 1 | Metrics: namespaces, dimensions, resolution, custom metrics | | | |
+| 1 | Metrics: namespaces, dimensions, resolution, custom metrics | 2026-09-07 | 2026-09-07 | Done. Namespaces, dimensions (up to identifying a metric uniquely), standard vs. high-resolution, and publishing custom metrics via PutMetricData, grounded in the live CloudWatch User Guide and API reference. **Next AWS unit:** CloudWatch concept 2, Alarms (static, anomaly detection, composite, alarm actions). |
 | 2 | Alarms: static, anomaly detection, composite, and alarm actions | | | |
 | 3 | Logs: log groups/streams, retention, metric filters, subscription filters | | | |
 | 4 | Logs Insights query language | | | |
