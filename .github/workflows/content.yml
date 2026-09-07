@@ -150,16 +150,6 @@ jobs:
           mkdir -p build
           (cd build/carousels && zip -r "../carousels-$(date -u +%F).zip" .)
 
-      - name: Email the link + carousels zip
-        if: steps.gate.outputs.send == 'true'
-        env:
-          SMTP_HOST: ${{ secrets.SMTP_HOST }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
-          SMTP_USER: ${{ secrets.SMTP_USER }}
-          SMTP_PASS: ${{ secrets.SMTP_PASS }}
-          DIGEST_TO: ${{ secrets.DIGEST_TO }}
-        run: python "$SKILL"/scripts/deliver_digest.py --file build/email.html --attach "build/carousels-*.zip"
-
       - name: Publish + commit
         if: steps.gate.outputs.send == 'true'
         run: |
@@ -175,3 +165,25 @@ jobs:
             echo "push attempt $attempt rejected; retrying"; sleep 5
           done
           echo "::error::could not push batch after 5 attempts"; exit 1
+
+      # Pages rebuilds asynchronously after the push, so the digests are not reachable
+      # the instant the commit lands. Wait for them to actually serve before emailing,
+      # otherwise every "Read the digest" link 404s for the first minute or two.
+      - name: Wait for GitHub Pages to serve the new batch
+        if: steps.gate.outputs.send == 'true'
+        continue-on-error: true
+        env:
+          SITE_BASE_URL: ${{ vars.SITE_BASE_URL }}
+        run: python "$SKILL"/scripts/wait_for_pages.py --docs docs --site-base-url "$SITE_BASE_URL"
+
+      # Sent last, so the links in it are already live. Runs even if publishing hit a
+      # problem, so a push hiccup never costs you the carousels zip as well.
+      - name: Email the link + carousels zip
+        if: ${{ !cancelled() && steps.gate.outputs.send == 'true' }}
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          DIGEST_TO: ${{ secrets.DIGEST_TO }}
+        run: python "$SKILL"/scripts/deliver_digest.py --file build/email.html --attach "build/carousels-*.zip"
