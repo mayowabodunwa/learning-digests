@@ -314,6 +314,10 @@ the repo.
 - `scripts/build_email.py` — build the batch's **Gmail-safe** link email deterministically
   (table layout, fully inline styles, logo embedded as a CID image). Do not hand-author
   the email; email clients strip `<style>` blocks and non-embedded images.
+- `scripts/wait_for_pages.py` — after the batch is committed, poll the new digests until
+  GitHub **Pages actually serves them**, then let the email go out. Pages rebuilds
+  asynchronously, so emailing straight after the commit sends links that 404 for a minute
+  or two. **Publish first, wait, then email** — never the other way round.
 - `scripts/lint_carousels.py` — **check the generated decks against the guardrails** before
   delivery. **Errors:** book tells, structure (7–10 slides, exactly one `code` visual-proof
   slide, cover first / close last), counters running `01/N..N/N` over the non-cover slides,
