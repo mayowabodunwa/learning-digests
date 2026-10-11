@@ -89,7 +89,7 @@ the email just links to them.
   `scripts/deliver_digest.py`. The email is Gmail-safe (inline styles, the avatar
   embedded as a CID image) and links each new digest.
 - **Carousels** → zipped with a **top-level folder per book** and **attached to that same
-  email**. You post each one manually (they suit TikTok and LinkedIn, 1080×1350).
+  email**. You post each one manually (they suit Instagram and LinkedIn, 1080×1350).
 
 (Alternative host: an AWS S3 static-website bucket works the same way and doubles as
 practice for your AWS track. Point `SITE_BASE_URL` at the bucket and `aws s3 sync docs/`

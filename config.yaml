@@ -33,7 +33,7 @@ carousels:
 brand:
   socials:
     linkedin: "in/mayowa-bodunwa"
-    tiktok: "@mayowa.bodunwa"
+    instagram: "@mayowa.bodunwa"
 
 # Self-paced batches across four tracks (3 books + AWS). New content only ships once
 # the "Current batch" checklist in TRACKER.md is fully ticked. Cron runs 00:00 and

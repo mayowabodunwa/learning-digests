@@ -2,7 +2,7 @@
 
 A self-paced learning engine. It turns book chapters (and docs) into a beginner-
 friendly **HTML digest** (with schematics and a micro-project to build) and a matching
-**carousel** for TikTok, on a dark personal-brand theme.
+**carousel** for Instagram, on a dark personal-brand theme.
 
 - Digests are published to **GitHub Pages** and you get a lightweight **link email**
   with that batch's carousels attached as a zip.

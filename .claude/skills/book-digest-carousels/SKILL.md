@@ -1,6 +1,6 @@
 ---
 name: book-digest-carousels
-description: "Turn a book chapter (PDF) into a beginner-friendly daily DIGEST drafted as a ready-to-send email, plus a batch of ready-to-post TikTok CAROUSEL image slides that follow the user's own template, and keep a progress tracker so chapters are never skipped or repeated. Use this skill whenever the user asks for a digest, chapter summary, carousels, slides, this week's carousels, today's digest, wants to turn a book or PDF into social content, or mentions their study or TikTok content routine, even if they don't name the skill. Trigger it on any recurring book-to-content request."
+description: "Turn a book chapter (PDF) into a beginner-friendly daily DIGEST drafted as a ready-to-send email, plus a batch of ready-to-post Instagram CAROUSEL image slides that follow the user's own template, and keep a progress tracker so chapters are never skipped or repeated. Use this skill whenever the user asks for a digest, chapter summary, carousels, slides, this week's carousels, today's digest, wants to turn a book or PDF into social content, or mentions their study or Instagram content routine, even if they don't name the skill. Trigger it on any recurring book-to-content request."
 ---
 
 # Book Digest & Carousels
@@ -12,7 +12,7 @@ material**. It reads a chapter from a book PDF and produces:
    assuming prior knowledge and without dropping important detail.
 2. **Carousels** — one on-brand set of ready-to-post image slides per track each batch
    (7–10 slides), distilling that unit's key idea, rendered on the user's dark brand
-   templates and ready for TikTok or LinkedIn.
+   templates and ready for Instagram or LinkedIn.
 
 It also keeps a **tracker** so you always know what's been covered and what's next.
 
@@ -117,7 +117,7 @@ delivery**, and the default output is for the user's **private use**, not an aud
      them straight to the user: **no human PR-review step, ever**. Publishing the
      digest to the user's **own GitHub Pages library** is authorized (they've opted
      into it). Beyond that, do not push to any other public platform (e.g. posting the
-     carousels to TikTok) unless the user explicitly asks. A cycle's carousels are
+     carousels to Instagram) unless the user explicitly asks. A cycle's carousels are
      zipped with a **top-level folder per book** and attached to the digest email.
 
 **Combined delivery, independent jobs.** In the unattended cycle the four jobs are
