@@ -27,10 +27,10 @@ for reference, they are simply not continued.
 
 ## Current batch: tick each when you've studied it
 
-- [ ] DDIA — Ch.10 (Part 1): Batch Processing with Unix Tools (`docs/digests/ddia-ch10-part1-unix-philosophy.html`)
-- [ ] AI Engineering — Ch.6 (Part 1): RAG — How Retrieval-Augmented Generation Actually Works (`docs/digests/ai-eng-ch06-part1-rag-fundamentals.html`)
-- [ ] High Performance MySQL — Ch.7 (Part 1): How MySQL Indexes Actually Work — B-Trees, Types & Why They Help (`docs/digests/hpmysql-ch07-part1-how-indexes-work.html`)
-- [ ] AWS — Topic 5: CloudWatch Metrics — Namespaces, Dimensions, Resolution & Custom Metrics (`docs/digests/aws-05-cloudwatch-metrics.html`)
+- [x] DDIA — Ch.10 (Part 1): Batch Processing with Unix Tools (`docs/digests/ddia-ch10-part1-unix-philosophy.html`)
+- [x] AI Engineering — Ch.6 (Part 1): RAG — How Retrieval-Augmented Generation Actually Works (`docs/digests/ai-eng-ch06-part1-rag-fundamentals.html`)
+- [x] High Performance MySQL — Ch.7 (Part 1): How MySQL Indexes Actually Work — B-Trees, Types & Why They Help (`docs/digests/hpmysql-ch07-part1-how-indexes-work.html`)
+- [x] AWS — Topic 5: CloudWatch Metrics — Namespaces, Dimensions, Resolution & Custom Metrics (`docs/digests/aws-05-cloudwatch-metrics.html`)
 
 ## Track A: Designing Data-Intensive Applications
 
@@ -126,7 +126,7 @@ in-progress concept before starting the next. Source is the official AWS docs
 ### CloudWatch (every concept)
 | # | Concept | Digested | Carousel | Notes |
 |--:|---------|----------|----------|-------|
-| 1 | Metrics: namespaces, dimensions, resolution, custom metrics | 2026-09-07 | 2026-09-07 | Done. Namespaces, dimensions (up to identifying a metric uniquely), standard vs. high-resolution, and publishing custom metrics via PutMetricData, grounded in the live CloudWatch User Guide and API reference. **Next AWS unit:** CloudWatch concept 2, Alarms (static, anomaly detection, composite, alarm actions). |
+| 1 | Metrics: namespaces, dimensions, resolution, custom metrics | 2026-09-07 | 2026-09-07 | Done. Namespaces, dimensions (up to identifying a metric uniquely), standard vs. high-resolution, and publishing custom metrics via PutMetricData, grounded in the live CloudWatch User Guide and API reference. **Next AWS unit:** the rotation moves on from CloudWatch, so it's S3 concept 1, Buckets, objects, keys, the flat namespace, durability & consistency model. (CloudWatch concept 2, Alarms, comes round on the next CloudWatch turn.) |
 | 2 | Alarms: static, anomaly detection, composite, and alarm actions | | | |
 | 3 | Logs: log groups/streams, retention, metric filters, subscription filters | | | |
 | 4 | Logs Insights query language | | | |
