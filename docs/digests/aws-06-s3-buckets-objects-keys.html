@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: S3 Buckets, Objects, Keys: The Flat Namespace, Durability &amp; Consistency</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS &middot; TOPIC 6 DIGEST</p>
+  <h1>S3 Buckets, Objects, Keys: The Flat Namespace, Durability &amp; Consistency</h1>
+  <p class="lead">S3 looks like a hard drive full of folders, and that picture is exactly what trips beginners up. Underneath, it's a giant lookup table: you hand it a bucket name and a key, and it hands back your object. Once that clicks, the naming rules, the "folders", and the consistency behavior all make sense.</p>
+
+  <h2>In one line</h2>
+  <p>Amazon S3 stores objects (data plus metadata) in buckets (containers), finds each one by a key (its name) in a flat space with no real folders, keeps copies across several data centers, and tells you the truth about what you just wrote.</p>
+
+  <h2>The big idea</h2>
+  <p>Most of us grew up with file systems: folders inside folders, a path, a file at the end. S3 is a different animal. It's an object store. You don't mount it like a disk and you don't edit a file in place. You put a whole object in, you get a whole object out, and every object is found by a name (the key) inside a container (the bucket). The slashes you see in names like <code>photos/2026/cat.jpg</code> are just characters in that name. The console draws folders for you because it's convenient, not because they exist.</p>
+  <p>This digest covers four things that sit at the foundation of everything else in S3: what buckets and objects are, how keys work (including the flat-namespace idea), how safe your data is (durability), and what you can count on when you read something right after writing it (the consistency model). Later S3 topics (access control, versioning, storage classes, lifecycle) all build on these.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Object storage</span>: a way of storing data as whole, self-contained objects that you address by name, instead of as files in a directory tree on a disk. S3 is an object store.</li>
+    <li><span class="keyterm-term">Bucket</span>: the container that holds objects. You pick a name and an AWS Region when you create it. e.g. <code>my-photos-2026</code>.</li>
+    <li><span class="keyterm-term">Object</span>: the thing you store. It's the data itself (any sequence of bytes) plus metadata that describes it.</li>
+    <li><span class="keyterm-term">Key (key name)</span>: the unique name of an object inside its bucket. e.g. <code>photos/2026/cat.jpg</code>.</li>
+    <li><span class="keyterm-term">Metadata</span>: name-value pairs attached to an object. Some are set by S3 (like last-modified date) and some are standard HTTP ones (like <code>Content-Type</code>). You can also add your own custom pairs when you store the object.</li>
+    <li><span class="keyterm-term">Prefix</span>: the leading part of a key, used to group objects. In <code>photos/2026/cat.jpg</code>, <code>photos/</code> and <code>photos/2026/</code> are both prefixes.</li>
+    <li><span class="keyterm-term">Delimiter</span>: a character (most often <code>/</code>) used with a prefix to make a flat list look like folders when you list objects.</li>
+    <li><span class="keyterm-term">Flat namespace / flat structure</span>: there is no tree of sub-buckets or subfolders. A bucket holds objects directly, and any hierarchy you see is inferred from the key text.</li>
+    <li><span class="keyterm-term">Namespace</span>: the space in which names have to be unique. For general purpose buckets by default, that space is shared globally.</li>
+    <li><span class="keyterm-term">Partition</span>: a grouping of AWS Regions. The docs list four: <code>aws</code> (standard Regions), <code>aws-cn</code> (China), <code>aws-us-gov</code> (GovCloud US) and <code>aws-eusc</code> (European Sovereign Cloud).</li>
+    <li><span class="keyterm-term">Region</span>: a geographic location where AWS runs infrastructure. A bucket lives in exactly one Region.</li>
+    <li><span class="keyterm-term">Availability Zone (AZ)</span>: one or more discrete data centers in a Region with their own power, networking and connectivity.</li>
+    <li><span class="keyterm-term">Durability</span>: how unlikely it is that your stored data gets lost or corrupted over time. Different from availability, which is whether you can reach the data right now.</li>
+    <li><span class="keyterm-term">Availability</span>: whether requests succeed at a given moment. Durability and availability are separate numbers in the docs.</li>
+    <li><span class="keyterm-term">Strong read-after-write consistency</span>: once a write succeeds, any read you start afterward sees that write.</li>
+    <li><span class="keyterm-term">Eventual consistency</span>: a change takes a little while to show up everywhere, so a read right after might still show the old state.</li>
+    <li><span class="keyterm-term">Atomic update</span>: a change that happens fully or not at all. A reader never sees half of it.</li>
+    <li><span class="keyterm-term">Last-writer-wins</span>: when two writes to the same key overlap, one of them ends up as the stored result, and S3 decides using the latest timestamp.</li>
+    <li><span class="keyterm-term">Conditional write</span>: a write that only goes through if a stated condition holds. With <code>--if-none-match "*"</code> on a put, the upload only succeeds if that key doesn't already exist.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>Here's the grounding piece. S3 is a storage service you talk to over HTTP, through the console, the CLI, an SDK, or the REST API directly. There's no disk to attach and no operating system to log in to. You do a small set of things: create a bucket, put an object into it, get an object out, list what's there, delete things. Every one of those requests names a bucket, and most name a key. So you can picture the whole service as a very large map from (bucket + key) to object. The docs describe it in nearly those terms, adding an optional version ID on top if versioning is on (versioning is a later topic).</p>
+  <p>Everything is private by default. A bucket and its objects can only be reached if you explicitly grant access, so a brand new bucket isn't something the whole internet can read. How you grant access (policies, IAM, ACLs, access points) is its own topic, so I'm leaving it alone here.</p>
+
+  <h3>1. Buckets: the top-level container</h3>
+  <p>A bucket is the first thing you create. You give it a name and pick a Region, and from then on every object you store goes into some bucket. Three facts about buckets are worth having in your head straight away.</p>
+  <p><strong>A bucket belongs to one account and one Region.</strong> The AWS account that created the bucket owns it, and ownership can't be transferred to another account. After creation you can't change the bucket's name or its Region. If you need a different name, you make a new bucket. Objects stored in a Region don't leave it unless you explicitly copy or replicate them elsewhere, which is why people pick a Region for latency, cost or regulatory reasons.</p>
+  <p><strong>Buckets are the unit of organization at the top.</strong> The docs describe a bucket as the highest-level organizer of the S3 namespace, the account responsible for storage and data-transfer charges, and the unit that usage reporting aggregates on. You can't create a bucket inside another bucket.</p>
+  <p><strong>There are several bucket types.</strong> The docs list four: general purpose buckets (the original type, recommended for most use cases), directory buckets (for low-latency and data-residency uses, organized into real directories rather than a flat space), table buckets (for tabular data in Apache Iceberg format) and vector buckets (for storing and querying vectors). This digest is about <em>general purpose</em> buckets, which are the flat-namespace ones. When I say "bucket" from here on, that's what I mean.</p>
+  <p>On quantity: the docs say that by default you can create up to 10,000 general purpose buckets per account, and you can ask for an increase through Service Quotas. There's no maximum bucket size and no limit on how many objects a bucket can hold. You can put everything in one bucket or split things across many. A common pattern in the docs is using separate buckets to separate different datasets or workloads.</p>
+
+  <h3>2. Bucket names: unique across a whole namespace</h3>
+  <p>This is the part that surprises people. By default, a general purpose bucket lives in a <em>global</em> namespace. That means the name has to be unique across all AWS accounts in all Regions within a partition, not just within your account. If someone else already has <code>photos</code>, you can't have it. Once you create a bucket in that shared space, nobody else in the partition can take that name until you delete the bucket.</p>
+  <p>The naming rules for general purpose buckets, as the docs list them:</p>
+  <ul>
+    <li>3 to 63 characters long.</li>
+    <li>Only lowercase letters, numbers, periods and hyphens.</li>
+    <li>Must start and end with a letter or number.</li>
+    <li>No two periods next to each other.</li>
+    <li>Can't look like an IP address (the docs' example is <code>192.168.5.4</code>).</li>
+    <li>Can't start with <code>xn--</code>, <code>sthree-</code> or <code>amzn-s3-demo-</code>.</li>
+    <li>Can't end with <code>-s3alias</code>, <code>--ol-s3</code>, <code>.mrap</code>, <code>--x-s3</code> or <code>--table-s3</code>. Those endings are reserved for other S3 features (access point aliases, Object Lambda aliases, Multi-Region Access Points, directory buckets and table buckets).</li>
+    <li>The ending <code>-an</code> is only allowed for buckets in your account regional namespace (see below).</li>
+    <li>If you plan to use S3 Transfer Acceleration, the name can't contain periods.</li>
+  </ul>
+  <p><strong>Simplification, with a caveat:</strong> that list is the general purpose rule set as the docs presented it in October 2026. Directory buckets and table buckets have their own, different naming rules, and the docs mention an older exception (buckets created in US East (N. Virginia) before March 1, 2018 could follow looser rules). Treat the list above as "the rules for creating a new general purpose bucket today".</p>
+  <p>A few practical points from the same page. Bucket names show up in the URLs that point at your objects, so don't put sensitive information in them. The docs recommend avoiding periods in names except for buckets used only for static website hosting, because periods break the certificate match for virtual-host-style addressing over HTTPS. And if your code creates buckets automatically, the docs suggest appending a GUID (a globally unique identifier) so you're unlikely to collide with a name somebody already took.</p>
+  <p>One more thing that I found unexpectedly important: deleting a bucket in the shared global namespace frees its name, and the docs warn that another account in the same partition could then create a bucket with that name and potentially receive requests that were meant for yours. Their suggestion if you want to keep the name is to empty the bucket and keep it rather than delete it.</p>
+  <p><strong>The account regional namespace.</strong> The docs also describe an alternative: a reserved slice of the global namespace that only your account can create buckets in. Names there follow a fixed shape: a prefix you choose, then your 12-digit account ID, then the Region code, ending in <code>-an</code>. Their example is <code>amzn-s3-demo-bucket-111122223333-us-west-2-an</code>. You opt in when creating the bucket (the CLI create-bucket page lists a <code>--bucket-namespace</code> option that accepts <code>account-regional</code> or <code>global</code>). The point is that nobody else can ever take names in your slice. This is a newer feature than the classic global behavior, so check the namespaces page below before relying on details.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 330" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">ANATOMY OF AN OBJECT ADDRESS</text>
+
+      <rect x="20" y="40" width="580" height="46" rx="8" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.2"/>
+      <text x="34" y="68" fill="#C9C7C1" font-size="11.5">https://<tspan fill="#6FCF97" font-weight="700">my-photos-2026</tspan>.s3.us-west-2.amazonaws.com/<tspan fill="#C8453A" font-weight="700">photos/2026/cat.jpg</tspan></text>
+
+      <line x1="130" y1="90" x2="130" y2="120" stroke="#6FCF97" stroke-width="1.3"/>
+      <rect x="40" y="120" width="180" height="60" rx="8" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="130" y="142" fill="#6FCF97" font-size="11" text-anchor="middle" font-weight="700">BUCKET NAME</text>
+      <text x="130" y="160" fill="#7A7A80" font-size="9.5" text-anchor="middle">3-63 chars, unique in</text>
+      <text x="130" y="172" fill="#7A7A80" font-size="9.5" text-anchor="middle">the namespace</text>
+
+      <line x1="270" y1="90" x2="270" y2="120" stroke="#7A7A80" stroke-width="1.3"/>
+      <rect x="240" y="120" width="140" height="60" rx="8" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.3"/>
+      <text x="310" y="142" fill="#C9C7C1" font-size="11" text-anchor="middle" font-weight="700">REGION</text>
+      <text x="310" y="160" fill="#7A7A80" font-size="9.5" text-anchor="middle">fixed when the</text>
+      <text x="310" y="172" fill="#7A7A80" font-size="9.5" text-anchor="middle">bucket is created</text>
+
+      <line x1="470" y1="90" x2="470" y2="120" stroke="#C8453A" stroke-width="1.3"/>
+      <rect x="400" y="120" width="200" height="60" rx="8" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/>
+      <text x="500" y="142" fill="#C8453A" font-size="11" text-anchor="middle" font-weight="700">KEY (one flat string)</text>
+      <text x="500" y="160" fill="#7A7A80" font-size="9.5" text-anchor="middle">slashes are just</text>
+      <text x="500" y="172" fill="#7A7A80" font-size="9.5" text-anchor="middle">characters in the name</text>
+
+      <rect x="60" y="210" width="500" height="100" rx="8" fill="#131316" stroke="#7A7A80" stroke-width="1" stroke-dasharray="4 3"/>
+      <text x="310" y="232" fill="#F2EFE9" font-size="11" text-anchor="middle" font-weight="700">THE MENTAL MODEL: A GIANT LOOKUP TABLE</text>
+      <text x="310" y="254" fill="#C9C7C1" font-size="10.5" text-anchor="middle">(bucket, key)  ->  object (bytes + metadata)</text>
+      <text x="310" y="274" fill="#7A7A80" font-size="9.5" text-anchor="middle">with versioning on: (bucket, key, version ID)  ->  object</text>
+      <text x="310" y="294" fill="#7A7A80" font-size="9.5" text-anchor="middle">the bucket name here is illustrative; real names must be unique</text>
+    </svg>
+    <figcaption>One URL, three ideas: which bucket, which Region, which key. The URL shape matches the example the S3 docs give for a general purpose bucket.</figcaption>
+  </figure>
+
+  <h3>3. Objects: data plus metadata</h3>
+  <p>An object is the unit S3 stores. According to the docs, it has a key (its name), a value (the content), metadata, optionally a version ID, and a few other attachments like tags and access-control information. The value can be any sequence of bytes, so a photo, a log file, a JSON document and a database backup are all just objects. Objects can range from zero bytes up to 50 TB according to the objects overview page.</p>
+  <p><strong>A caveat on that 50 TB figure:</strong> the same page adds a note that the true maximum is 53.7 TB (48.8 TiB), because multipart upload allows up to 10,000 parts of up to 5 GiB each. For beginner purposes, "up to 50 TB per object" is the number the docs lead with. I'm not covering multipart uploads in this digest, so I won't state the size limit of a single plain upload, since I didn't verify it.</p>
+  <p><strong>Metadata</strong> is a set of name-value pairs. S3 fills in some of them (like the last-modified date), some are standard HTTP headers (like <code>Content-Type</code>, which tells a browser it's an image or a PDF), and you can attach your own custom pairs at the time you store the object. Think of it as the label on the box, separate from what's inside.</p>
+  <p><strong>Whole objects, not edits.</strong> A mental model that kept me out of trouble: if you want to change an object, you write a new object to the same key. You don't open it and change byte 400. That's the "overwrite" the consistency section talks about.</p>
+
+  <h3>4. Keys and the flat namespace</h3>
+  <p>The key is an object's unique identifier inside its bucket. The docs say each object has exactly one key, and that the combination of bucket, key and (if versioning is on) version ID identifies it uniquely.</p>
+  <p><strong>Key rules.</strong> A key is a sequence of Unicode characters encoded as UTF-8, with a maximum length of 1,024 bytes. Bytes, not characters: the docs note that in some locales a single character needs 2 bytes. Keys are case sensitive, so <code>Report.txt</code> and <code>report.txt</code> are two different objects. And the whole key counts toward the limit, including any prefix and the slashes.</p>
+  <p><strong>What characters are safe?</strong> You can technically use any UTF-8 character, but the docs sort characters into groups. The generally safe set is letters, digits, and a small group of punctuation: <code>!</code> <code>-</code> <code>_</code> <code>.</code> <code>*</code> <code>'</code> <code>(</code> <code>)</code>. A longer list of characters (like <code>&amp;</code>, <code>$</code>, <code>@</code>, <code>=</code>, <code>;</code>, <code>:</code>, <code>+</code>, <code>,</code>, <code>?</code>, spaces and some control characters) might need special handling such as URL encoding. A third list (including backslash, <code>{</code>, <code>}</code>, <code>%</code>, <code>#</code>, <code>|</code>, <code>~</code> and a few others) is flagged as best avoided because applications handle them inconsistently. The docs also advise against path-looking segments that are just <code>.</code> or <code>..</code>, since tools may "normalize" them and then fail to find the object. My practical takeaway: stick to lowercase letters, digits, hyphens, underscores, periods and slashes, and you'll almost never hit a surprise.</p>
+  <p><strong>The flat namespace.</strong> This is the big one. The docs state it plainly: the data model is flat. You create a bucket, the bucket stores objects, and there's no hierarchy of sub-buckets or subfolders. The console, SDKs and CLI <em>infer</em> a hierarchy by looking at prefixes and a delimiter in the keys. So if a bucket contains these four keys:</p>
+  <p><code>docs/notes/week1.txt</code>, <code>docs/notes/week2.txt</code>, <code>docs/readme.txt</code>, <code>logo.png</code></p>
+  <p>then S3 holds four objects and nothing else. There's no <code>docs</code> object and no <code>notes</code> object. The console groups them into what looks like folders because it sees the shared prefixes <code>docs/</code> and <code>docs/notes/</code>.</p>
+  <p>How does a listing show a "folder" view? You ask S3 to list keys that start with a given prefix and tell it a delimiter. Keys that have the delimiter after the prefix get rolled up into one entry, and the CLI list command reports them in a separate <code>CommonPrefixes</code> list, which the CLI docs describe as acting like subdirectories. Everything else comes back in <code>Contents</code>. Same flat data, different view.</p>
+  <p><strong>The "create folder" button.</strong> The docs explain that when you create a folder in the console, it makes a zero-byte object whose key is the prefix plus the delimiter (for example <code>docs/</code>). Those folder objects don't show in the console, but they behave like any other object and can be seen through the REST API, CLI and SDKs. That's a lovely little proof that folders are just names.</p>
+  <p><strong>Sort order.</strong> S3 lists keys in lexicographic order by their UTF-8 bytes. A practical effect from the docs: uppercase letters sort before lowercase letters, and non-ASCII characters generally sort after ASCII ones. So <code>Apple/</code> comes before <code>apple/</code>.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 300" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">SAME DATA, TWO VIEWS</text>
+
+      <rect x="20" y="40" width="270" height="240" rx="10" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/>
+      <text x="155" y="62" fill="#C8453A" font-size="11" text-anchor="middle" font-weight="700">WHAT S3 STORES (flat)</text>
+      <text x="40" y="92" fill="#C9C7C1" font-size="10.5">docs/notes/week1.txt</text>
+      <text x="40" y="116" fill="#C9C7C1" font-size="10.5">docs/notes/week2.txt</text>
+      <text x="40" y="140" fill="#C9C7C1" font-size="10.5">docs/readme.txt</text>
+      <text x="40" y="164" fill="#C9C7C1" font-size="10.5">logo.png</text>
+      <text x="155" y="206" fill="#7A7A80" font-size="9.5" text-anchor="middle">4 objects, 4 keys.</text>
+      <text x="155" y="222" fill="#7A7A80" font-size="9.5" text-anchor="middle">No folder objects unless</text>
+      <text x="155" y="238" fill="#7A7A80" font-size="9.5" text-anchor="middle">someone created a zero-byte one.</text>
+
+      <line x1="296" y1="160" x2="334" y2="160" stroke="#7A7A80" stroke-width="1.3"/>
+      <polygon points="334,155 344,160 334,165" fill="#7A7A80"/>
+      <text x="318" y="148" fill="#7A7A80" font-size="9" text-anchor="middle">prefix +</text>
+      <text x="318" y="178" fill="#7A7A80" font-size="9" text-anchor="middle">delimiter "/"</text>
+
+      <rect x="350" y="40" width="250" height="240" rx="10" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="475" y="62" fill="#6FCF97" font-size="11" text-anchor="middle" font-weight="700">WHAT YOU SEE (inferred)</text>
+      <text x="370" y="92" fill="#C9C7C1" font-size="10.5">[+] docs/</text>
+      <text x="390" y="116" fill="#C9C7C1" font-size="10.5">[+] notes/</text>
+      <text x="410" y="140" fill="#7A7A80" font-size="10">week1.txt</text>
+      <text x="410" y="160" fill="#7A7A80" font-size="10">week2.txt</text>
+      <text x="390" y="184" fill="#7A7A80" font-size="10">readme.txt</text>
+      <text x="370" y="208" fill="#7A7A80" font-size="10">logo.png</text>
+      <text x="475" y="246" fill="#7A7A80" font-size="9.5" text-anchor="middle">"folders" appear because keys</text>
+      <text x="475" y="262" fill="#7A7A80" font-size="9.5" text-anchor="middle">share prefixes</text>
+    </svg>
+    <figcaption>My own example keys. The folder tree is a display trick built from key text, which is the flat-namespace idea in one picture.</figcaption>
+  </figure>
+
+  <p><strong>What flat means for you in practice:</strong> there's no "rename folder" or "move folder" operation in the sense a file system has. Any such action amounts to working on every object that shares the prefix, which is a different kind of job. I'm inferring that from the data model rather than quoting a statement in the docs, so treat it as the mental model and check how the console or tools you use behave.</p>
+
+  <h3>5. Durability: how S3 keeps your data safe</h3>
+  <p>Durability is the question "will my data still be there, and still be correct, years from now?" The docs describe S3's approach in a few parts.</p>
+  <p><strong>Redundancy across devices and zones.</strong> For the S3 Standard storage class (the default, used if you don't choose one) and several others, S3 stores objects redundantly on multiple devices across a minimum of three Availability Zones in a Region. The docs add that AZs are physically separated by a meaningful distance (many kilometers) while all being within 100 km (60 miles) of each other. These classes are designed to keep your data even if an entire AZ is lost.</p>
+  <p><strong>Detecting and repairing.</strong> The docs say the infrastructure is designed to handle concurrent device failures by quickly detecting and repairing any lost redundancy, and that it regularly checks data integrity using checksums. In plain terms, it keeps checking its copies and fixes the damaged ones.</p>
+  <p><strong>The number.</strong> The docs say S3 Standard is designed for 99.999999999% durability and 99.99% availability of objects over a given year. That durability figure ("eleven nines") is the same for most storage classes in the docs' comparison table. I want to flag two bounding words: it's a <em>design target</em> ("designed for"), not a guarantee that nothing can ever go wrong, and it's per object over a year. Availability is a separate and lower number, and it differs by class (the table lists 99.99% for Standard, 99.9% for Standard-IA, 99.5% for One Zone-IA, and so on).</p>
+  <p><strong>Not every class spreads across zones.</strong> S3 One Zone-IA stores data in a single AZ, and S3 Express One Zone also uses a single AZ that you pick. The docs say One Zone-IA data isn't resilient to the physical loss of that zone (they mention disasters like earthquakes and floods). Choosing among classes is a later topic. For now the useful point is that "stored in S3" doesn't always mean "stored in three zones": that's true for Standard, not for every class.</p>
+  <p><strong>A durability caveat that matters.</strong> Durability protects against the storage system losing data. It does nothing about <em>you</em> deleting or overwriting an object by mistake. The docs point to versioning, Object Lock and replication as the extra layers for that, all of which come later. So don't read "eleven nines" as "I can't lose this file".</p>
+
+  <figure>
+    <svg viewBox="0 0 620 270" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">S3 STANDARD: ONE OBJECT, SPREAD ACROSS ZONES</text>
+
+      <rect x="20" y="40" width="580" height="210" rx="12" fill="none" stroke="#7A7A80" stroke-width="1.2" stroke-dasharray="5 4"/>
+      <text x="34" y="58" fill="#7A7A80" font-size="10">AWS REGION (the bucket lives here)</text>
+
+      <rect x="40" y="76" width="160" height="110" rx="8" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="120" y="96" fill="#6FCF97" font-size="10.5" text-anchor="middle" font-weight="700">AZ 1</text>
+      <rect x="62" y="110" width="116" height="24" rx="4" fill="#131316" stroke="#6FCF97"/>
+      <text x="120" y="126" fill="#C9C7C1" font-size="9.5" text-anchor="middle">device holding copy</text>
+      <rect x="62" y="144" width="116" height="24" rx="4" fill="#131316" stroke="#6FCF97"/>
+      <text x="120" y="160" fill="#C9C7C1" font-size="9.5" text-anchor="middle">device holding copy</text>
+
+      <rect x="230" y="76" width="160" height="110" rx="8" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="310" y="96" fill="#6FCF97" font-size="10.5" text-anchor="middle" font-weight="700">AZ 2</text>
+      <rect x="252" y="110" width="116" height="24" rx="4" fill="#131316" stroke="#6FCF97"/>
+      <text x="310" y="126" fill="#C9C7C1" font-size="9.5" text-anchor="middle">device holding copy</text>
+      <rect x="252" y="144" width="116" height="24" rx="4" fill="#131316" stroke="#6FCF97"/>
+      <text x="310" y="160" fill="#C9C7C1" font-size="9.5" text-anchor="middle">device holding copy</text>
+
+      <rect x="420" y="76" width="160" height="110" rx="8" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="500" y="96" fill="#6FCF97" font-size="10.5" text-anchor="middle" font-weight="700">AZ 3 (at least)</text>
+      <rect x="442" y="110" width="116" height="24" rx="4" fill="#131316" stroke="#6FCF97"/>
+      <text x="500" y="126" fill="#C9C7C1" font-size="9.5" text-anchor="middle">device holding copy</text>
+      <rect x="442" y="144" width="116" height="24" rx="4" fill="#131316" stroke="#6FCF97"/>
+      <text x="500" y="160" fill="#C9C7C1" font-size="9.5" text-anchor="middle">device holding copy</text>
+
+      <text x="310" y="212" fill="#C9C7C1" font-size="10" text-anchor="middle">checksums are checked regularly; lost redundancy is detected and repaired</text>
+      <text x="310" y="232" fill="#7A7A80" font-size="9.5" text-anchor="middle">schematic only: the docs say "multiple devices, minimum of three AZs", not how many per zone</text>
+    </svg>
+    <figcaption>A simplified picture of the docs' description for S3 Standard. The number of devices drawn per zone is only for illustration.</figcaption>
+  </figure>
+
+  <h3>6. The consistency model: what you can rely on</h3>
+  <p>Consistency is about what a reader sees right after a writer finishes. S3 stores data across many servers, so in principle a read could hit a place that hasn't caught up yet. The docs state the current behavior clearly.</p>
+  <p><strong>Objects: strong read-after-write.</strong> In all Regions, S3 gives strong read-after-write consistency for PUT and DELETE of objects. That covers brand new objects, overwrites of existing objects, and deletes. Reads of object metadata (such as a HEAD request), object tags and ACLs are strongly consistent too. Once a PUT returns success, any GET or LIST you start after receiving that response returns what was written. The docs give examples:</p>
+  <ul>
+    <li>Write a new object, list the bucket right away: the object is in the listing.</li>
+    <li>Overwrite an object, read it right away: you get the new data.</li>
+    <li>Delete an object, read it right away: nothing comes back.</li>
+    <li>Delete an object, list right away: it's not in the listing.</li>
+  </ul>
+  <p><strong>Updates to a single key are atomic.</strong> If one thread overwrites a key while another reads it, the reader gets either the old data or the new data, never a half-written mix.</p>
+  <p><strong>Concurrent writers: last writer wins.</strong> S3 doesn't lock objects for concurrent writers. If two PUTs hit the same key at about the same time, the one with the latest timestamp wins. The docs also point out that you can't predict the order the writes arrive in or the order their acknowledgments come back (network latency and distance matter), so the safe way to know the final value is to read after both writes have been acknowledged. If this matters to your application, the docs say you need to build your own locking into it. They also describe conditional writes on the put-object CLI page: <code>--if-none-match "*"</code> makes the upload succeed only if the key doesn't exist yet, and S3 answers 412 Precondition Failed if it does.</p>
+  <p><strong>No cross-key atomicity.</strong> Updates are key-based. You can't make one key's update depend on another's, or update two keys as one all-or-nothing change, unless you design that into your application. If you write <code>orders/1.json</code> and <code>orders/index.json</code>, a reader could in principle see one new and one old.</p>
+  <p><strong>Bucket configuration is different: eventual.</strong> This is the exception worth memorizing. The docs say bucket configurations are eventually consistent. Two examples they give: if you delete a bucket and immediately list all buckets, the deleted bucket might still show up; and the first time you enable versioning on a bucket it may take a short time to propagate fully, so they recommend waiting 15 minutes after enabling it before sending writes or deletes to objects in that bucket.</p>
+  <p><strong>One more operational hint from the bucket overview page:</strong> because bucket operations work against a centralized, global resource space, the docs recommend you don't create, delete or configure buckets in the high-availability code path of your application. Do it in a setup step that runs less often.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 300" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">WHEN DOES A READ SEE A WRITE?</text>
+
+      <line x1="40" y1="70" x2="590" y2="70" stroke="#7A7A80" stroke-width="1"/>
+      <text x="40" y="60" fill="#7A7A80" font-size="9.5">time -></text>
+
+      <text x="40" y="104" fill="#C9C7C1" font-size="10.5">Case A</text>
+      <rect x="110" y="90" width="150" height="20" rx="4" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="185" y="104" fill="#C8453A" font-size="9.5" text-anchor="middle">PUT color=ruby</text>
+      <polygon points="260,95 270,100 260,105" fill="#6FCF97"/>
+      <text x="268" y="84" fill="#7A7A80" font-size="9" >success returned</text>
+      <rect x="360" y="90" width="150" height="20" rx="4" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="435" y="104" fill="#6FCF97" font-size="9.5" text-anchor="middle">GET -> sees ruby</text>
+
+      <text x="40" y="164" fill="#C9C7C1" font-size="10.5">Case B</text>
+      <rect x="110" y="150" width="240" height="20" rx="4" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="230" y="164" fill="#C8453A" font-size="9.5" text-anchor="middle">PUT color=garnet (still in flight)</text>
+      <rect x="200" y="176" width="110" height="20" rx="4" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="255" y="190" fill="#C9C7C1" font-size="9.5" text-anchor="middle">GET -> old OR new</text>
+      <rect x="400" y="150" width="150" height="20" rx="4" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="475" y="164" fill="#6FCF97" font-size="9.5" text-anchor="middle">GET after ack -> garnet</text>
+
+      <text x="40" y="244" fill="#C9C7C1" font-size="10.5">Case C</text>
+      <rect x="110" y="230" width="200" height="20" rx="4" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="210" y="244" fill="#C8453A" font-size="9.5" text-anchor="middle">PUT x=1 (client 1)</text>
+      <rect x="150" y="256" width="200" height="20" rx="4" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="250" y="270" fill="#C8453A" font-size="9.5" text-anchor="middle">PUT x=2 (client 2)</text>
+      <text x="470" y="250" fill="#7A7A80" font-size="9.5" text-anchor="middle">overlap: latest timestamp wins;</text>
+      <text x="470" y="266" fill="#7A7A80" font-size="9.5" text-anchor="middle">read after both acks to know which</text>
+    </svg>
+    <figcaption>My own timeline sketch of the behaviors the docs describe: after success is returned a read sees the write (A), a read that starts mid-write may see old or new (B), and overlapping writes to one key resolve by last-writer-wins (C).</figcaption>
+  </figure>
+
+  <h2>Why it matters</h2>
+  <p>These ideas show up in almost every S3 decision you'll make later. Bucket naming and the global namespace explain why scripts that create buckets fail with "name already taken" and why teams adopt naming schemes. The flat-namespace idea changes how you design keys: because listing works on prefixes, how you structure key names decides how easy it will be to find, list and manage groups of objects later (the docs show, for example, that bucket policies can use wildcards to cover objects with a common prefix, and that access can be controlled at the prefix level). The durability story tells you what S3 protects you from (hardware and even a whole zone) and what it doesn't (your own mistakes), which is the whole reason versioning exists. And the consistency model tells you what to trust in your code: you can write then immediately read or list objects and expect to see your change, but you can't assume two writers to one key will merge, and you can't treat two keys as one transaction.</p>
+  <p>It's also worth knowing the older folklore. A real example, dated: on December 1, 2020, AWS announced on its News Blog that S3 now delivers strong read-after-write consistency automatically for GET, PUT and LIST operations (plus operations that change tags, ACLs or metadata), for new and existing objects in all Regions, at no extra charge and with no stated performance impact. Before that, S3 was eventually consistent for some of these reads, and big data tools like EMRFS Consistent View and the open-source S3Guard existed in part to paper over that. If you read older blog posts and forum answers about "S3 eventual consistency", they were written about the pre-2020 behavior, not today's.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>S3 is a map from (bucket + key, plus version ID if versioning is on) to an object. The slashes in a key are just characters; the folder tree is inferred from prefixes and a delimiter.</li>
+      <li>General purpose bucket names live in a global namespace by default: 3 to 63 characters, lowercase letters, numbers, periods and hyphens, unique across accounts and Regions within a partition. You can't rename a bucket or move it to another Region.</li>
+      <li>A key can be up to 1,024 bytes of UTF-8, is case sensitive, and the prefix and slashes count toward that. Objects can be up to 50 TB, and a bucket can hold any number of them.</li>
+      <li>S3 Standard is designed for 99.999999999% durability over a year by storing across a minimum of three AZs. That's a design target against storage failure, not protection against you deleting or overwriting something.</li>
+      <li>Object reads are strongly consistent after a successful write, deletes included. Bucket configuration is eventually consistent. Overlapping writes to one key resolve as last-writer-wins, and there are no multi-key transactions.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <p style="font-size:14px;color:var(--muted);">Heads up: the AWS CLI projects below create real resources in your account, so use a throwaway bucket and do the cleanup step at the end. I checked every command and option below against the AWS CLI reference pages and the local <code>aws ... help</code> output, but I couldn't run them against a live account while writing this, so read each error message carefully the first time. Project 1 is plain Python with no AWS account needed, and I did run it.</p>
+    <ol>
+      <li><strong>Build a pretend S3 listing in Python (no AWS needed).</strong> Write a function that takes a list of key strings, a prefix and an optional delimiter, and returns two lists: <code>contents</code> (keys that have no delimiter after the prefix) and <code>common_prefixes</code> (the rolled-up "folders"). Sort the keys by their UTF-8 bytes before processing. Try keys like <code>Apple/a</code>, <code>apple/a</code>, <code>docs/notes/week1.txt</code>, <code>logo.png</code>. <em>Done when:</em> listing with prefix <code>""</code> and delimiter <code>/</code> shows <code>logo.png</code> in contents and the top-level folders as common prefixes, listing with prefix <code>docs/</code> shows <code>docs/notes/</code> as a common prefix, listing with no delimiter returns every key under the prefix, and <code>Apple/</code> sorts before <code>apple/</code>.</li>
+      <li><strong>Write a bucket-name checker and break it on purpose.</strong> Implement the general purpose rules from the list above (length, allowed characters, start and end, double periods, IP-address shape, reserved prefixes and suffixes) as a function. Feed it good and bad names such as <code>my-bucket-01</code>, <code>My_Bucket</code>, <code>a..b</code>, <code>192.168.5.4</code>, <code>xn--abc</code>, <code>logs-s3alias</code>. <em>Done when:</em> every bad example is rejected for the reason you expect, and you've written down at least one rule your checker <em>can't</em> test offline (uniqueness across all accounts), plus the one it skips unless you add it (the <code>-an</code> account-regional rule).</li>
+      <li><strong>Create a bucket with a unique name using the CLI.</strong> In us-east-1 the docs' example needs no location constraint: <code>aws s3api create-bucket --bucket "$BUCKET" --region us-east-1</code>. For any other Region add the location constraint, for example <code>aws s3api create-bucket --bucket "$BUCKET" --region eu-west-1 --create-bucket-configuration LocationConstraint=eu-west-1</code>. Generate the name the way the docs suggest for avoiding collisions, with a GUID: <code>BUCKET="my-s3-lab-$(uuidgen | tr -d - | tr '[:upper:]' '[:lower:]')"</code>. <em>Done when:</em> the create call returns a <code>Location</code>, <code>aws s3 ls</code> shows the bucket, and you can say why the first name you'd think of probably wouldn't have worked, and why <code>amzn-s3-demo-</code> names are rejected.</li>
+      <li><strong>Prove the flat namespace with the CLI.</strong> Put three small files with slash keys, for example <code>aws s3api put-object --bucket "$BUCKET" --key docs/notes/week1.txt --body week1.txt</code> (repeat for <code>docs/notes/week2.txt</code> and <code>logo.txt</code>). Then compare <code>aws s3api list-objects-v2 --bucket "$BUCKET"</code> with <code>aws s3api list-objects-v2 --bucket "$BUCKET" --prefix docs/ --delimiter /</code>. <em>Done when:</em> the first call shows full keys under <code>Contents</code>, the second shows a <code>CommonPrefixes</code> entry for <code>docs/notes/</code>, and you can explain in one sentence why no folder was ever created. Bonus: create a folder in the console and list again to spot its zero-byte object.</li>
+      <li><strong>Inspect an object and its metadata, and test case sensitivity.</strong> Upload with custom metadata: <code>aws s3api put-object --bucket "$BUCKET" --key Report.txt --body report.txt --content-type text/plain --metadata owner=me,env=lab</code>. Read it back without downloading: <code>aws s3api head-object --bucket "$BUCKET" --key Report.txt</code>. Upload another file as <code>report.txt</code> (lowercase). <em>Done when:</em> head-object shows <code>ContentLength</code>, <code>ContentType</code> and your <code>Metadata</code>, and the listing shows two distinct keys that differ only by case.</li>
+      <li><strong>Watch strong consistency and a conditional write.</strong> Overwrite <code>Report.txt</code> with new content, then immediately fetch it with <code>aws s3api get-object --bucket "$BUCKET" --key Report.txt out.txt</code> (the output file is the last, positional argument) and diff <code>out.txt</code> against what you uploaded. Then delete a key with <code>aws s3api delete-object --bucket "$BUCKET" --key logo.txt</code> and immediately list. Finally try <code>aws s3api put-object --bucket "$BUCKET" --key Report.txt --body report.txt --if-none-match "*"</code>. <em>Done when:</em> the overwrite is visible instantly, the deleted key is gone from the very next listing, and the conditional put on an existing key fails with a precondition error (the CLI docs name this as HTTP 412).
+        <br><strong>Cleanup, don't skip:</strong> <code>aws s3 rb "s3://$BUCKET" --force</code> removes the bucket's non-versioned objects and then the bucket. The CLI docs note it won't remove versioned objects, which doesn't matter here because you never enabled versioning. Confirm with <code>aws s3 ls</code>.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>The natural next questions are the ones this digest deliberately left alone: how access is controlled (bucket policies, IAM, Block Public Access, ACLs and Object Ownership), what versioning really does to keys and deletes, how storage classes trade availability and retrieval behavior against each other, and how lifecycle rules act on prefixes. If you want something to reread first, the "How Amazon S3 works" and consistency sections of the S3 welcome page are short and worth going through yourself after this.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, written to help you build a mental model quickly. It is not a substitute for the official documentation. Verify anything you plan to rely on (bucket naming rules, limits, durability and availability figures, CLI syntax) against the live pages below, because S3 and its docs change.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html" target="_blank" rel="noopener">What is Amazon S3? (buckets, objects, keys, regions, data consistency model)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingBucket.html" target="_blank" rel="noopener">General purpose buckets overview (global namespace, ownership, bucket operations guidance)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html" target="_blank" rel="noopener">General purpose bucket naming rules (including account regional namespace)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/BucketRestrictions.html" target="_blank" rel="noopener">General purpose bucket quotas, limitations, and restrictions</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingObjects.html" target="_blank" rel="noopener">Amazon S3 objects overview (object size, metadata)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html" target="_blank" rel="noopener">Naming Amazon S3 objects (key length, characters, prefixes, flat structure, sort order)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/DataDurability.html" target="_blank" rel="noopener">Data protection in Amazon S3 (durability, Availability Zones, checksums)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-class-intro.html" target="_blank" rel="noopener">Understanding and managing Amazon S3 storage classes (durability, availability and AZ comparison table)</a></li>
+    <li>AWS CLI reference: <a href="https://docs.aws.amazon.com/cli/latest/reference/s3api/create-bucket.html" target="_blank" rel="noopener">s3api create-bucket</a>, <a href="https://docs.aws.amazon.com/cli/latest/reference/s3api/put-object.html" target="_blank" rel="noopener">put-object</a>, <a href="https://docs.aws.amazon.com/cli/latest/reference/s3api/head-object.html" target="_blank" rel="noopener">head-object</a>, <a href="https://docs.aws.amazon.com/cli/latest/reference/s3api/get-object.html" target="_blank" rel="noopener">get-object</a>, <a href="https://docs.aws.amazon.com/cli/latest/reference/s3api/list-objects-v2.html" target="_blank" rel="noopener">list-objects-v2</a>, <a href="https://docs.aws.amazon.com/cli/latest/reference/s3api/delete-object.html" target="_blank" rel="noopener">delete-object</a>, <a href="https://docs.aws.amazon.com/cli/latest/reference/s3/rb.html" target="_blank" rel="noopener">s3 rb</a></li>
+    <li><a href="https://aws.amazon.com/blogs/aws/amazon-s3-update-strong-read-after-write-consistency/" target="_blank" rel="noopener">AWS News Blog, 1 December 2020: Amazon S3 update, strong read-after-write consistency</a> (the dated example in "Why it matters")</li>
+  </ul>
+  <p class="src-note">Flagged for accuracy: (1) I could not run the AWS CLI commands against a live account (no credentials in the environment where this was written). I checked the option names against the CLI reference pages and the installed CLI's built-in help, but not the live responses, and the exact wording of error messages is not stated here for that reason. (2) The Python checker in project 2 covers only the rules listed above, and uniqueness cannot be checked offline. (3) The docs describe the 50 TB object limit and a note that the real maximum is 53.7 TB (48.8 TiB); I used 50 TB as the headline number and did not state the single-upload size limit since I did not verify it. (4) The statement that S3 has no rename-folder operation is my inference from the flat data model, not a quoted docs sentence. (5) Pricing is deliberately not covered; the docs pages I read were not consistent with each other on some storage-class cost comparisons, and cost details belong on the live pricing page. (6) The account regional namespace is a newer feature and I only covered it briefly. Everything else is grounded in the pages linked above as they read in October 2026. The pages were retrieved through a summarizing fetch tool, so confirm exact figures (naming rules, limits, availability percentages) directly on the pages.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

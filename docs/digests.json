@@ -166,5 +166,33 @@
     "ch": "Topic 5",
     "title": "CloudWatch Metrics: Namespaces, Dimensions, Resolution & Custom Metrics",
     "date": "2026-09-07"
+  },
+  {
+    "slug": "ddia-ch10-part2-mapreduce-distributed-filesystems",
+    "book": "Designing Data-Intensive Applications",
+    "ch": "Ch.10 (Part 2)",
+    "title": "MapReduce and Distributed Filesystems",
+    "date": "2026-10-11"
+  },
+  {
+    "slug": "ai-eng-ch06-part2-agents",
+    "book": "AI Engineering",
+    "ch": "Ch.6 (Part 2, final)",
+    "title": "Agents: Tools, Planning, Failure Modes and Memory",
+    "date": "2026-10-11"
+  },
+  {
+    "slug": "hpmysql-ch07-part2-indexing-strategies",
+    "book": "High Performance MySQL",
+    "ch": "Ch.7 (Part 2)",
+    "title": "Indexing Strategies: Prefix Indexes, Column Order, and Clustered Indexes",
+    "date": "2026-10-11"
+  },
+  {
+    "slug": "aws-06-s3-buckets-objects-keys",
+    "book": "AWS",
+    "ch": "Topic 6",
+    "title": "S3 Buckets, Objects, Keys: The Flat Namespace, Durability & Consistency",
+    "date": "2026-10-11"
   }
 ]

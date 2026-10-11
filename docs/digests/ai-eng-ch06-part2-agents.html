@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Engineering: Agents (Part 2): Tools, Planning, Failure Modes and Memory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+  pre { background: #0A0A0B; border: 1px solid var(--hairline); border-radius: 8px; padding: 12px 14px; overflow-x: auto; margin: 10px 0; }
+  pre code { background: none; padding: 0; font-size: 12px; line-height: 1.55; display: block; white-space: pre; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AI &middot; CH.6 DIGEST (PART 2, FINAL)</p>
+  <h1>Agents: Tools, Planning, Failure Modes and Memory</h1>
+  <p class="lead">Part 1 ended on a hint: a retriever and a SQL runner are both things a model can <em>call</em> to go get information it doesn't have. This part follows that thread all the way. We'll look at what makes something an agent, what tools it can use, how it plans and checks its own work, the new ways agents fail (and how to measure them), and the memory system that holds it all together. We finish with the chapter's own wrap-up. The author is upfront that the agents section is a best-effort framework for a young field, so I've flagged where things are opinion or still open.</p>
+
+  <h2>In one line</h2>
+  <p>An agent is a model that can look at an environment and take actions in it through tools, with the model itself acting as the planner that decides what to do next, checks the results, and keeps track of what it has seen.</p>
+
+  <h2>The big idea</h2>
+  <p>A plain model can do one thing: turn input into output (text in, text out). Give it tools and a loop and it can do much more: look something up, run code, query a database, send an email, then look at what happened and decide the next move. That's the agent pattern. The catch is that every extra capability is also an extra way to fail. Agents make multi-step decisions, so small errors can pile up, and tools that <em>change</em> things (write actions) can cause real damage. So most of the engineering here is about three questions: which tools to hand over, how to get a reliable plan out of the model, and how to measure the new kinds of failure. Memory is the supporting piece, because all of this generates far more information than fits in one prompt.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Agent</span>: anything that can perceive an environment and act on it. Here, a model plus the environment it works in plus the actions (tools) it can take.</li>
+    <li><span class="keyterm-term">Environment</span>: the world the agent operates in, set by the use case (a game, the internet, a computer's terminal and files, a database).</li>
+    <li><span class="keyterm-term">Tool</span>: a capability the agent can invoke, usually a function (search, calculator, SQL runner, email API).</li>
+    <li><span class="keyterm-term">Tool inventory</span>: the full set of tools an agent is allowed to use.</li>
+    <li><span class="keyterm-term">Read-only action</span>: an action that lets the agent perceive without changing anything (look up a record, read an email).</li>
+    <li><span class="keyterm-term">Write action</span>: an action that changes the environment (delete a row, send an email, start a bank transfer).</li>
+    <li><span class="keyterm-term">Planner</span>: the part that decides which steps to take. In a foundation-model agent, the model itself.</li>
+    <li><span class="keyterm-term">Task, goal, constraint</span>: a task is defined by what you want (the goal) and the limits it must respect (constraints, such as a budget or a deadline).</li>
+    <li><span class="keyterm-term">Plan / task decomposition</span>: a roadmap of manageable steps for a task. Producing one is also called decomposing the task.</li>
+    <li><span class="keyterm-term">Reflection</span>: the agent (or a second component) evaluating a plan, a step's result, or the final outcome, to spot mistakes.</li>
+    <li><span class="keyterm-term">Error correction</span>: acting on what reflection found, usually by generating a new plan.</li>
+    <li><span class="keyterm-term">Function calling</span>: the common name for a model API feature where the model can ask to invoke one of your declared tools, naming the function and its arguments.</li>
+    <li><span class="keyterm-term">Control flow</span>: the order in which a plan's steps run. Sequential, parallel, if-statement, and for-loop are the four kinds covered.</li>
+    <li><span class="keyterm-term">Intent classifier</span>: a prompt or small model that works out what the user is actually trying to do, which helps pick tools and reject out-of-scope requests.</li>
+    <li><span class="keyterm-term">ReAct</span>: a pattern that interleaves reasoning and acting: think, act, observe, repeat until done.</li>
+    <li><span class="keyterm-term">Reflexion</span>: a framework that splits reflection into an evaluator (judges the outcome) and a self-reflection step (works out what went wrong), then tries a new plan.</li>
+    <li><span class="keyterm-term">Ablation study</span>: removing one component (here, a tool) and measuring how much performance drops, to learn whether it earns its place.</li>
+    <li><span class="keyterm-term">Planning failure / tool failure / efficiency failure</span>: the three families of agent-specific problems: a bad plan, a right tool giving a wrong result, and a correct but wasteful run.</li>
+    <li><span class="keyterm-term">Internal knowledge</span>: what the model absorbed in training. Doesn't change unless the model is updated.</li>
+    <li><span class="keyterm-term">Short-term memory</span>: the model's context window for the current task. Fast, but limited in size.</li>
+    <li><span class="keyterm-term">Long-term memory</span>: external storage the model reaches by retrieval, which persists across tasks.</li>
+    <li><span class="keyterm-term">Memory management / memory retrieval</span>: deciding what to store or drop, versus fetching what's relevant from long-term storage.</li>
+    <li><span class="keyterm-term">FIFO (first in, first out)</span>: a simple eviction rule where the oldest items are the first to be removed.</li>
+    <li><span class="keyterm-term">Prompt-based method</span>: anything that improves results purely through the model's inputs (prompts, context, tools) without changing the model's weights. RAG and agents both qualify.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>Grounding first. Think about how you'd get a very smart new colleague to help with something messy, like "figure out why last month's signups dropped." You wouldn't hand them one sheet of paper and demand a single answer. You'd give them access (the dashboard, the database, the team chat), they'd form a rough plan, poke at the data, notice something odd, change direction, and keep notes so they don't redo work. An AI agent is that same shape: <strong>access</strong> (tools), <strong>a way of deciding what to do</strong> (planning, checking), and <strong>notes</strong> (memory). Everything in this part is one of those three, plus the question "how do I know it's doing well?" (evaluation). I'll take them in that order, starting with what an agent actually is.</p>
+
+  <h3>1. What an agent is, and why it needs a stronger model</h3>
+  <p>The definition is deliberately broad: an agent is anything that can <strong>perceive its environment and act upon it</strong>. Two things characterize it: the environment it lives in, and the set of actions it can take. The environment comes from the use case. For a game-playing agent it's the game. For a web-scraping agent it's the internet. For a coding agent it might be a computer's terminal and file system, with actions like "search files," "open a file," and "edit lines."</p>
+  <p>Actions come from tools, and the two constrain each other. The environment decides which tools even make sense (in a chess game the only sensible actions are legal chess moves), while the tool inventory limits where the agent can operate (an agent whose only skill is swimming is stuck in water). Many apps you already use are agents with a small toolbox: a chat assistant that can search the web, run code, and generate images qualifies. The chapter also points out that a RAG system is itself a simple agent, with the retrievers and SQL runner as its tools.</p>
+  <p>In an AI agent, the model is the brain: it takes in the task plus feedback from the environment, plans a sequence of actions, and judges whether the job is done. Here's a made-up example in my own words. A bookshop owner asks, "Will I sell out of the new cookbook before the next shipment?" A tool-using agent could work like this:</p>
+  <ol>
+    <li>Reason: "I need current stock and recent sales rate."</li>
+    <li>Call a stock-lookup tool. Observe: 42 copies left.</li>
+    <li>Call a sales-history tool. Observe: sales numbers for the last four weeks.</li>
+    <li>Reason: "The last four weeks include a holiday spike, so that rate is misleading. I need an ordinary-week figure too."</li>
+    <li>Call the sales-history tool again for a normal period, then write an answer.</li>
+  </ol>
+  <p>Notice the agent decided to fetch more data after looking at the first result. That "look, think, act again" loop is the heart of it.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs>
+        <marker id="a1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7A7A80"/></marker>
+        <marker id="a1r" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#C8453A"/></marker>
+      </defs>
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">THE AGENT LOOP</text>
+      <rect x="30" y="60" width="150" height="120" rx="9" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/>
+      <text x="105" y="86" fill="#C8453A" font-size="11" font-weight="700" text-anchor="middle">AGENT</text>
+      <text x="105" y="108" fill="#C9C7C1" font-size="9" text-anchor="middle">model = planner</text>
+      <text x="105" y="124" fill="#C9C7C1" font-size="9" text-anchor="middle">reads task + feedback</text>
+      <text x="105" y="140" fill="#C9C7C1" font-size="9" text-anchor="middle">picks next action</text>
+      <text x="105" y="162" fill="#7A7A80" font-size="8.5" text-anchor="middle">decides when it's done</text>
+      <rect x="250" y="60" width="130" height="120" rx="9" fill="#131316" stroke="#7A7A80" stroke-width="1.2"/>
+      <text x="315" y="86" fill="#F2EFE9" font-size="11" font-weight="700" text-anchor="middle">TOOLS</text>
+      <text x="315" y="108" fill="#C9C7C1" font-size="9" text-anchor="middle">search, SQL, code</text>
+      <text x="315" y="124" fill="#C9C7C1" font-size="9" text-anchor="middle">calculator, email</text>
+      <text x="315" y="146" fill="#6FCF97" font-size="8.5" text-anchor="middle">read-only: look</text>
+      <text x="315" y="162" fill="#C8453A" font-size="8.5" text-anchor="middle">write: change things</text>
+      <rect x="450" y="60" width="140" height="120" rx="9" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.2" stroke-dasharray="4 3"/>
+      <text x="520" y="86" fill="#F2EFE9" font-size="11" font-weight="700" text-anchor="middle">ENVIRONMENT</text>
+      <text x="520" y="110" fill="#C9C7C1" font-size="9" text-anchor="middle">database, web,</text>
+      <text x="520" y="124" fill="#C9C7C1" font-size="9" text-anchor="middle">file system, inbox</text>
+      <text x="520" y="148" fill="#7A7A80" font-size="8.5" text-anchor="middle">set by the use case</text>
+      <line x1="180" y1="100" x2="248" y2="100" stroke="#C8453A" stroke-width="1.3" marker-end="url(#a1r)"/>
+      <text x="214" y="94" fill="#C8453A" font-size="8" text-anchor="middle">act</text>
+      <line x1="380" y1="100" x2="448" y2="100" stroke="#C8453A" stroke-width="1.3" marker-end="url(#a1r)"/>
+      <line x1="448" y1="150" x2="382" y2="150" stroke="#7A7A80" stroke-width="1.3" marker-end="url(#a1)"/>
+      <line x1="248" y1="150" x2="182" y2="150" stroke="#7A7A80" stroke-width="1.3" marker-end="url(#a1)"/>
+      <text x="214" y="166" fill="#7A7A80" font-size="8" text-anchor="middle">observe</text>
+      <text x="310" y="214" fill="#C9C7C1" font-size="9.5" text-anchor="middle">repeat until the agent judges the task finished</text>
+      <text x="310" y="232" fill="#7A7A80" font-size="8.5" text-anchor="middle">(or a step limit you set stops it)</text>
+    </svg>
+    <figcaption>Fig 1. An agent is a model that cycles between acting through tools and observing what came back.</figcaption>
+  </figure>
+
+  <p><strong>Why agents usually need a more capable model than a one-shot task.</strong> Two reasons are given. First, <em>compound mistakes</em>: a task with many steps multiplies the chance of an error. If each step is right 95% of the time, ten steps in a row come out right about 60% of the time, and a hundred steps about 0.6%. That's a simplification: it assumes each step succeeds or fails independently and that any single miss ruins the run. Real agents can catch and repair some of their own slips (that's what reflection is for), so treat 60% as an illustration of the pressure, not a prediction. Second, <em>higher stakes</em>: with tools that act, any failure can have bigger consequences. Long tasks also cost time and money, which the autonomy is meant to pay back by saving human time.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">CHANCE OF A FULLY CORRECT RUN (95% PER STEP)</text>
+      <line x1="90" y1="190" x2="560" y2="190" stroke="#7A7A80" stroke-width="1"/>
+      <line x1="90" y1="50" x2="90" y2="190" stroke="#7A7A80" stroke-width="1"/>
+      <text x="82" y="54" fill="#7A7A80" font-size="8.5" text-anchor="end">100%</text>
+      <text x="82" y="124" fill="#7A7A80" font-size="8.5" text-anchor="end">50%</text>
+      <text x="82" y="190" fill="#7A7A80" font-size="8.5" text-anchor="end">0%</text>
+      <rect x="140" y="57" width="80" height="133" fill="#6FCF97"/>
+      <text x="180" y="50" fill="#F2EFE9" font-size="10" text-anchor="middle">95%</text>
+      <text x="180" y="208" fill="#C9C7C1" font-size="9" text-anchor="middle">1 step</text>
+      <rect x="270" y="106" width="80" height="84" fill="#C9C7C1"/>
+      <text x="310" y="99" fill="#F2EFE9" font-size="10" text-anchor="middle">about 60%</text>
+      <text x="310" y="208" fill="#C9C7C1" font-size="9" text-anchor="middle">10 steps</text>
+      <rect x="400" y="189" width="80" height="1.5" fill="#C8453A"/>
+      <text x="440" y="180" fill="#C8453A" font-size="10" text-anchor="middle">about 0.6%</text>
+      <text x="440" y="208" fill="#C9C7C1" font-size="9" text-anchor="middle">100 steps</text>
+      <text x="310" y="234" fill="#7A7A80" font-size="8.5" text-anchor="middle">0.95 multiplied by itself n times; assumes independent steps and no self-repair</text>
+    </svg>
+    <figcaption>Fig 2. Why long chains of steps are fragile even when each step is good.</figcaption>
+  </figure>
+
+  <h3>2. Tools: what to hand the agent</h3>
+  <p>An agent doesn't strictly need tools, but without them it's limited to whatever one thing the bare model can do (text models make text, image models make images). Tools let it both <strong>perceive</strong> and <strong>act</strong>. Actions that only observe are <strong>read-only</strong>; actions that alter the environment are <strong>write actions</strong>. That split matters a lot for safety, as you'll see. The chapter groups tools into three categories.</p>
+
+  <p><strong>Knowledge augmentation.</strong> Tools that fetch context, the same job as RAG. Text and image retrievers and SQL runners from Part 1 count, and so do things like an internal people search, an inventory API, a Slack or email reader. Web browsing is a big one here (the chapter uses it as an umbrella for any internet-reaching tool: search APIs, news APIs, GitHub APIs, social media APIs). It keeps a model from going <strong>stale</strong>, meaning its training data is out of date, so it can't answer about this week's weather, news, or flight status without help. The trade-off the author flags: the internet is messy, so choose which internet APIs you connect with care.</p>
+
+  <p><strong>Capability extension.</strong> Tools that patch a model's known weak spots. Models are unreliable at exact arithmetic, so a calculator beats trying to train the skill in. Other cheap helpers include a calendar, time zone converter, unit converter, and a translator for languages the model handles poorly. A <strong>code interpreter</strong> is the heavyweight version: the model writes code, runs it, and reads the results or the error, which lets an agent act as a coding assistant, data analyst, or research assistant. The chapter warns that automatic code execution brings the risk of code injection (covered in Chapter 5's defensive prompting material), so sandboxing and proper security matter. Tools can also make a single-modality model effectively multimodal: a text-only model can call an image generator, an image captioner, a transcription tool, or OCR for PDFs. As a data point, the chapter cites the Chameleon paper, where an agent with 13 tools beat the same base model alone on several benchmarks (the chapter reports an 11.37% improvement over the best published few-shot result on ScienceQA, and a 17% accuracy improvement on TabMWP). Treat those as one paper's results on those benchmarks, not a general guarantee.</p>
+
+  <p><strong>Write actions.</strong> Tools that change things: a SQL runner can drop a table, an email API can send a reply, a banking API can start a transfer. They unlock whole workflows (research a lead, draft and send a first email, read the reply, update the records). They also raise the stakes. The chapter's analogy is good: you wouldn't give a new intern the power to delete the production database, and you shouldn't give an unreliable AI the power to move money. Trust in both capability and security has to be earned, and the system has to be protected from people trying to manipulate it into harmful actions. The author's stance isn't "never let agents act," it's that rigorous safeguards need to come with the autonomy. A practical consequence the chapter returns to later: define, per action, how much automation is allowed.</p>
+
+  <div class="card">
+    <p style="margin-bottom:8px"><strong>A quick sorting exercise (my own example).</strong> Imagine an agent for a small online shop. Sort these into read-only or write: <span class="mono">get_order_status</span> (read), <span class="mono">search_help_articles</span> (read), <span class="mono">issue_refund</span> (write), <span class="mono">update_shipping_address</span> (write), <span class="mono">send_apology_email</span> (write). Three out of five can change the real world. That's a hint for where to put approval gates.</p>
+  </div>
+
+  <h3>3. Function calling: how a model "uses" a tool</h3>
+  <p>A model only produces text. So how does it use a tool? Through <strong>function calling</strong>, the name many model providers use for their tool-use feature. Details differ by provider, so the chapter describes the general shape (and says to consult your provider's docs for specifics):</p>
+  <ol>
+    <li><strong>Create a tool inventory.</strong> Declare each tool you might want used: its entry point (the function name), its parameters, and documentation saying what it does and what the parameters mean.</li>
+    <li><strong>Say which tools are allowed for this query.</strong> Many APIs let you choose per request, and some add a mode setting: <span class="mono">required</span> (the model must use at least one tool), <span class="mono">none</span> (no tools), or <span class="mono">auto</span> (the model decides).</li>
+  </ol>
+  <p>Then, given a user question, the model's reply isn't prose. It's a structured request along the lines of "call function X with arguments Y." <strong>Your code</strong> then runs that function and feeds the result back so the model can write the final answer. The model proposes; your program executes. The chapter notes that some function-calling APIs make sure only <em>declared</em> functions get generated, but that doesn't guarantee the <em>argument values</em> are right. Its practical tip is worth underlining: always have the system report the parameter values it used for each call, and inspect them.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7A7A80"/></marker></defs>
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">FUNCTION CALLING, GENERAL SHAPE</text>
+      <rect x="14" y="50" width="128" height="76" rx="8" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.2"/>
+      <text x="78" y="72" fill="#F2EFE9" font-size="9.5" font-weight="700" text-anchor="middle">1. YOU DECLARE</text>
+      <text x="78" y="90" fill="#C9C7C1" font-size="8.5" text-anchor="middle">name, params,</text>
+      <text x="78" y="103" fill="#C9C7C1" font-size="8.5" text-anchor="middle">description</text>
+      <rect x="170" y="50" width="128" height="76" rx="8" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/>
+      <text x="234" y="72" fill="#C8453A" font-size="9.5" font-weight="700" text-anchor="middle">2. MODEL ASKS</text>
+      <text x="234" y="90" fill="#C9C7C1" font-size="8.5" text-anchor="middle">"call c_to_f</text>
+      <text x="234" y="103" fill="#C9C7C1" font-size="8.5" text-anchor="middle">with celsius=30"</text>
+      <rect x="326" y="50" width="128" height="76" rx="8" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.2"/>
+      <text x="390" y="72" fill="#F2EFE9" font-size="9.5" font-weight="700" text-anchor="middle">3. YOUR CODE RUNS</text>
+      <text x="390" y="90" fill="#C9C7C1" font-size="8.5" text-anchor="middle">c_to_f(30)</text>
+      <text x="390" y="103" fill="#C9C7C1" font-size="8.5" text-anchor="middle">-&gt; 86.0</text>
+      <rect x="482" y="50" width="124" height="76" rx="8" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.2"/>
+      <text x="544" y="72" fill="#6FCF97" font-size="9.5" font-weight="700" text-anchor="middle">4. MODEL ANSWERS</text>
+      <text x="544" y="90" fill="#C9C7C1" font-size="8.5" text-anchor="middle">"30 C is 86 F"</text>
+      <line x1="142" y1="88" x2="168" y2="88" stroke="#7A7A80" stroke-width="1.2" marker-end="url(#a3)"/>
+      <line x1="298" y1="88" x2="324" y2="88" stroke="#7A7A80" stroke-width="1.2" marker-end="url(#a3)"/>
+      <line x1="454" y1="88" x2="480" y2="88" stroke="#7A7A80" stroke-width="1.2" marker-end="url(#a3)"/>
+      <text x="310" y="168" fill="#C9C7C1" font-size="9.5" text-anchor="middle">Check step 2 yourself: right function, right number of arguments, right values?</text>
+      <text x="310" y="188" fill="#7A7A80" font-size="8.5" text-anchor="middle">Pseudocode shape only. Field names and settings differ between providers.</text>
+    </svg>
+    <figcaption>Fig 3. The model proposes a call; your program runs it and hands back the result.</figcaption>
+  </figure>
+
+  <h3>4. Planning: from a task to a roadmap</h3>
+  <p>A <strong>task</strong> has a goal and constraints. "Organize a team offsite" is the goal; "under a fixed budget, in one city, on specific dates" are constraints. Complex tasks need a <strong>plan</strong>, a roadmap of steps, and good planning means understanding the task, weighing options, and picking the most promising one. The chapter admits planning is a huge field and only skims the surface.</p>
+  <p>Order and choice of steps matter for efficiency, not just correctness. Take "how many startups with no revenue have raised a large round?" You could find all no-revenue companies and then filter by funding, or find the heavily funded ones and then filter by revenue. Both are correct, but one starts from a much smaller pile, so it's far cheaper. A good planner picks the cheaper path.</p>
+
+  <p><strong>Decouple planning from execution.</strong> You could prompt a model to think step by step and then immediately run every step in one go. The danger: if it invents a thousand-step plan that doesn't reach the goal, it may burn hours of time and API spend before anyone notices. So the chapter recommends generating a plan first, <em>validating</em> it, and only then executing. Validation can be cheap heuristics (reject plans that use a tool the agent doesn't have; reject plans longer than some step cap you choose) or an AI judge that critiques the plan. A bad plan goes back to the planner for another try; a good one gets executed, and the outputs are evaluated again. Plans don't have to cover the whole task; they can cover one subtask at a time. To save time you can generate several candidate plans in parallel and have an evaluator pick one, which trades extra cost for lower latency.</p>
+  <p>This gives you three components (generate, validate, execute). If you think of each as its own agent, that's a <strong>multi-agent system</strong>, and the chapter notes that most real agentic workflows end up that way.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 300" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs>
+        <marker id="a4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7A7A80"/></marker>
+        <marker id="a4r" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#C8453A"/></marker>
+        <marker id="a4g" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#6FCF97"/></marker>
+      </defs>
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">PLAN, CHECK, THEN RUN</text>
+      <rect x="10" y="50" width="100" height="56" rx="8" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.2"/>
+      <text x="60" y="76" fill="#F2EFE9" font-size="9.5" text-anchor="middle">task</text>
+      <text x="60" y="92" fill="#7A7A80" font-size="8" text-anchor="middle">+ intent check</text>
+      <rect x="150" y="50" width="120" height="56" rx="8" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/>
+      <text x="210" y="74" fill="#C8453A" font-size="9.5" font-weight="700" text-anchor="middle">GENERATE PLAN</text>
+      <text x="210" y="92" fill="#C9C7C1" font-size="8" text-anchor="middle">task decomposition</text>
+      <rect x="310" y="50" width="120" height="56" rx="8" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.2"/>
+      <text x="370" y="74" fill="#F2EFE9" font-size="9.5" font-weight="700" text-anchor="middle">VALIDATE</text>
+      <text x="370" y="92" fill="#C9C7C1" font-size="8" text-anchor="middle">rules or AI judge</text>
+      <rect x="470" y="50" width="130" height="56" rx="8" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.2"/>
+      <text x="535" y="74" fill="#6FCF97" font-size="9.5" font-weight="700" text-anchor="middle">EXECUTE</text>
+      <text x="535" y="92" fill="#C9C7C1" font-size="8" text-anchor="middle">call tools</text>
+      <line x1="110" y1="78" x2="148" y2="78" stroke="#7A7A80" stroke-width="1.2" marker-end="url(#a4)"/>
+      <line x1="270" y1="78" x2="308" y2="78" stroke="#7A7A80" stroke-width="1.2" marker-end="url(#a4)"/>
+      <line x1="430" y1="78" x2="468" y2="78" stroke="#6FCF97" stroke-width="1.2" marker-end="url(#a4g)"/>
+      <text x="450" y="70" fill="#6FCF97" font-size="8" text-anchor="middle">ok</text>
+      <path d="M370 106 L370 150 L210 150 L210 108" fill="none" stroke="#C8453A" stroke-width="1.2" marker-end="url(#a4r)"/>
+      <text x="290" y="144" fill="#C8453A" font-size="8" text-anchor="middle">bad plan: try again</text>
+      <path d="M535 106 L535 200 L210 200 L210 110" fill="none" stroke="#7A7A80" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#a4)"/>
+      <text x="372" y="194" fill="#7A7A80" font-size="8" text-anchor="middle">reflect on results: goal met? if not, new plan</text>
+      <text x="310" y="250" fill="#C9C7C1" font-size="9.5" text-anchor="middle">A human can sit at any box: write the plan, approve it, or run risky steps.</text>
+      <text x="310" y="270" fill="#7A7A80" font-size="8.5" text-anchor="middle">Reflection is optional for an agent to run, but it tends to help a lot.</text>
+    </svg>
+    <figcaption>Fig 4. Only validated plans get executed, and results feed back into another round of checking.</figcaption>
+  </figure>
+
+  <p><strong>Intent matters.</strong> Planning needs to understand what the user is really after, so agents often use an <strong>intent classifier</strong> (another prompt or a small trained classifier). Knowing the intent helps choose tools: a billing question probably needs a payments lookup, while "how do I reset my password" needs documentation retrieval. A useful extra class is IRRELEVANT, so the agent can politely decline out-of-scope requests instead of wasting compute searching for impossible solutions.</p>
+  <p><strong>Humans in the loop.</strong> Humans can supply a high-level plan for tasks the agent struggles to plan, approve a plan, or personally execute risky steps (updating a database, merging a code change). That only works if you clearly define the automation level allowed for each action.</p>
+  <p>Putting it together, solving a task typically looks like: (1) generate a plan, (2) reflect on the plan and replace it if bad, (3) execute, (4) reflect on the outcomes, correct mistakes, and replan if the goal isn't met. You've met the ingredients before: "think step by step" asks a model to decompose, "check whether your answer is correct" asks it to reflect.</p>
+
+  <h3>5. Can foundation models actually plan?</h3>
+  <p>This is flagged as an open question, so I'll present both sides without picking one. Some prominent researchers argue that autoregressive language models (the kind that produce one token at a time, left to right) can't truly plan. One critique is that what looks like a plan is general planning <em>knowledge</em> pulled out of the model, which can look reasonable and still fail once you try executing it. The chapter's own take is that the evidence is mostly anecdotal, and it's unclear whether models are fundamentally unable or we simply haven't learned to use them well.</p>
+  <p>The reframing that helped me: <strong>planning is a search problem.</strong> You explore paths toward a goal, predict how each will turn out, and pick the most promising, sometimes concluding no path exists. Search often needs <em>backtracking</em>: try action A, find yourself somewhere unpromising, return and try B. The argument "left-to-right models can't backtrack" is countered in the chapter: a model can notice a path isn't working and revise it, or just start over. A second point: to plan well you need to know not only the available actions but what <em>state</em> each action leads to (if turning right means falling off a cliff, you skip it). That suggests prompting only for a list of actions, as plain chain-of-thought does, may not be enough, and the chapter mentions a paper arguing a model can predict outcomes well enough to plan with its own internal "world model." Even if a model can't plan alone, it can be one part of a planner, for example paired with a search tool and a way to track state.</p>
+  <p><strong>Side note on reinforcement learning (RL).</strong> RL has long used the word agent too. The practical difference is where the planner comes from: an RL agent's planner is trained by an RL algorithm (often time-consuming and resource-heavy), while a foundation-model agent uses the model itself, which you prompt or finetune. Nothing stops you combining them, and the author suspects the two will merge over time. That last part is a prediction, not a fact.</p>
+
+  <h3>6. Generating plans in practice</h3>
+  <p>The simplest plan generator is a prompt. You list the available actions, state that the plan must be a sequence of valid actions, show a couple of examples, and put the task at the end. The chapter stresses its sample prompt is for illustration; real ones are more elaborate, and the plan format (a list of function names whose parameters get filled in as you go) is just one of many ways to structure control.</p>
+  <p><strong>Parameters are the slippery part.</strong> Exact argument values are often unknowable in advance because they come from earlier tool outputs (a date tool returns today's date, and the next step's date range is computed from it). Sometimes a request is simply under-specified ("average price of the best sellers": how many? this week or all time?), so the model has to guess, and guesses can be wrong. Since both the sequence and the parameters are model-generated, both can be hallucinated: calling a function that doesn't exist, or a real one with wrong arguments. The listed ways to improve planning are all familiar: better system prompt with more examples, clearer tool and parameter descriptions, simpler tool functions (split a complex one in two), a stronger model, or finetuning for plan generation.</p>
+
+  <p><strong>Planning granularity.</strong> A plan can be zoomed out (quarter by quarter) or zoomed in (week by week). The trade-off: detailed plans are harder to produce but easier to run, while high-level plans are easy to produce but hard to execute. <strong>Hierarchical planning</strong> sidesteps it: plan coarsely first, then expand each part. A second granularity question is naming. If your plan uses exact function names and a tool gets renamed, you have to update prompts and examples (and re-finetune if you trained on old names). Plans written in plain language ("get the current date," "look up the top seller") survive tool changes and are closer to what the model is best at, so hallucination is likely lower. The cost is that you then need a <strong>translator</strong> to turn each plain-language step into an executable call. Translating is an easier job than planning, so a weaker model can often do it.</p>
+
+  <p><strong>Control flows beyond a straight line.</strong> The order in which steps run is the plan's <strong>control flow</strong>. Four kinds are described:</p>
+  <ul>
+    <li><strong>Sequential:</strong> B after A, usually because B needs A's output.</li>
+    <li><strong>Parallel:</strong> A and B at the same time. Example: after getting a list of items, look up each item's price simultaneously.</li>
+    <li><strong>If statement:</strong> pick B or C based on what the previous step returned.</li>
+    <li><strong>For loop:</strong> repeat a step until a condition is met.</li>
+  </ul>
+  <p>In ordinary software those conditions are exact. In an agent, the model decides them, so non-sequential plans are harder to generate and to translate into commands. Practical tip: when comparing agent frameworks, check which control flows they support. Parallel execution can cut the latency users feel, such as when visiting ten websites.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 210" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="a5" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7A7A80"/></marker></defs>
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">FOUR WAYS TO ORDER THE STEPS</text>
+      <!-- sequential -->
+      <text x="75" y="48" fill="#C8453A" font-size="9.5" font-weight="700" text-anchor="middle">SEQUENTIAL</text>
+      <rect x="20" y="64" width="34" height="26" rx="5" fill="#0E0E10" stroke="#7A7A80"/><text x="37" y="81" fill="#C9C7C1" font-size="9" text-anchor="middle">A</text>
+      <rect x="96" y="64" width="34" height="26" rx="5" fill="#0E0E10" stroke="#7A7A80"/><text x="113" y="81" fill="#C9C7C1" font-size="9" text-anchor="middle">B</text>
+      <line x1="54" y1="77" x2="94" y2="77" stroke="#7A7A80" marker-end="url(#a5)"/>
+      <text x="75" y="120" fill="#7A7A80" font-size="8" text-anchor="middle">B needs A</text>
+      <!-- parallel -->
+      <text x="228" y="48" fill="#C8453A" font-size="9.5" font-weight="700" text-anchor="middle">PARALLEL</text>
+      <rect x="190" y="58" width="34" height="22" rx="5" fill="#0E0E10" stroke="#7A7A80"/><text x="207" y="73" fill="#C9C7C1" font-size="9" text-anchor="middle">A</text>
+      <rect x="190" y="88" width="34" height="22" rx="5" fill="#0E0E10" stroke="#7A7A80"/><text x="207" y="103" fill="#C9C7C1" font-size="9" text-anchor="middle">B</text>
+      <rect x="250" y="73" width="34" height="22" rx="5" fill="#0E0E10" stroke="#6FCF97"/><text x="267" y="88" fill="#6FCF97" font-size="9" text-anchor="middle">join</text>
+      <line x1="224" y1="69" x2="248" y2="82" stroke="#7A7A80" marker-end="url(#a5)"/>
+      <line x1="224" y1="99" x2="248" y2="88" stroke="#7A7A80" marker-end="url(#a5)"/>
+      <text x="238" y="130" fill="#7A7A80" font-size="8" text-anchor="middle">same time, less waiting</text>
+      <!-- if -->
+      <text x="400" y="48" fill="#C8453A" font-size="9.5" font-weight="700" text-anchor="middle">IF</text>
+      <rect x="350" y="72" width="40" height="24" rx="5" fill="#0E0E10" stroke="#7A7A80"/><text x="370" y="88" fill="#C9C7C1" font-size="9" text-anchor="middle">check</text>
+      <rect x="430" y="56" width="34" height="22" rx="5" fill="#0E0E10" stroke="#7A7A80"/><text x="447" y="71" fill="#C9C7C1" font-size="9" text-anchor="middle">B</text>
+      <rect x="430" y="90" width="34" height="22" rx="5" fill="#0E0E10" stroke="#7A7A80"/><text x="447" y="105" fill="#C9C7C1" font-size="9" text-anchor="middle">C</text>
+      <line x1="390" y1="80" x2="428" y2="68" stroke="#7A7A80" marker-end="url(#a5)"/>
+      <line x1="390" y1="88" x2="428" y2="100" stroke="#7A7A80" marker-end="url(#a5)"/>
+      <text x="410" y="130" fill="#7A7A80" font-size="8" text-anchor="middle">result picks the branch</text>
+      <!-- loop -->
+      <text x="548" y="48" fill="#C8453A" font-size="9.5" font-weight="700" text-anchor="middle">FOR LOOP</text>
+      <rect x="520" y="62" width="56" height="28" rx="5" fill="#0E0E10" stroke="#7A7A80"/><text x="548" y="80" fill="#C9C7C1" font-size="9" text-anchor="middle">step A</text>
+      <path d="M576 76 Q 604 76 604 106 Q 604 118 548 118 Q 520 118 520 100" fill="none" stroke="#7A7A80" marker-end="url(#a5)"/>
+      <text x="548" y="140" fill="#7A7A80" font-size="8" text-anchor="middle">repeat until condition met</text>
+      <text x="310" y="184" fill="#C9C7C1" font-size="9.5" text-anchor="middle">In an agent, the model decides these branches and conditions.</text>
+      <text x="310" y="200" fill="#7A7A80" font-size="8.5" text-anchor="middle">That's why the fancier shapes are harder to get right.</text>
+    </svg>
+    <figcaption>Fig 5. Sequential is the easy case; the other three need the model to set conditions correctly.</figcaption>
+  </figure>
+
+  <h3>7. Reflection and error correction</h3>
+  <p>Reflection can happen at several points: when the request first arrives (is this even feasible?), after a plan is made (does it make sense?), after each step (am I on track?), and after the whole plan (did I finish the job?). The chapter's phrasing: reflection isn't strictly required for an agent to run, but it's close to required for an agent to <em>succeed</em>. Reflection produces insights that uncover errors, and error correction fixes them, so they go hand in hand. It can come from the same agent via a self-critique prompt, or from a separate component such as a scorer (a model that outputs a score for each outcome), or from a second agent that evaluates the first.</p>
+  <p><strong>ReAct</strong> (from a 2022 paper) popularized interleaving reasoning and acting. At each step the agent writes a thought (planning), takes an action, reads the observation (reflection), and loops until it decides it's finished. The prompt usually shows examples of the format: Thought 1, Act 1, Observation 1, and so on, ending in a Finish action with the answer. <strong>Reflexion</strong> (2023) separates reflection into two modules, an evaluator and a self-reflection step that writes down what went wrong, then proposes a new attempt (the paper calls a plan a "trajectory"). Picture a coding task where the evaluator finds the code fails a third of the tests, and the self-reflection step realizes the code never considered inputs where every number is negative. The next attempt accounts for that. This is how agents can "learn from mistakes" within a task.</p>
+  <p>Reflection is relatively easy to add and can produce surprisingly large gains compared with the effort. The cost is latency and money: thoughts and observations are extra tokens, and both ReAct and Reflexion lean on plenty of examples in the prompt, which raises input cost and uses up context space that could hold other information.</p>
+
+  <h3>8. Choosing tools</h3>
+  <p>There's no foolproof recipe. Published agents range from a handful of tools (one finetuned model learned five; Chameleon used 13) to attempts at choosing among 1,645 APIs. More tools means more capability but also more to learn and use well, and longer tool descriptions that may not fit in context. The chapter's advice is to experiment:</p>
+  <ul>
+    <li>Compare the agent's performance with different tool sets.</li>
+    <li>Run an <strong>ablation</strong>: remove a tool and see if performance drops. If it doesn't, drop the tool.</li>
+    <li>Find tools the agent keeps getting wrong. If prompting and even finetuning can't make a tool usable, replace it.</li>
+    <li>Plot how often each tool gets called to see which are popular and which are ignored.</li>
+  </ul>
+  <p>One study the chapter cites found two patterns: different tasks lean on different tools (a science question set used knowledge retrieval a lot more than a table-math set), and different models show different tool preferences (two models picked different mixes). So tool choice depends on the model and the task, not just the environment. When evaluating agent frameworks, check which planners and tools they support, and how easy it is to add new tools later, since your needs will change.</p>
+  <p>Two research ideas on agents <em>building</em> tools: <strong>tool transition</strong> analysis asks, after tool X, how likely is tool Y? Pairs that always appear together could be merged into one bigger tool. And a system called Voyager keeps a <strong>skill library</strong>: when a newly written skill (a small program) proves useful, it's saved and can be retrieved for later tasks, conceptually like adding to the tool inventory. These are research directions, not settled practice.</p>
+
+  <h3>9. How agents fail, and how to measure it</h3>
+  <p>Evaluation is about catching failures, and the more an agent does, the more places it can go wrong. On top of the general failures from earlier chapters, agents have their own, in three families: planning, tools, and efficiency. The method is the same throughout: <strong>list the failure modes, then measure how often each happens.</strong> (The author also mentions public agent benchmarks and leaderboards for function calling, agent evaluation harnesses, and travel planning; names and availability change, so check what exists when you need one.)</p>
+
+  <p><strong>Planning failures.</strong> The most common kind is a tool-use mistake. There are three flavors:</p>
+  <ul>
+    <li><strong>Invalid tool:</strong> the plan names a tool that isn't in the inventory.</li>
+    <li><strong>Valid tool, invalid parameters:</strong> right tool, wrong argument list (too many, too few, wrong names).</li>
+    <li><strong>Valid tool, incorrect parameter values:</strong> right tool, right shape, wrong number or string (for instance converting 100 when the user said 120).</li>
+  </ul>
+  <p>Then there's <strong>goal failure</strong>: the plan doesn't solve the task, or solves it while breaking a constraint (a trip to the wrong city, or the right city way over budget). <strong>Time</strong> is a constraint people forget: a grant proposal finished after the deadline is useless. And there's a sneaky one caused by faulty reflection: the agent is convinced it's done when it isn't (asked to seat 50 guests in 30 rooms, it places 40 and declares success).</p>
+  <p>To measure planning, build a dataset where each example is a (task, tool inventory) pair, have the agent generate several plans per task, and compute things like: what share of plans are valid; how many tries it takes on average to get a valid plan; what share of tool calls are valid; how often invalid tools are called; how often valid tools get invalid parameters; how often they get wrong values. Then read the failures for patterns: which task types, which tools. If one tool keeps tripping the agent, try better prompting, more examples, or finetuning, and if all else fails, swap it for an easier tool.</p>
+
+  <p><strong>Tool failures.</strong> The agent picked the right tool, but the output is wrong: a captioner describes the image incorrectly, a SQL generator writes bad SQL, or the translator that converts plain-language steps into commands slips. Another cause is a <em>missing</em> tool, such as needing live prices with no internet access. Each tool should be tested independently, and the advice is to print every tool call and its output so you can inspect them. For missing tools, watch which domains the agent fails in and ask human experts which tools they'd reach for.</p>
+
+  <p><strong>Efficiency.</strong> A correct run can still be wasteful. Track average steps per task, average cost per task, and how long each action takes (spotting slow or pricey ones). Compare against a baseline, which may be another agent or a human. One caution from the chapter: human efficiency and AI efficiency aren't the same thing. Visiting a hundred web pages is slow for a person who opens one at a time but may be trivial for a program that fetches them all at once.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 270" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">WHERE AN AGENT RUN CAN BREAK</text>
+      <rect x="14" y="40" width="190" height="196" rx="9" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/>
+      <text x="109" y="62" fill="#C8453A" font-size="10.5" font-weight="700" text-anchor="middle">PLANNING</text>
+      <text x="109" y="86" fill="#C9C7C1" font-size="8.5" text-anchor="middle">invalid tool</text>
+      <text x="109" y="102" fill="#C9C7C1" font-size="8.5" text-anchor="middle">invalid parameters</text>
+      <text x="109" y="118" fill="#C9C7C1" font-size="8.5" text-anchor="middle">wrong parameter values</text>
+      <text x="109" y="134" fill="#C9C7C1" font-size="8.5" text-anchor="middle">goal or constraint missed</text>
+      <text x="109" y="150" fill="#C9C7C1" font-size="8.5" text-anchor="middle">too slow for the deadline</text>
+      <text x="109" y="166" fill="#C9C7C1" font-size="8.5" text-anchor="middle">"done!" when it isn't</text>
+      <text x="109" y="210" fill="#7A7A80" font-size="8" text-anchor="middle">measure: % valid plans,</text>
+      <text x="109" y="223" fill="#7A7A80" font-size="8" text-anchor="middle">tries to a valid plan</text>
+      <rect x="215" y="40" width="190" height="196" rx="9" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.3"/>
+      <text x="310" y="62" fill="#F2EFE9" font-size="10.5" font-weight="700" text-anchor="middle">TOOLS</text>
+      <text x="310" y="86" fill="#C9C7C1" font-size="8.5" text-anchor="middle">tool returns wrong output</text>
+      <text x="310" y="102" fill="#C9C7C1" font-size="8.5" text-anchor="middle">translator slips</text>
+      <text x="310" y="118" fill="#C9C7C1" font-size="8.5" text-anchor="middle">the right tool isn't there</text>
+      <text x="310" y="210" fill="#7A7A80" font-size="8" text-anchor="middle">measure: test each tool alone,</text>
+      <text x="310" y="223" fill="#7A7A80" font-size="8" text-anchor="middle">log every call and output</text>
+      <rect x="416" y="40" width="190" height="196" rx="9" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="511" y="62" fill="#6FCF97" font-size="10.5" font-weight="700" text-anchor="middle">EFFICIENCY</text>
+      <text x="511" y="86" fill="#C9C7C1" font-size="8.5" text-anchor="middle">too many steps</text>
+      <text x="511" y="102" fill="#C9C7C1" font-size="8.5" text-anchor="middle">too much money per task</text>
+      <text x="511" y="118" fill="#C9C7C1" font-size="8.5" text-anchor="middle">slow or costly actions</text>
+      <text x="511" y="210" fill="#7A7A80" font-size="8" text-anchor="middle">measure: steps, cost, time</text>
+      <text x="511" y="223" fill="#7A7A80" font-size="8" text-anchor="middle">vs a baseline</text>
+      <text x="310" y="258" fill="#7A7A80" font-size="8.5" text-anchor="middle">plus the general failures every AI application has</text>
+    </svg>
+    <figcaption>Fig 6. Three families of agent-specific failure, and what to measure for each.</figcaption>
+  </figure>
+
+  <h3>10. Memory: how an AI app holds on to information</h3>
+  <p>RAG and agents both handle more information than a prompt can hold. A RAG system's retrieved context grows across turns, and an agent has to keep instructions, examples, tool lists, plans, tool outputs, and reflections. <strong>Memory</strong> means the mechanisms that let a model retain and use information. The chapter describes three:</p>
+  <ul>
+    <li><strong>Internal knowledge.</strong> What the model learned in training. It's available on every query and only changes if the model itself is updated.</li>
+    <li><strong>Short-term memory.</strong> The context window. Previous messages can be added to it, which is how a conversation stays coherent. It's fast but small, and it doesn't persist across tasks, so it should hold what matters for the task at hand.</li>
+    <li><strong>Long-term memory.</strong> External data reached by retrieval, as in RAG. It persists across tasks, and unlike internal knowledge you can delete things from it without touching the model.</li>
+  </ul>
+  <p>A human parallel: knowing how to breathe is internal knowledge, the name of the person you just met is short-term, and books, notes, and computers extend long-term memory. The rule of thumb for where to put information is by how often it's needed: what's essential for <em>all</em> tasks belongs in the model itself (via training or finetuning), rarely needed material belongs in long-term memory, and short-term memory is for immediate, task-specific stuff.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="a6" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7A7A80"/></marker></defs>
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">THREE PLACES INFORMATION CAN LIVE</text>
+      <rect x="20" y="44" width="170" height="130" rx="9" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.3"/>
+      <text x="105" y="68" fill="#F2EFE9" font-size="10" font-weight="700" text-anchor="middle">INTERNAL</text>
+      <text x="105" y="84" fill="#F2EFE9" font-size="10" font-weight="700" text-anchor="middle">KNOWLEDGE</text>
+      <text x="105" y="108" fill="#C9C7C1" font-size="8.5" text-anchor="middle">the model's weights</text>
+      <text x="105" y="124" fill="#C9C7C1" font-size="8.5" text-anchor="middle">on every query</text>
+      <text x="105" y="148" fill="#7A7A80" font-size="8" text-anchor="middle">changes only if the</text>
+      <text x="105" y="160" fill="#7A7A80" font-size="8" text-anchor="middle">model is updated</text>
+      <rect x="225" y="44" width="170" height="130" rx="9" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/>
+      <text x="310" y="68" fill="#C8453A" font-size="10" font-weight="700" text-anchor="middle">SHORT-TERM</text>
+      <text x="310" y="84" fill="#C8453A" font-size="10" font-weight="700" text-anchor="middle">(CONTEXT)</text>
+      <text x="310" y="108" fill="#C9C7C1" font-size="8.5" text-anchor="middle">this task's messages</text>
+      <text x="310" y="124" fill="#C9C7C1" font-size="8.5" text-anchor="middle">+ retrieved snippets</text>
+      <text x="310" y="148" fill="#7A7A80" font-size="8" text-anchor="middle">fast, limited size,</text>
+      <text x="310" y="160" fill="#7A7A80" font-size="8" text-anchor="middle">gone after the task</text>
+      <rect x="430" y="44" width="170" height="130" rx="9" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="515" y="68" fill="#6FCF97" font-size="10" font-weight="700" text-anchor="middle">LONG-TERM</text>
+      <text x="515" y="84" fill="#6FCF97" font-size="10" font-weight="700" text-anchor="middle">(EXTERNAL)</text>
+      <text x="515" y="108" fill="#C9C7C1" font-size="8.5" text-anchor="middle">database, notes, files</text>
+      <text x="515" y="124" fill="#C9C7C1" font-size="8.5" text-anchor="middle">fetched by retrieval</text>
+      <text x="515" y="148" fill="#7A7A80" font-size="8" text-anchor="middle">persists across tasks,</text>
+      <text x="515" y="160" fill="#7A7A80" font-size="8" text-anchor="middle">can delete entries</text>
+      <line x1="430" y1="110" x2="397" y2="110" stroke="#7A7A80" stroke-width="1.2" marker-end="url(#a6)"/>
+      <text x="310" y="204" fill="#C9C7C1" font-size="9" text-anchor="middle">retrieval pulls long-term items into the context; overflow can move out the other way</text>
+      <text x="310" y="226" fill="#7A7A80" font-size="8.5" text-anchor="middle">often needed: put it in the model. rarely needed: long-term. right now: short-term.</text>
+    </svg>
+    <figcaption>Fig 7. Where to keep a piece of information depends mostly on how often it's needed.</figcaption>
+  </figure>
+
+  <p><strong>What a memory system buys you.</strong> The chapter lists four benefits. (1) <em>Handling overflow</em> inside a session: a long task piles up more than the context holds, so the excess goes to long-term storage. (2) <em>Persisting across sessions</em>: a coaching assistant that makes you re-explain yourself every time is annoying, and one that remembers your preferences can personalize its suggestions. (3) <em>Consistency</em>: if you ask a person to rate something twice, they're more consistent if they remember their first answer, and a model that can see its past answers can calibrate. (4) <em>Structural integrity</em>: pasting a table into a prompt doesn't guarantee the model treats it as a table, whereas a memory system that stores structured data (a spreadsheet of leads, a queue of pending actions) keeps the structure.</p>
+
+  <p><strong>Two jobs: management and retrieval.</strong> <em>Retrieval</em> from long-term memory works like the RAG retrieval from Part 1, so the chapter focuses on <em>management</em>, which is basically two operations: add and delete. Long-term storage is cheap and expandable, so deleting from it may be unnecessary. Short-term memory is capped by the context length, so it needs a policy. One way to think about it: reserve a share of the context for retrieved long-term items (say 30%, purely as an example), and the rest is the short-term budget. When short-term fills up, the overflow moves to long-term storage.</p>
+  <p>Eviction strategies borrow from data systems in general. The simplest is <strong>FIFO</strong>: the oldest content is removed first. Some API providers and frameworks effectively do this by dropping the start of long conversations or keeping only the last N messages or tokens. It's easy but it bakes in an assumption that early content matters least, and that can be badly wrong. Often the first message states the whole purpose of the conversation. (The chapter notes small talk can be the exception.) Smarter approaches cut redundancy: summarize the conversation (with the same model or another), track named entities, or go further, as one research team did with a classifier that decides, sentence by sentence, whether the memory, the summary, or both should contribute to the new memory. Another team had the agent reflect after each action and decide whether the new information should be inserted, merged with existing memory, or should replace outdated, contradicting memory. What to do with contradictions depends on the use case: some keep the newest, some ask a model to judge, and some keep both because different perspectives can help even though they can confuse the agent.</p>
+
+  <h3>11. The chapter's wrap-up</h3>
+  <p>The summary stitches the whole chapter together, and it's a nice recap of both parts. RAG came first: many tasks need more background knowledge than a context window holds, and RAG is a two-step process (retrieve, then generate) whose success depends on retriever quality. Term-based retrievers like BM25 and Elasticsearch are light and make strong baselines; embedding-based retrievers cost more compute but can do better, and they're powered by vector search, the same technology behind search and recommendation systems.</p>
+  <p>Then the link: RAG is a special case of the agent pattern, where the retriever is one tool. Both let a model get around its context limit and stay current, but agents go further. An agent is defined by its environment and tools; the model is the planner, and complex tasks need a strong one, helped along by reflection and memory. More tools means more capability, but also potentially more catastrophic failures as automation grows, so tool use exposes agents to the security risks from the prompting chapter and needs rigorous defenses. Finally, both patterns are <strong>prompt-based</strong>: they improve results purely through what goes <em>into</em> the model, without changing it. The next chapter turns to changing the model itself (finetuning).</p>
+
+  <h2>Why it matters</h2>
+  <p>Almost every "AI assistant that does things" product is some arrangement of the parts above, so the vocabulary here lets you read a new agent framework or product announcement and ask good questions: what's the tool inventory, which tools write, who validates plans, what control flows are supported, what gets remembered, and how is it measured? It also reframes debugging. When an agent misbehaves, "the model is bad" is rarely the whole story. It might be a missing tool, a vague tool description, a wrong parameter value, a plan that was never validated, or a memory policy that quietly evicted the user's original goal. Each of those is something you can measure and fix, which is far more encouraging than hoping a bigger model will cure everything.</p>
+  <p>Cloud builders will recognize the pattern too: function calling plus approval gates for risky actions is the same instinct as least-privilege permissions. Give the agent the narrowest set of write abilities it needs, and put a human in the path of the dangerous ones.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>An agent is a model plus an environment plus tools, with the model acting as planner. A RAG system is the simple case where retrieval is the tool.</li>
+      <li>Read-only tools let an agent look; write tools let it change things. Most of the safety thinking is about the second kind, including per-action approval levels.</li>
+      <li>Plan first, validate the plan, then execute, and reflect on results. Reflection is cheap to add and often pays off, but costs extra tokens and latency.</li>
+      <li>Agents fail in three families (planning, tools, efficiency). Define each failure mode, log every tool call with its arguments, and measure how often each happens.</li>
+      <li>Memory has three layers (the model, the context, external storage). Eviction policy matters: naive oldest-first can throw away the one message that stated the goal.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li>
+        <strong>Compounding-error calculator.</strong> Run a short script that prints the chance of a flawless run for several per-step accuracies and step counts, then add a "retry once per step" column and see how much it helps.
+        <pre><code># How reliable is a chain of steps? Try different per-step accuracies.
+for p in (0.90, 0.95, 0.99):
+    row = [f"{n} steps: {p ** n:.1%}" for n in (1, 10, 50, 100)]
+    print(f"per-step {p:.0%} -&gt;", " | ".join(row))</code></pre>
+        <em>Done when:</em> you can explain, using your own table, why raising per-step accuracy from 95% to 99% matters more over 50 steps than over 3, and you've stated the independence assumption your numbers rely on.
+      </li>
+      <li>
+        <strong>Tool-call checker.</strong> Start from this validator, then add a third check for wrong parameter <em>values</em> by giving each test case an expected answer.
+        <pre><code># Classify each planned tool call the way the failure-mode list does.
+TOOLS = {
+    "get_date": [],
+    "c_to_f": ["celsius"],
+    "top_sellers": ["start", "end", "count"],
+}
+
+def check_call(name, args):
+    if name not in TOOLS:
+        return "invalid tool"
+    if sorted(args) != sorted(TOOLS[name]):
+        return "valid tool, invalid parameters"
+    return "ok so far (values still unchecked)"
+
+plan = [
+    ("get_date", {}),
+    ("web_search", {"q": "weather"}),
+    ("c_to_f", {"celsius": 30, "unit": "F"}),
+    ("c_to_f", {"celsius": 30}),
+]
+for name, args in plan:
+    print(f"{name}{args} -&gt; {check_call(name, args)}")</code></pre>
+        <em>Done when:</em> a list of at least 12 hand-written planned calls is sorted into the three failure types plus "ok", and you report the share in each bucket.
+      </li>
+      <li>
+        <strong>A tiny think-act-observe loop.</strong> The script below fakes the model with a scripted list so you can see the plumbing. Replace the fake with a real model call if you have access, and add a second tool.
+        <pre><code># A scripted "model" drives a ReAct-style loop, so you can see the plumbing
+# without any API. Swap fake_model for a real model call later.
+def c_to_f(celsius):
+    return celsius * 9 / 5 + 32
+
+TOOL_FUNCS = {"c_to_f": c_to_f}
+
+script = iter([
+    {"thought": "I need Fahrenheit for 30 C.", "act": ("c_to_f", {"celsius": 30})},
+    {"thought": "The tool gave 86.0, which answers it.", "act": ("finish", {"answer": "30 C is 86 F"})},
+])
+
+def fake_model(history):
+    return next(script)
+
+def run_agent(task, max_steps=5):
+    history = [("task", task)]
+    for step in range(1, max_steps + 1):
+        out = fake_model(history)
+        name, args = out["act"]
+        print(f"Thought {step}: {out['thought']}")
+        print(f"Act {step}: {name}({args})")      # always log the arguments
+        if name == "finish":
+            return args["answer"]
+        if name not in TOOL_FUNCS:
+            history.append(("observation", f"error: no tool named {name}"))
+            continue
+        result = TOOL_FUNCS[name](**args)
+        print(f"Observation {step}: {result}")
+        history.append(("observation", result))
+    return "stopped: hit the step limit"
+
+print(run_agent("What is 30 C in Fahrenheit?"))</code></pre>
+        <em>Done when:</em> your loop logs every action with its arguments, stops at a step limit you chose, and handles a call to a tool that doesn't exist without crashing.
+      </li>
+      <li>
+        <strong>Approval gate for write actions.</strong> Tag each tool read or write and block writes until a human approves. Extend it to a log of every request and its decision.
+        <pre><code># Tag each tool as read or write, and require approval before any write runs.
+TOOLS = {
+    "get_order_status": {"writes": False, "fn": lambda order_id: f"order {order_id}: shipped"},
+    "issue_refund":     {"writes": True,  "fn": lambda order_id: f"refunded order {order_id}"},
+}
+
+def run_tool(name, args, approve):
+    tool = TOOLS[name]
+    if tool["writes"] and not approve(name, args):
+        return "blocked: a human said no"
+    return tool["fn"](**args)
+
+def always_no(name, args):
+    print(f"  approval requested for {name}{args}")
+    return False
+
+print(run_tool("get_order_status", {"order_id": 7}, always_no))
+print(run_tool("issue_refund", {"order_id": 7}, always_no))
+print(run_tool("issue_refund", {"order_id": 7}, lambda n, a: True))</code></pre>
+        <em>Done when:</em> you have five tools (at least two writes), a printed audit log, and one test showing a write was blocked and another showing it ran after approval.
+      </li>
+      <li>
+        <strong>Memory eviction showdown.</strong> Compare plain oldest-first eviction with a version that pins the opening goal. Then add a third strategy that replaces old messages with a one-line summary (hand-written is fine).
+        <pre><code># Compare two ways of shrinking a chat history to fit a word budget.
+history = [
+    "GOAL: quiz me on VPC routing, one question at a time, wait for my answer",
+    "ok",
+    "route tables decide where traffic goes",
+    "next one please",
+    "what does a NAT gateway do",
+    "next one please",
+]
+
+def words(msgs):
+    return sum(len(m.split()) for m in msgs)
+
+def fifo(msgs, budget):
+    kept = list(msgs)
+    while words(kept) &gt; budget:
+        kept.pop(0)                  # the oldest message goes first
+    return kept
+
+def fifo_keep_first(msgs, budget):
+    first, rest = msgs[0], list(msgs[1:])
+    while words([first] + rest) &gt; budget and rest:
+        rest.pop(0)                  # evict the oldest AFTER the pinned goal
+    return [first] + rest
+
+print("plain FIFO     :", fifo(history, 20))
+print("pin the goal   :", fifo_keep_first(history, 20))</code></pre>
+        <em>Done when:</em> you've built a 10-message chat where plain oldest-first loses something important, and you can point to which strategy kept it and what it cost you in space.
+      </li>
+      <li>
+        <strong>Tool ablation on paper.</strong> Invent a toy agent with 4 tools and 8 tasks, and write down, for each task, which tools it needs (a simple table is enough). Pretend to remove each tool in turn and count tasks that break.
+        <em>Done when:</em> you've identified at least one tool that no task needs (a candidate to drop) and one tool whose removal breaks the most tasks, and you can say what real data you would log to confirm it.
+      </li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Reread the planning section with one question in mind: for the agent you'd most like to build, which actions are writes, and what would the validate step actually check? Then try the ReAct paper's own examples. Seeing the raw thought, action, observation transcripts makes the loop feel much less magical. A natural next question is when a problem is better solved by changing the model (finetuning, next chapter) than by giving it better inputs.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, written to help you build a mental model quickly. It is not a substitute for the source text; verify anything you plan to rely on, especially specific research results, vendor features, API behavior, and any figure you intend to quote, against the original source or current documentation.</p>
+  <ul class="src-list">
+    <li><em>AI Engineering</em> by Chip Huyen (O'Reilly), Chapter 6, "RAG and Agents." This digest (Part 2, final) covers printed pages 275-306 (PDF pages 299-330): Agents (overview, tools, planning, foundation-model versus RL planners, plan generation, function calling, planning granularity, complex plans and control flows, reflection and error correction, tool selection), Agent Failure Modes and Evaluation, Memory, and the chapter Summary. Part 1 covered the RAG half (printed pages 253-274). The next chapter in the book is Chapter 7, Finetuning.</li>
+    <li>Papers named in the chapter that I did not read directly: Yao et al. 2022 (ReAct); Shinn et al. 2023 (Reflexion); Lu et al. 2023 (Chameleon); Wang et al. 2023 (Voyager); Schick et al. 2023 (Toolformer); Patil et al. 2023 (Gorilla); Hao et al. 2023 (planning with a world model); Kambhampati 2023 and LeCun 2023 (skeptical views on LLM planning); Bae et al. 2022 and Liu et al. 2023 (memory management). Everything here about them is as the chapter reports it.</li>
+  </ul>
+  <p class="src-note">Flagged for accuracy: (1) The chapter says its agents section is "more experimental" and a best-effort framework for an evolving field, so treat the definitions and failure taxonomy as a useful mental model rather than settled standards. (2) The compounding-error figures (95% per step giving roughly 60% over ten steps and 0.6% over a hundred) are simple multiplication that assumes independent steps and no self-correction; I computed them myself to confirm the arithmetic. (3) Benchmark gains quoted for Chameleon are as reported in the chapter for specific benchmarks and setups. (4) The function-calling setting names (required, none, auto) and the response shape are described in the chapter as a general pattern in pseudocode; individual providers differ, so check your provider's docs. (5) The 30% reserved-context figure in the memory section is the chapter's illustrative example, not a recommended value. (6) My bookshop, offsite, shop-agent and quiz examples are invented for teaching and are not from the source. (7) The code in "Try it yourself" was run locally with Python 3 and produced the expected output, but it uses scripted stand-ins, not any real model API.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

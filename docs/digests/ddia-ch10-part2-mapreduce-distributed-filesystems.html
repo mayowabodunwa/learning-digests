@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DDIA: Ch.10 MapReduce and Distributed Filesystems (Part 2)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+  pre { background:#0A0A0B; border:1px solid var(--hairline); border-radius:8px; padding:14px 16px; overflow-x:auto; font-family:"JetBrains Mono",monospace; font-size:11.5px; line-height:1.5; color:var(--body); margin:10px 0 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">SYSTEMS &middot; CH.10 DIGEST (PART 2)</p>
+  <h1>MapReduce and Distributed Filesystems</h1>
+  <p class="lead">Part 1 ended with a tidy five-command Unix pipeline and one honest limitation: it only runs on one machine. This part is the answer to "okay, but what if the data doesn't fit on one machine?" It covers where the data lives (a distributed filesystem, with HDFS as the running example) and how a job runs over it (MapReduce, which is a lot like that pipeline stretched across a cluster). I'll keep going back to the log-counting pipeline from Part 1, because the whole trick is spotting that it's the same shape wearing bigger clothes.</p>
+
+  <h2>In one line</h2>
+  <p>MapReduce takes the "extract a key, sort, then combine adjacent records" shape of a Unix pipeline and runs it across many machines, reading from and writing to a distributed filesystem, with the framework (not you) handling the splitting, moving, and sorting of data.</p>
+
+  <h2>The big idea</h2>
+  <p>A Unix pipeline reads from files, passes bytes through small programs, and writes to a file. MapReduce keeps that spirit and swaps out two things. The files now live on a <strong>distributed filesystem</strong>, which stitches together the disks of many ordinary machines into what looks like one big filesystem. And the work of "break the input into pieces, process the pieces in parallel, bring matching records together" is done by a framework, so that you only write two small functions: a <strong>mapper</strong> that pulls a key and a value out of each record, and a <strong>reducer</strong> that handles all the values that share a key. Everything between those two functions (partitioning, sorting, copying data between machines) is the framework's job. A single job is limited, so real work is usually several jobs chained together, with each job's output directory feeding the next job. I'm calling that "bigger clothes", not magic: it is deliberately blunt and brute-force, and that bluntness is a big part of why it scales.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Distributed filesystem</span>: software that makes the disks of many machines behave like one big filesystem. You ask for a file by name and don't care which machines hold the bytes. e.g. HDFS.</li>
+    <li><span class="keyterm-term">HDFS</span> (Hadoop Distributed File System): the open source distributed filesystem that Hadoop's MapReduce reads from and writes to. It is an open source reimplementation of the Google File System (GFS).</li>
+    <li><span class="keyterm-term">Shared-nothing</span>: an architecture where each machine uses its own CPU, memory, and disks, and machines only talk over an ordinary network. The contrast is shared-disk storage (NAS, SAN), where a central storage appliance serves everybody.</li>
+    <li><span class="keyterm-term">Daemon</span>: a program that runs in the background on a machine, waiting to do work for others. In HDFS, a daemon on each machine serves up the files stored on that machine.</li>
+    <li><span class="keyterm-term">NameNode</span>: HDFS's central server. It doesn't hold the file contents, it keeps the map of which blocks of which files sit on which machines.</li>
+    <li><span class="keyterm-term">Block</span>: a chunk of a file. HDFS splits files into blocks and spreads them over machines.</li>
+    <li><span class="keyterm-term">Replication</span>: keeping several copies of the same block on different machines so a dead machine or disk doesn't lose data.</li>
+    <li><span class="keyterm-term">Erasure coding</span> (e.g. Reed-Solomon codes): a smarter alternative to plain copies. You store extra computed "parity" data so lost pieces can be rebuilt, using less extra storage than full replication.</li>
+    <li><span class="keyterm-term">RAID</span>: redundancy across several disks inside one machine. Distributed filesystems do a similar job across machines, over a normal network.</li>
+    <li><span class="keyterm-term">MapReduce</span>: a programming framework for processing big datasets stored in a distributed filesystem by writing a mapper and a reducer.</li>
+    <li><span class="keyterm-term">Record</span>: one unit of input, such as one line of a log. An input parser splits files into records.</li>
+    <li><span class="keyterm-term">Mapper</span>: a function called once per input record. It emits zero or more key-value pairs and remembers nothing between records.</li>
+    <li><span class="keyterm-term">Reducer</span>: a function called once per distinct key, given that key plus an iterator over all the values collected for it.</li>
+    <li><span class="keyterm-term">Map task / reduce task</span>: one running instance of the mapper or reducer logic working on one slice of the data. A job has many of each, running in parallel.</li>
+    <li><span class="keyterm-term">Partition</span>: one slice of a dataset that can be handled independently of the other slices.</li>
+    <li><span class="keyterm-term">Shuffle</span>: the whole step of splitting mapper output by reducer, sorting it, and copying it from mappers to reducers. (The name is confusing: there is no randomness in it.)</li>
+    <li><span class="keyterm-term">Workflow</span>: several MapReduce jobs chained so that one job's output becomes the next job's input.</li>
+    <li><span class="keyterm-term">Workflow scheduler</span>: a tool that runs a set of jobs in the right order and manages the dependencies between them (the source names Oozie, Azkaban, Luigi, Airflow, and Pinball).</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>Grounding first. Part 1 showed that a batch job is "read a big fixed pile of data, produce output", and that Unix tools do this well but on a single machine. Once your input is hundreds of gigabytes or more, you hit two separate problems. First, <em>where does the data live</em>, if no single disk can hold it comfortably and you also don't want one dead disk to destroy it? Second, <em>how do you run code over it</em> without hand-writing all the logic for splitting work among machines, moving data around, and coping with parts of the job running at different speeds? A distributed filesystem answers the first. MapReduce answers the second. The framing from the source is that a MapReduce job is comparable to a single Unix process: it takes one or more inputs and produces one or more outputs. And, like most Unix tools, running a job normally doesn't modify its input and has no side effects beyond producing the output files.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="22" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">SAME SHAPE, TWO SCALES</text>
+
+      <text x="20" y="52" fill="#7A7A80" font-size="10">one machine</text>
+      <rect x="20" y="60" width="130" height="40" rx="6" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="85" y="84" fill="#F2EFE9" font-size="10" text-anchor="middle">read lines</text>
+      <rect x="170" y="60" width="130" height="40" rx="6" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="235" y="84" fill="#C8453A" font-size="10" text-anchor="middle">awk '{print $7}'</text>
+      <rect x="320" y="60" width="130" height="40" rx="6" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="385" y="84" fill="#F2EFE9" font-size="10" text-anchor="middle">sort</text>
+      <rect x="470" y="60" width="150" height="40" rx="6" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="545" y="84" fill="#C8453A" font-size="10" text-anchor="middle">uniq -c</text>
+      <line x1="150" y1="80" x2="170" y2="80" stroke="#7A7A80"/><line x1="300" y1="80" x2="320" y2="80" stroke="#7A7A80"/><line x1="450" y1="80" x2="470" y2="80" stroke="#7A7A80"/>
+
+      <text x="20" y="134" fill="#7A7A80" font-size="10">a cluster</text>
+      <rect x="20" y="142" width="130" height="40" rx="6" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="85" y="160" fill="#F2EFE9" font-size="10" text-anchor="middle">input format</text>
+      <text x="85" y="174" fill="#7A7A80" font-size="8.5" text-anchor="middle">(files -> records)</text>
+      <rect x="170" y="142" width="130" height="40" rx="6" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="235" y="160" fill="#C8453A" font-size="10" text-anchor="middle">your MAPPER</text>
+      <text x="235" y="174" fill="#7A7A80" font-size="8.5" text-anchor="middle">(record -> key, value)</text>
+      <rect x="320" y="142" width="130" height="40" rx="6" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="385" y="160" fill="#F2EFE9" font-size="10" text-anchor="middle">framework sort</text>
+      <text x="385" y="174" fill="#7A7A80" font-size="8.5" text-anchor="middle">(implicit, shuffle)</text>
+      <rect x="470" y="142" width="150" height="40" rx="6" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="545" y="160" fill="#C8453A" font-size="10" text-anchor="middle">your REDUCER</text>
+      <text x="545" y="174" fill="#7A7A80" font-size="8.5" text-anchor="middle">(key, values -> output)</text>
+      <line x1="150" y1="162" x2="170" y2="162" stroke="#7A7A80"/><line x1="300" y1="162" x2="320" y2="162" stroke="#7A7A80"/><line x1="450" y1="162" x2="470" y2="162" stroke="#7A7A80"/>
+
+      <text x="320" y="212" fill="#7A7A80" font-size="9.5" text-anchor="middle">red boxes = the parts you write. The rest is provided for you.</text>
+    </svg>
+    <figcaption>The log pipeline from Part 1, lined up against the four steps of a MapReduce job.</figcaption>
+  </figure>
+
+  <h3>1. Where the data lives: a distributed filesystem (HDFS)</h3>
+  <p>Unix tools read and write files through stdin and stdout. MapReduce jobs read and write <strong>files on a distributed filesystem</strong> instead. In Hadoop's version of MapReduce that filesystem is <strong>HDFS</strong>, an open source reimplementation of the Google File System. HDFS isn't the only one: the source names GlusterFS and the Quantcast File System (QFS), and says object storage services like Amazon S3, Azure Blob Storage, and OpenStack Swift are similar in many ways. The source uses HDFS as the running example, and says the principles carry over to any distributed filesystem. I'll do the same.</p>
+  <p><strong>Shared-nothing.</strong> HDFS is built on the shared-nothing idea. In a <em>shared-disk</em> design (NAS and SAN are the names the source gives), one centralized storage appliance, often with custom hardware and special network gear like Fibre Channel, serves all the machines. HDFS goes the other way: it needs no special hardware, just ordinary computers connected by an ordinary datacenter network, each with disks of its own.</p>
+  <p><strong>How it's put together.</strong> A daemon process runs on every participating machine and exposes a network service so other machines can reach the files stored on that one. A single central server, the <strong>NameNode</strong>, keeps track of which file blocks are stored on which machine. Put together, you get what looks like one huge filesystem built from the free disk space of every machine running the daemon. A mental model: the NameNode is the index card catalogue at a library, and the daemons are the shelves in different rooms. You ask the catalogue where a block is, then go fetch it from the right shelf.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 270" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="22" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">A DISTRIBUTED FILESYSTEM, SKETCHED</text>
+
+      <rect x="210" y="40" width="220" height="52" rx="8" fill="#0E0E10" stroke="#C8453A" stroke-width="1.4"/>
+      <text x="320" y="61" fill="#C8453A" font-size="11" font-weight="700" text-anchor="middle">NameNode</text>
+      <text x="320" y="77" fill="#7A7A80" font-size="9" text-anchor="middle">block A -> m1, m2   block B -> m2, m3 ...</text>
+
+      <rect x="20" y="130" width="170" height="90" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="105" y="150" fill="#F2EFE9" font-size="10.5" font-weight="700" text-anchor="middle">machine 1 (daemon)</text>
+      <rect x="40" y="165" width="60" height="30" rx="4" fill="#131316" stroke="#6FCF97"/><text x="70" y="184" fill="#6FCF97" font-size="10" text-anchor="middle">blk A</text>
+      <rect x="110" y="165" width="60" height="30" rx="4" fill="#131316" stroke="#7A7A80"/><text x="140" y="184" fill="#7A7A80" font-size="10" text-anchor="middle">blk C</text>
+
+      <rect x="225" y="130" width="170" height="90" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="310" y="150" fill="#F2EFE9" font-size="10.5" font-weight="700" text-anchor="middle">machine 2 (daemon)</text>
+      <rect x="245" y="165" width="60" height="30" rx="4" fill="#131316" stroke="#6FCF97"/><text x="275" y="184" fill="#6FCF97" font-size="10" text-anchor="middle">blk A</text>
+      <rect x="315" y="165" width="60" height="30" rx="4" fill="#131316" stroke="#F2EFE9"/><text x="345" y="184" fill="#F2EFE9" font-size="10" text-anchor="middle">blk B</text>
+
+      <rect x="430" y="130" width="190" height="90" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="525" y="150" fill="#F2EFE9" font-size="10.5" font-weight="700" text-anchor="middle">machine 3 (daemon)</text>
+      <rect x="450" y="165" width="60" height="30" rx="4" fill="#131316" stroke="#F2EFE9"/><text x="480" y="184" fill="#F2EFE9" font-size="10" text-anchor="middle">blk B</text>
+      <rect x="520" y="165" width="60" height="30" rx="4" fill="#131316" stroke="#7A7A80"/><text x="550" y="184" fill="#7A7A80" font-size="10" text-anchor="middle">blk C</text>
+
+      <line x1="270" y1="92" x2="105" y2="130" stroke="#7A7A80" stroke-dasharray="2,3"/>
+      <line x1="320" y1="92" x2="310" y2="130" stroke="#7A7A80" stroke-dasharray="2,3"/>
+      <line x1="370" y1="92" x2="525" y2="130" stroke="#7A7A80" stroke-dasharray="2,3"/>
+
+      <text x="320" y="248" fill="#7A7A80" font-size="9.5" text-anchor="middle">every block here sits on two machines, so losing any one machine loses nothing</text>
+      <text x="320" y="262" fill="#7A7A80" font-size="9.5" text-anchor="middle">(simplified: real clusters have far more machines and blocks)</text>
+    </svg>
+    <figcaption>A central NameNode tracks where blocks are. The blocks themselves live on the machines, copied so one failure doesn't lose them.</figcaption>
+  </figure>
+
+  <p><strong>Surviving failures.</strong> Machines and disks die, so blocks are <strong>replicated</strong> on multiple machines. That can be as simple as several full copies (the same idea as replication in the earlier replication chapter), or it can be <strong>erasure coding</strong> such as Reed-Solomon codes, which lets you rebuild lost data with less storage overhead than keeping whole extra copies. The source compares this to RAID, which spreads redundancy over several disks inside one machine. The difference is that a distributed filesystem does its file access and replication across a conventional datacenter network, without special hardware.</p>
+  <p><strong>Scale and cost.</strong> The source says HDFS has scaled well: at the time of writing (the book is from 2017), the biggest deployments ran on tens of thousands of machines with a combined capacity of hundreds of petabytes. It credits commodity hardware plus open source software for making the cost much lower than an equivalent dedicated storage appliance. Treat those numbers as a snapshot of when the book was written, not as current limits.</p>
+  <p><strong>One footnoted nuance worth keeping.</strong> With HDFS, compute tasks can be scheduled on the machine that stores a copy of the file they need, while object stores usually keep storage and computation separate. Reading from a local disk helps when network bandwidth is the bottleneck. The caveat from the same footnote: if erasure coding is used, that locality advantage goes away, because data from several machines has to be combined to reconstruct the original file.</p>
+  <p><strong>Write-once files.</strong> The source also notes that job output files are written once, sequentially, without modifying any existing part of a file after it is written. That fits the "inputs are treated as immutable" habit from the Unix tools.</p>
+
+  <h3>2. The MapReduce recipe, step by step</h3>
+  <p>The easiest way into MapReduce is to line it up with the log pipeline from Part 1. A MapReduce job does four things:</p>
+  <ol>
+    <li><strong>Read the input files and break them into records.</strong> In the log example, one record is one line (the newline is the record separator). The framework's <em>input format parser</em> does this, not you.</li>
+    <li><strong>Call the mapper on each record</strong> to pull out a key and a value. In the pipeline, <code>awk '{print $7}'</code> played this role: it extracted the URL as the key and left the value empty.</li>
+    <li><strong>Sort all the key-value pairs by key.</strong> In the pipeline, the first <code>sort</code> did this. In MapReduce you never write this step: mapper output is always sorted before the reducer sees it.</li>
+    <li><strong>Call the reducer</strong> to walk the sorted pairs. Because sorting put identical keys next to each other, combining their values is easy and doesn't need much memory. In the pipeline, <code>uniq -c</code> did this by counting adjacent equal records.</li>
+  </ol>
+  <p>So you write steps 2 and 4. Steps 1 and 3 come with the framework.</p>
+  <h3>The mapper and the reducer, precisely</h3>
+  <p>The <strong>mapper</strong> is called once for every input record. Its job is to extract a key and a value. For one input it may emit any number of pairs, including none (handy for skipping junk lines). It keeps no state from one record to the next, so each record is processed independently. The <strong>reducer</strong> is handed a key together with an iterator over all the values the framework collected for that key, and it can emit output records, for example the count of how many times a URL was seen. It can run arbitrary logic over those values.</p>
+  <p>A way to hold both in your head: the mapper's role is to <em>prepare</em> the data into a form that can be sorted, and the reducer's role is to <em>process</em> the data once sorted. One consequence: counting hits per URL is one job. Ranking URLs by how many hits they got needs a second round of sorting, which in MapReduce means a second job that reads the first job's output. That's the "second sort" from the Part 1 pipeline, now as its own job.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">ONE TINY JOB: COUNTING HITS PER URL</text>
+
+      <text x="20" y="48" fill="#7A7A80" font-size="9.5">input records (log lines)</text>
+      <rect x="20" y="56" width="150" height="26" rx="4" fill="#131316" stroke="#C9C7C1"/><text x="95" y="73" fill="#F2EFE9" font-size="9.5" text-anchor="middle">GET /pricing</text>
+      <rect x="20" y="88" width="150" height="26" rx="4" fill="#131316" stroke="#C9C7C1"/><text x="95" y="105" fill="#F2EFE9" font-size="9.5" text-anchor="middle">GET /docs</text>
+      <rect x="20" y="120" width="150" height="26" rx="4" fill="#131316" stroke="#C9C7C1"/><text x="95" y="137" fill="#F2EFE9" font-size="9.5" text-anchor="middle">GET /pricing</text>
+      <rect x="20" y="152" width="150" height="26" rx="4" fill="#131316" stroke="#C9C7C1"/><text x="95" y="169" fill="#F2EFE9" font-size="9.5" text-anchor="middle">GET /pricing</text>
+
+      <text x="235" y="48" fill="#C8453A" font-size="9.5" text-anchor="middle">map: record -> (key, 1)</text>
+      <line x1="170" y1="69" x2="195" y2="69" stroke="#7A7A80"/><line x1="170" y1="101" x2="195" y2="101" stroke="#7A7A80"/><line x1="170" y1="133" x2="195" y2="133" stroke="#7A7A80"/><line x1="170" y1="165" x2="195" y2="165" stroke="#7A7A80"/>
+      <text x="200" y="73" fill="#C8453A" font-size="9.5">(/pricing, 1)</text>
+      <text x="200" y="105" fill="#C8453A" font-size="9.5">(/docs, 1)</text>
+      <text x="200" y="137" fill="#C8453A" font-size="9.5">(/pricing, 1)</text>
+      <text x="200" y="169" fill="#C8453A" font-size="9.5">(/pricing, 1)</text>
+
+      <text x="385" y="48" fill="#F2EFE9" font-size="9.5" text-anchor="middle">sort by key</text>
+      <line x1="300" y1="100" x2="335" y2="100" stroke="#7A7A80"/>
+      <rect x="338" y="56" width="100" height="26" rx="4" fill="#131316" stroke="#7A7A80"/><text x="388" y="73" fill="#F2EFE9" font-size="9.5" text-anchor="middle">(/docs, 1)</text>
+      <rect x="338" y="88" width="100" height="26" rx="4" fill="#131316" stroke="#7A7A80"/><text x="388" y="105" fill="#F2EFE9" font-size="9.5" text-anchor="middle">(/pricing, 1)</text>
+      <rect x="338" y="120" width="100" height="26" rx="4" fill="#131316" stroke="#7A7A80"/><text x="388" y="137" fill="#F2EFE9" font-size="9.5" text-anchor="middle">(/pricing, 1)</text>
+      <rect x="338" y="152" width="100" height="26" rx="4" fill="#131316" stroke="#7A7A80"/><text x="388" y="169" fill="#F2EFE9" font-size="9.5" text-anchor="middle">(/pricing, 1)</text>
+
+      <text x="540" y="48" fill="#6FCF97" font-size="9.5" text-anchor="middle">reduce: key, values -> total</text>
+      <line x1="438" y1="100" x2="470" y2="100" stroke="#7A7A80"/>
+      <rect x="472" y="62" width="150" height="26" rx="4" fill="#131316" stroke="#6FCF97"/><text x="547" y="79" fill="#6FCF97" font-size="9.5" text-anchor="middle">/docs  ->  1</text>
+      <rect x="472" y="112" width="150" height="26" rx="4" fill="#131316" stroke="#6FCF97"/><text x="547" y="129" fill="#6FCF97" font-size="9.5" text-anchor="middle">/pricing  ->  3</text>
+
+      <text x="320" y="210" fill="#7A7A80" font-size="9.5" text-anchor="middle">after sorting, equal keys are adjacent, so the reducer just walks down the list</text>
+    </svg>
+    <figcaption>One tiny job, end to end. The values here are made up for illustration.</figcaption>
+  </figure>
+
+  <h3>3. Running it on many machines</h3>
+  <p>The big difference from a Unix pipeline is that MapReduce can spread a computation over many machines <em>without you writing any parallelism code</em>. That works because the mapper and reducer only look at one record (or one key's values) at a time and don't care where their input came from or where their output goes. That's the loose-coupling idea from Part 1 again, and it frees the framework to shuffle data between machines however it likes.</p>
+  <p>What do you write the functions in? The source says you <em>can</em> use standard Unix tools as mappers and reducers in a distributed job, but more commonly they're functions in an ordinary programming language: in Hadoop MapReduce each is a Java class implementing an interface, whereas in MongoDB and CouchDB they're JavaScript functions.</p>
+
+  <h3>Map side: partitioning and putting computation near the data</h3>
+  <p>Parallelism comes from <strong>partitioning</strong>. The input to a job is typically a directory in HDFS. Each file, or each file block, in it counts as a separate partition that its own <strong>map task</strong> can process. The source's figure labels them m1, m2, and m3. The source says input files are typically hundreds of megabytes each (a typical-case remark, not a rule).</p>
+  <p>The scheduler tries to run each map task on a machine that already holds a replica of its input block, as long as that machine has spare RAM and CPU. This is called <strong>putting the computation near the data</strong>. It saves copying big input files over the network and so cuts network load and improves locality. Usually, the code to run isn't on the chosen machine yet, so the framework first copies it there (a JAR file, for a Java program), then starts the task, which reads its block and passes records one at a time to the mapper.</p>
+
+  <h3>Reduce side: partitioning by key</h3>
+  <p>The reduce side is partitioned too, but with a twist. The number of map tasks follows the number of input blocks. The number of reduce tasks is <em>configured by the job author</em> and can differ. Here's the crucial requirement: all pairs with the same key must reach the <em>same</em> reducer. So the framework takes a <strong>hash of the key</strong> and uses it to pick which reducer gets each pair. Think of sorting letters into numbered pigeonholes by running the recipient's name through a formula: same name, same pigeonhole, every time.</p>
+
+  <h3>The shuffle: sorting in stages</h3>
+  <p>Mapper output is probably too large to sort with an ordinary sorting algorithm on one machine, so sorting happens in stages. First, each map task splits its output by reducer (using that key hash), and writes each piece into a <strong>sorted file on the mapper's own local disk</strong>. The source says this uses a technique similar to the SSTables and LSM-trees from the storage chapter.</p>
+  <p>When a mapper finishes reading its input and writing its sorted output files, the scheduler tells the reducers they can start fetching. Each reducer connects to every mapper and downloads the sorted file for its own partition. The overall process of partitioning by reducer, sorting, and copying from mappers to reducers is the <strong>shuffle</strong>. It's a confusing name, since nothing is randomized.</p>
+  <p>The reduce task then <strong>merges</strong> the files it downloaded, preserving sort order, so if different mappers emitted the same key, those records end up adjacent. The reducer is called with a key and an iterator that scans through all records with that key one at a time (the source notes they might not all fit in memory, which is why it's an iterator and not a list). The reducer can emit any number of output records. Those are written to a file on the distributed filesystem, usually one copy on the local disk of the machine running the reducer and replicas on other machines.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">DATAFLOW OF ONE JOB: 3 MAPPERS, 2 REDUCERS</text>
+
+      <text x="20" y="46" fill="#7A7A80" font-size="9">input blocks (DFS)</text>
+      <rect x="20" y="54" width="100" height="36" rx="5" fill="#0E0E10" stroke="#C9C7C1"/><text x="70" y="77" fill="#F2EFE9" font-size="9.5" text-anchor="middle">block 1</text>
+      <rect x="20" y="130" width="100" height="36" rx="5" fill="#0E0E10" stroke="#C9C7C1"/><text x="70" y="153" fill="#F2EFE9" font-size="9.5" text-anchor="middle">block 2</text>
+      <rect x="20" y="206" width="100" height="36" rx="5" fill="#0E0E10" stroke="#C9C7C1"/><text x="70" y="229" fill="#F2EFE9" font-size="9.5" text-anchor="middle">block 3</text>
+
+      <line x1="120" y1="72" x2="160" y2="72" stroke="#7A7A80"/>
+      <line x1="120" y1="148" x2="160" y2="148" stroke="#7A7A80"/>
+      <line x1="120" y1="224" x2="160" y2="224" stroke="#7A7A80"/>
+
+      <rect x="160" y="50" width="130" height="44" rx="6" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/><text x="225" y="69" fill="#C8453A" font-size="10" text-anchor="middle" font-weight="700">map task m1</text><text x="225" y="84" fill="#7A7A80" font-size="8.5" text-anchor="middle">sorted files on local disk</text>
+      <rect x="160" y="126" width="130" height="44" rx="6" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/><text x="225" y="145" fill="#C8453A" font-size="10" text-anchor="middle" font-weight="700">map task m2</text><text x="225" y="160" fill="#7A7A80" font-size="8.5" text-anchor="middle">sorted files on local disk</text>
+      <rect x="160" y="202" width="130" height="44" rx="6" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/><text x="225" y="221" fill="#C8453A" font-size="10" text-anchor="middle" font-weight="700">map task m3</text><text x="225" y="236" fill="#7A7A80" font-size="8.5" text-anchor="middle">sorted files on local disk</text>
+
+      <rect x="440" y="80" width="130" height="50" rx="6" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/><text x="505" y="101" fill="#6FCF97" font-size="10" text-anchor="middle" font-weight="700">reduce task r1</text><text x="505" y="116" fill="#7A7A80" font-size="8.5" text-anchor="middle">merge, then reduce</text>
+      <rect x="440" y="170" width="130" height="50" rx="6" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/><text x="505" y="191" fill="#6FCF97" font-size="10" text-anchor="middle" font-weight="700">reduce task r2</text><text x="505" y="206" fill="#7A7A80" font-size="8.5" text-anchor="middle">merge, then reduce</text>
+
+      <g stroke="#7A7A80" stroke-dasharray="3,3" fill="none">
+        <line x1="290" y1="66" x2="440" y2="98"/><line x1="290" y1="78" x2="440" y2="188"/>
+        <line x1="290" y1="140" x2="440" y2="104"/><line x1="290" y1="156" x2="440" y2="194"/>
+        <line x1="290" y1="214" x2="440" y2="112"/><line x1="290" y1="230" x2="440" y2="200"/>
+      </g>
+      <text x="365" y="266" fill="#F2EFE9" font-size="10" text-anchor="middle">SHUFFLE: every mapper feeds every reducer</text>
+      <text x="365" y="281" fill="#7A7A80" font-size="9" text-anchor="middle">hash(key) decides which reducer gets a pair</text>
+
+      <text x="600" y="152" fill="#7A7A80" font-size="9" text-anchor="middle">output</text>
+      <text x="600" y="165" fill="#7A7A80" font-size="9" text-anchor="middle">files in</text>
+      <text x="600" y="178" fill="#7A7A80" font-size="9" text-anchor="middle">the DFS</text>
+      <line x1="570" y1="105" x2="590" y2="140" stroke="#7A7A80"/><line x1="570" y1="195" x2="590" y2="185" stroke="#7A7A80"/>
+    </svg>
+    <figcaption>Three map tasks and two reduce tasks, drawn from scratch. The number of reducers is a choice, the number of mappers follows the input blocks.</figcaption>
+  </figure>
+
+  <h3>4. Chaining jobs into workflows</h3>
+  <p>A single job can only do so much. Counting page views per URL is one job. Finding the <em>most popular</em> URLs needs a second round of sorting, so it needs a second job. That's why jobs are very commonly chained into <strong>workflows</strong>, where one job's output becomes the next job's input.</p>
+  <p>The way Hadoop MapReduce does this is almost embarrassingly plain, and I find that comforting. The source says the framework has no particular support for workflows, so the chaining is done <em>implicitly by directory name</em>: you configure the first job to write to a directory in HDFS, and you configure the second job to read that same directory. From the framework's viewpoint they are two independent jobs.</p>
+  <p>That makes chained jobs less like a Unix pipeline (where one process feeds the next directly through a small in-memory buffer) and more like a sequence of commands where each writes to a temporary file that the next reads. The source says this has advantages and disadvantages and says it comes back to them in a later section on materializing intermediate state. I'll leave that for a later part rather than guess at it here.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 170" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">TWO JOBS, GLUED TOGETHER BY A DIRECTORY NAME</text>
+      <rect x="15" y="50" width="100" height="50" rx="6" fill="#0E0E10" stroke="#C9C7C1"/><text x="65" y="72" fill="#F2EFE9" font-size="9.5" text-anchor="middle">/logs/</text><text x="65" y="87" fill="#7A7A80" font-size="8.5" text-anchor="middle">raw input</text>
+      <line x1="115" y1="75" x2="145" y2="75" stroke="#7A7A80"/>
+      <rect x="145" y="50" width="120" height="50" rx="6" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/><text x="205" y="72" fill="#C8453A" font-size="10" text-anchor="middle" font-weight="700">job 1</text><text x="205" y="87" fill="#7A7A80" font-size="8.5" text-anchor="middle">hits per URL</text>
+      <line x1="265" y1="75" x2="295" y2="75" stroke="#7A7A80"/>
+      <rect x="295" y="50" width="100" height="50" rx="6" fill="#0E0E10" stroke="#6FCF97"/><text x="345" y="72" fill="#6FCF97" font-size="9.5" text-anchor="middle">/tmp/counts/</text><text x="345" y="87" fill="#7A7A80" font-size="8.5" text-anchor="middle">written in full</text>
+      <line x1="395" y1="75" x2="425" y2="75" stroke="#7A7A80"/>
+      <rect x="425" y="50" width="100" height="50" rx="6" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/><text x="475" y="72" fill="#C8453A" font-size="10" text-anchor="middle" font-weight="700">job 2</text><text x="475" y="87" fill="#7A7A80" font-size="8.5" text-anchor="middle">rank by count</text>
+      <line x1="525" y1="75" x2="545" y2="75" stroke="#7A7A80"/>
+      <rect x="545" y="50" width="85" height="50" rx="6" fill="#0E0E10" stroke="#C9C7C1"/><text x="587" y="72" fill="#F2EFE9" font-size="9.5" text-anchor="middle">/top/</text><text x="587" y="87" fill="#7A7A80" font-size="8.5" text-anchor="middle">final output</text>
+      <text x="320" y="135" fill="#7A7A80" font-size="9.5" text-anchor="middle">job 2 may only start after job 1 has completed successfully</text>
+      <text x="320" y="152" fill="#7A7A80" font-size="9.5" text-anchor="middle">(directory names here are made up for the sketch)</text>
+    </svg>
+    <figcaption>The framework only sees two separate jobs. The "pipeline" is just you agreeing on a folder.</figcaption>
+  </figure>
+
+  <p><strong>Success and dependencies.</strong> A batch job's output is considered valid only once the job has finished successfully, and MapReduce discards the partial output of a failed job. So a job in a workflow can only start after the jobs that produce its input directories have completed successfully. To manage those dependencies, various <strong>workflow schedulers</strong> were built for Hadoop, which the source lists as Oozie, Azkaban, Luigi, Airflow, and Pinball. They also help with managing a big collection of batch jobs. The source says workflows of 50 to 100 MapReduce jobs are common when building recommendation systems, and in a large organization, different teams may run jobs that read each other's output, which is why tooling matters. Finally, higher-level tools on top of Hadoop (the source names Pig, Hive, Cascading, Crunch, and FlumeJava) set up multi-stage workflows and wire them together automatically.</p>
+
+  <p><em>Simplification flag:</em> I've described the shuffle as "sorted files, fetched by reducers, merged". That's the mental model from the source. Real implementations have a lot more engineering in them (what to buffer, when to spill, how to retry), and the source doesn't go into that, so I'm not going to either.</p>
+
+  <h2>Why it matters</h2>
+  <p>You may never write a line of Hadoop, but the shape keeps showing up. "Pull a key out of every record, bring matching keys together, then summarize each group" is behind a huge amount of data work, and knowing it lets you read other systems (including SQL group-bys) more easily. The design choices here also explain a lot of the vocabulary you'll meet next: why joins in batch jobs are done by sorting, why job outputs are files that other jobs read, and why workflow schedulers exist. This part sets up the next one, where the source returns to joins and asks how they're really implemented when there are no indexes.</p>
+  <p>It also gives you a cleaner way to think about cloud storage. Services like S3 are described by the source as similar in many ways to distributed filesystems, with the nuance that storage and computation are usually kept apart there, so the "computation near the data" trick has less to work with.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>A distributed filesystem like HDFS joins the disks of many ordinary machines into one big filesystem: a NameNode tracks block locations, daemons on each machine serve blocks, and blocks are replicated (or erasure coded) to survive failures.</li>
+      <li>MapReduce is the Unix log pipeline at cluster scale: you write the mapper (record -> key, value) and the reducer (key, values -> output). Splitting, sorting, and moving data is the framework's job.</li>
+      <li>Parallelism comes from partitioning: roughly one map task per input block, and a number of reduce tasks you pick, with a hash of the key making sure equal keys land on the same reducer.</li>
+      <li>The shuffle is partition, sort, and copy from mappers to reducers, with nothing random about it. Reducers merge sorted files so equal keys are adjacent.</li>
+      <li>One job is limited. Real work is a workflow of chained jobs, linked by output and input directory names, where a job starts only after its inputs' jobs finished successfully.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Build a mini MapReduce in one file.</strong> In any language, write a function that takes input files, a mapper, a reducer, and a reducer count. It should (a) call the mapper on every line, (b) split the output into one bucket per reducer using a stable hash of the key, (c) write each bucket sorted to its own file, then (d) merge the files per reducer and call the reducer once per key. A reference sketch is below. <em>Done when:</em> running it on three small log files gives the same top counts as <code>awk | sort | uniq -c | sort -rn</code> on the concatenated logs.</li>
+      <li><strong>Prove the "same key, same reducer" rule.</strong> Print which reducer each key went to under 2, 3, and 5 reducers. <em>Done when:</em> for any given run, no key shows up in the output files of more than one reducer, and you can explain why your hash must give the same answer in every mapper (hint: in Python, the built-in <code>hash()</code> on strings is randomised per run, so I used <code>zlib.crc32</code> in the sketch).</li>
+      <li><strong>Chain a second job.</strong> Make the first job count hits per URL, then run a second job on its output directory to list the top 3. <em>Done when:</em> the second job only reads files the first job wrote, and deleting the first job's output makes the second job fail loudly instead of producing a wrong answer.</li>
+      <li><strong>Add a failed-job rule.</strong> Make your job write to a temporary directory and only rename it to the final name after every reducer finishes. Kill it halfway through on purpose. <em>Done when:</em> after a failed run, the final output directory doesn't exist (or is unchanged), and the next job in the chain refuses to start.</li>
+      <li><strong>Sketch a block map by hand.</strong> Take a pretend 1 GB file, pretend a block size, and a cluster of five machines. Write a NameNode table (block -> machines) with 3 copies of each block, then "kill" one machine and mark which blocks still have enough copies. <em>Done when:</em> you can say which blocks have fewer copies than you wanted and what the system would need to do about it. (Block size and copy count here are your choices for the exercise, not HDFS defaults.)</li>
+      <li><strong>Read a real directory of output.</strong> If you have access to any Spark, Hadoop, or Hive output, or you just run project 1, look at the output directory. <em>Done when:</em> you can explain why there's one file per reducer instead of one file total, and how you'd merge them into one if you needed to.</li>
+    </ol>
+    <p class="src-note">Reference sketch for project 1, which I ran against three generated 1000-line logs (python3, standard library only). It matches the Unix pipeline's top-3. It's deliberately single-process: it imitates the data movement, not the parallelism.</p>
+    <pre>import sys, os, zlib, itertools, heapq, tempfile, collections
+
+def partition_of(key, n):
+    # stable hash (Python&#x27;s built-in hash() is randomised per run for strings)
+    return zlib.crc32(key.encode()) % n
+
+def run_job(input_files, mapper, reducer, n_reducers, workdir):
+    # MAP: one task per input file; each writes one sorted spill file per reducer
+    for m, path in enumerate(input_files):
+        buckets = collections.defaultdict(list)
+        with open(path) as f:
+            for line in f:
+                for k, v in mapper(line.rstrip(&quot;\n&quot;)):
+                    buckets[partition_of(k, n_reducers)].append((k, v))
+        for r in range(n_reducers):
+            with open(os.path.join(workdir, f&quot;map{m}-part{r}.txt&quot;), &quot;w&quot;) as out:
+                for k, v in sorted(buckets[r]):
+                    out.write(f&quot;{k}\t{v}\n&quot;)
+    # SHUFFLE + REDUCE: each reducer merges the sorted files for its partition
+    outputs = []
+    for r in range(n_reducers):
+        files = [open(os.path.join(workdir, f&quot;map{m}-part{r}.txt&quot;)) for m in range(len(input_files))]
+        streams = [(tuple(l.rstrip(&quot;\n&quot;).split(&quot;\t&quot;, 1)) for l in fh) for fh in files]
+        merged = heapq.merge(*streams)          # keeps sort order, like the real merge step
+        outpath = os.path.join(workdir, f&quot;out-part{r}.txt&quot;)
+        with open(outpath, &quot;w&quot;) as out:
+            for key, group in itertools.groupby(merged, key=lambda kv: kv[0]):
+                for rk, rv in reducer(key, (v for _, v in group)):
+                    out.write(f&quot;{rk}\t{rv}\n&quot;)
+        outputs.append(outpath)
+        for fh in files: fh.close()
+    return outputs
+
+# job 1: count hits per URL (log line: ip time url status)
+def map_url(line):
+    parts = line.split()
+    if len(parts) &gt;= 3:
+        yield parts[2], 1
+def reduce_count(key, values):
+    yield key, sum(int(v) for v in values)
+
+# job 2: rank. Everything goes under one key so one reducer sees all counts, sorted by key
+def map_rank(line):
+    url, count = line.split(&quot;\t&quot;)
+    yield &quot;all&quot;, f&quot;{int(count):08d} {url}&quot;
+def reduce_top(key, values):
+    for v in sorted(values, reverse=True)[:3]:
+        c, u = v.split(&quot; &quot;, 1)
+        yield u, int(c)
+
+if __name__ == &quot;__main__&quot;:
+    inputs = sys.argv[1:]
+    with tempfile.TemporaryDirectory() as w1, tempfile.TemporaryDirectory() as w2:
+        j1 = run_job(inputs, map_url, reduce_count, 2, w1)
+        print(&quot;job 1 output files:&quot;, [os.path.basename(p) for p in j1])
+        j2 = run_job(j1, map_rank, reduce_top, 1, w2)
+        print(open(j2[0]).read(), end=&quot;&quot;)</pre>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Next in the source is "Reduce-Side Joins and Grouping": how a job joins two datasets (say, click events and user profiles) with no indexes, using exactly the sort-and-bring-keys-together machinery from this part. For this part, reread the shuffle description and try to predict, for a three-mapper job, how many sorted files get fetched in total. Also worth a look: the later section on materializing intermediate state, which the source points forward to for the pros and cons of chaining jobs through files.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, written to help you build a mental model quickly. It is not a substitute for the source; verify anything you plan to rely on against the original before using it for real.</p>
+  <ul class="src-list">
+    <li>Martin Kleppmann, <em>Designing Data-Intensive Applications</em> (O'Reilly, 2017), Chapter 10, "Batch Processing." This part covers the opening of the section "MapReduce and Distributed Filesystems" (the HDFS discussion, "MapReduce Job Execution", "Distributed execution of MapReduce", and "MapReduce workflows"), printed pages 397 to 403 (PDF pages 419 to 425 of the supplied file). It stops right before the sub-section "Reduce-Side Joins and Grouping".</li>
+  </ul>
+  <p class="src-note">Flagged for accuracy: (1) HDFS scale figures (tens of thousands of machines, hundreds of petabytes) are the book's statement "at the time of writing" (2017), not current numbers. (2) The "input files are typically hundreds of megabytes" remark is the source's description of a typical case, not a limit. (3) The source mentions that this section's trade-offs of file-based chaining are discussed later; I did not cover them here. (4) The code in project 1 is my own original sketch, run and checked against the Unix pipeline on generated data, not code from the book. (5) The diagrams were drawn from scratch, with made-up illustrative values (URLs, block names, directory names). (6) I did not look anything up outside the supplied chapter; descriptions of S3 and other systems are only what the source says about them.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

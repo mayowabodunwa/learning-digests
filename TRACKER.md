@@ -27,10 +27,10 @@ for reference, they are simply not continued.
 
 ## Current batch: tick each when you've studied it
 
-- [x] DDIA — Ch.10 (Part 1): Batch Processing with Unix Tools (`docs/digests/ddia-ch10-part1-unix-philosophy.html`)
-- [x] AI Engineering — Ch.6 (Part 1): RAG — How Retrieval-Augmented Generation Actually Works (`docs/digests/ai-eng-ch06-part1-rag-fundamentals.html`)
-- [x] High Performance MySQL — Ch.7 (Part 1): How MySQL Indexes Actually Work — B-Trees, Types & Why They Help (`docs/digests/hpmysql-ch07-part1-how-indexes-work.html`)
-- [x] AWS — Topic 5: CloudWatch Metrics — Namespaces, Dimensions, Resolution & Custom Metrics (`docs/digests/aws-05-cloudwatch-metrics.html`)
+- [ ] DDIA — Ch.10 (Part 2): MapReduce and Distributed Filesystems (`docs/digests/ddia-ch10-part2-mapreduce-distributed-filesystems.html`)
+- [ ] AI Engineering — Ch.6 (Part 2, final): Agents — Tools, Planning, Failure Modes and Memory (`docs/digests/ai-eng-ch06-part2-agents.html`)
+- [ ] High Performance MySQL — Ch.7 (Part 2): Indexing Strategies — Prefix Indexes, Column Order, and Clustered Indexes (`docs/digests/hpmysql-ch07-part2-indexing-strategies.html`)
+- [ ] AWS — Topic 6: S3 Buckets, Objects, Keys — The Flat Namespace, Durability & Consistency (`docs/digests/aws-06-s3-buckets-objects-keys.html`)
 
 ## Track A: Designing Data-Intensive Applications
 
@@ -39,7 +39,7 @@ Focus: Ch.4, Ch.10, Ch.11. Nothing else from this book.
 | Ch | Title | Pages | Digested | Carousel | Notes |
 |---:|-------|-------|----------|----------|-------|
 | 4 | Encoding and Evolution | 133–166 | 2026-08-09 (Pt.1, pp.133–150); 2026-08-18 (Pt.2, final, pp.150–162) | 2026-08-09 (Pt.1); 2026-08-18 (Pt.2, final) | Done. Part 2 = Modes of Dataflow (databases, REST/RPC, message brokers, distributed actor frameworks) through the chapter's own Summary. Chapter 4 is fully covered; PDF pages 162–166 are references/Part II divider, not chapter content. |
-| 10 | Batch Processing | 411–460 | 2026-09-07 (Pt.1, pp.411–419) | 2026-09-07 (Pt.1) | In progress. Part 1 = chapter framing (services vs. batch vs. stream systems) plus "Batch Processing with Unix Tools" in full (log analysis pipeline, sort vs. in-memory aggregation, the Unix Philosophy: uniform interface, separation of logic/wiring, transparency/experimentation). Stops at the boundary before "MapReduce and Distributed Filesystems". **Next DDIA unit:** Ch.10 Part 2, MapReduce and Distributed Filesystems. |
+| 10 | Batch Processing | 411–460 | 2026-09-07 (Pt.1, pp.411–419); 2026-10-11 (Pt.2, printed pp.397–403 / PDF 419–425) | 2026-09-07 (Pt.1); 2026-10-11 (Pt.2) | In progress. Part 1 = chapter framing (services vs. batch vs. stream systems) plus "Batch Processing with Unix Tools" in full (log analysis pipeline, sort vs. in-memory aggregation, the Unix Philosophy: uniform interface, separation of logic/wiring, transparency/experimentation). Stops at the boundary before "MapReduce and Distributed Filesystems". Part 2 = HDFS and shared-nothing storage, the four MapReduce steps (mapper/reducer), distributed execution (partitioning, shuffle) and workflows; stops before "Reduce-Side Joins and Grouping" (mid printed p.403). **Next DDIA unit:** Ch.10 Part 3, reduce-side joins and grouping, map-side joins, and the output of batch workflows. |
 | 11 | Stream Processing | 461–510 | | | |
 
 *Already published (do not redo):* Ch.1; Ch.2 Parts 1 and 2.
@@ -53,7 +53,7 @@ be produced); Ch.3 and Ch.4 are skipped.
 | Ch | Title | Pages | Digested | Carousel | Notes |
 |---:|-------|-------|----------|----------|-------|
 | 5 | Prompt Engineering | 235-276 | 2026-08-09 (Pt.1, pp.235–258); 2026-08-18 (Pt.2, final, pp.259–276) | 2026-08-09 (Pt.1); 2026-08-18 (Pt.2, final) | Done. Part 2 = Defensive Prompt Engineering (prompt extraction, jailbreaking/injection, information extraction, prompt-level and system-level defenses) through the chapter's own Summary. |
-| 6 | RAG and Agents | 277-330 | 2026-09-07 (Pt.1, pp.277–298) | 2026-09-07 (Pt.1) | In progress. Part 1 = the RAG half of the chapter in full (what RAG is, RAG architecture, term-based vs. embedding-based retrieval, hybrid search/RRF, retrieval optimization, evaluating retrieval, RAG beyond text). Stops at the boundary before "Agents" begins. **Next AI Engineering unit:** Ch.6 Part 2, Agents (tools, planning, evaluation). |
+| 6 | RAG and Agents | 277-330 | 2026-09-07 (Pt.1, pp.277–298); 2026-10-11 (Pt.2, final, printed pp.275–306 / PDF 299–330) | 2026-09-07 (Pt.1); 2026-10-11 (Pt.2, final) | Done. Part 1 = the RAG half of the chapter in full (what RAG is, RAG architecture, term-based vs. embedding-based retrieval, hybrid search/RRF, retrieval optimization, evaluating retrieval, RAG beyond text). Stops at the boundary before "Agents" begins. Part 2 = Agents (tools, planning, reflection, tool selection, failure modes and evaluation), Memory, and the chapter's own Summary. **Next AI Engineering unit:** Ch.7 Finetuning. |
 | 7 | Finetuning | 331-386 | | | |
 | 8 | Dataset Engineering | 387-428 | | | |
 | 9 | Inference Optimization | 429-472 | | | |
@@ -69,7 +69,7 @@ Focus: Ch.6, Ch.7, Ch.8. Nothing else from this book.
 | Ch | Title | Pages | Digested | Carousel | Notes |
 |---:|-------|-------|----------|----------|-------|
 | 6 | Schema Design and Management | 147-176 | 2026-08-09 (Pt.1, pp.147–168); 2026-08-18 (Pt.2, final, pp.168–176) | 2026-08-09 (Pt.1); 2026-08-18 (Pt.2, final) | Done. Part 2 = the closing ENUM/NULL gotchas plus Schema Management (source control, Flyway/Liquibase/Skeema/Vitess, native DDL vs. pt-online-schema-change vs. gh-ost, CI/CD pipeline design) through the chapter's own Summary. |
-| 7 | Indexing for High Performance | 177-212 | 2026-09-07 (Pt.1, pp.177–184) | 2026-09-07 (Pt.1) | In progress. Part 1 = chapter opener, "If I Use an ORM, Do I Need to Care?" sidebar, and all of "Indexing Basics" (B-tree indexes incl. adaptive hash index and leftmost-prefix behavior, full-text indexes, benefits of indexes). Stops before "Indexing Strategies for High Performance" begins. **Next High Performance MySQL unit:** Ch.7 Part 2, Indexing Strategies for High Performance. |
+| 7 | Indexing for High Performance | 177-212 | 2026-09-07 (Pt.1, pp.177–184); 2026-10-11 (Pt.2, printed pp.162–178 / PDF 184–200) | 2026-09-07 (Pt.1); 2026-10-11 (Pt.2) | In progress. Part 1 = chapter opener, "If I Use an ORM, Do I Need to Care?" sidebar, and all of "Indexing Basics" (B-tree indexes incl. adaptive hash index and leftmost-prefix behavior, full-text indexes, benefits of indexes). Stops before "Indexing Strategies for High Performance" begins. Part 2 = Indexing Strategies for High Performance from its start through "When Primary Key Order Is Worse" (prefix indexes, multicolumn/column order, clustered indexes); stops before "Covering Indexes". **Next High Performance MySQL unit:** Ch.7 Part 3 (final), covering indexes, index scans for sorts, redundant/duplicate/unused indexes, index and table maintenance, and the Summary. |
 | 8 | Query Performance Optimization | 213-248 | | | |
 
 *Already published (do not redo):* Ch.1; Ch.2; Ch.3 Part 1.
@@ -84,7 +84,7 @@ in-progress concept before starting the next. Source is the official AWS docs
 ### S3 (every concept)
 | # | Concept | Digested | Carousel | Notes |
 |--:|---------|----------|----------|-------|
-| 1 | Buckets, objects, keys, the flat namespace, durability & consistency model | | | |
+| 1 | Buckets, objects, keys, the flat namespace, durability & consistency model | 2026-10-11 | 2026-10-11 | Done. General purpose buckets (naming, global namespace), objects, keys and the flat namespace, durability design target and 3+ AZs, strong read-after-write consistency, conditional writes. CLI micro-projects checked against the CLI reference but not run against a live account. **Next AWS unit:** the rotation moves on to EC2 concept 2, Purchasing options. |
 | 2 | Storage classes & lifecycle policies (incl. Intelligent-Tiering, Glacier tiers) | | | |
 | 3 | Versioning, delete markers, MFA delete | | | |
 | 4 | Encryption: SSE-S3, SSE-KMS, DSSE-KMS, SSE-C, bucket keys | | | |
