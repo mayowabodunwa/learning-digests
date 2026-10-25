@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S3 Multipart Upload, Transfer Acceleration and Byte-Range Fetches: Moving Big Objects Faster</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+  pre { background: var(--panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 16px; }
+  pre code { background: none; padding: 0; font-size: 12.5px; line-height: 1.55; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS S3 &middot; CONCEPT 9 DIGEST</p>
+  <h1>S3 Multipart Upload, Transfer Acceleration and Byte-Range Fetches: Moving Big Objects Faster</h1>
+  <p class="lead">Moving a big file to or from S3 as one long request is fragile and slow. S3 gives you three tools for that: split the upload into parts (multipart upload), shorten the network path to the bucket (Transfer Acceleration), and download just the bytes you want, in parallel (byte-range fetches). This digest explains each, what they cost you in complexity, and the cleanup you must not forget.</p>
+
+  <h2>In one line</h2>
+  <p>Multipart upload sends one object as independently retryable parts that S3 stitches together, Transfer Acceleration routes uploads through nearby CloudFront edge locations to the bucket, and byte-range fetches use the HTTP <code>Range</code> header to download pieces of an object, possibly many at once.</p>
+
+  <h2>The big idea</h2>
+  <p>Imagine moving house with one giant truck trip. If the truck breaks down at 90 percent, you start over. Splitting into many car trips (parts) means a breakdown only costs you one trip, and you can run several cars at once. That's multipart upload. If the road is long and bumpy, a faster route to a nearby depot helps; that's Transfer Acceleration. And when you only need the kitchen boxes, you fetch just those; that's a byte-range fetch.</p>
+  <p>These tools solve different problems: <strong>reliability and parallelism</strong> (multipart and ranges) and <strong>distance</strong> (acceleration). They also come with traps: unfinished multipart uploads quietly cost money until cleaned up, acceleration has extra charges and bucket-name restrictions, and ranges have a limit of one range per request.</p>
+  <p>Simplification label: I don't quote prices. The docs mention that extra charges can apply for Transfer Acceleration and that incomplete multipart parts are billed; I point to the pricing page instead. I also note a few places where the docs disagree on size limits.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Multipart upload</span>: uploading one object as a set of parts that S3 assembles afterwards.</li>
+    <li><span class="keyterm-term">Part</span>: a contiguous chunk of the object's data, identified by a part number.</li>
+    <li><span class="keyterm-term">Upload ID</span>: the identifier S3 returns when you initiate a multipart upload; required for every later step.</li>
+    <li><span class="keyterm-term">ETag</span>: an identifier S3 returns for each uploaded part; you must send the list back to complete the upload.</li>
+    <li><span class="keyterm-term">Complete / abort</span>: the two ways a multipart upload ends: assemble the object, or throw the parts away.</li>
+    <li><span class="keyterm-term">Checksum</span>: a fingerprint of data used to detect corruption in transit.</li>
+    <li><span class="keyterm-term">Transfer Acceleration</span>: a bucket-level feature that speeds long-distance transfers via CloudFront edge locations.</li>
+    <li><span class="keyterm-term">Edge location</span>: a CloudFront point of presence close to users.</li>
+    <li><span class="keyterm-term">Accelerate endpoint</span>: the special hostname (<code>bucket.s3-accelerate.amazonaws.com</code>) you use for accelerated transfers.</li>
+    <li><span class="keyterm-term">Byte-range fetch</span>: a GET with a <code>Range</code> header requesting only certain bytes of an object.</li>
+    <li><span class="keyterm-term">Prefix (performance)</span>: the leading part of a key; the docs state request-rate guidelines per prefix.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>0. Grounding: why single requests struggle</h3>
+  <p>A single PUT or GET is one HTTP request on one connection. For small objects that's fine. For big ones, a network blip forces a restart, and one connection often can't fill the available bandwidth. The docs frame S3 as a very large distributed system, not a single network endpoint, and say the best performance comes from issuing multiple concurrent requests across separate connections (S3 has no limit on the number of connections to a bucket). Everything below is a way to do that safely.</p>
+
+  <h3>1. Multipart upload</h3>
+  <p>The docs recommend multipart upload as a best practice for objects of 100 MB or larger. Advantages they list: higher throughput by uploading parts in parallel; quick recovery (retry only the failed part); pause and resume (there is no expiry on an initiated upload, so you must explicitly finish or stop it); and starting an upload before you know the final size.</p>
+  <p><strong>The three steps:</strong></p>
+  <ol>
+    <li><strong>Initiate</strong> (<code>CreateMultipartUpload</code>): you specify a checksum type, and any metadata you want on the object must be given here. S3 returns an <strong>upload ID</strong>. Anonymous users can't initiate multipart uploads.</li>
+    <li><strong>Upload parts</strong> (<code>UploadPart</code>): each with the upload ID and a part number from 1 to 10,000. Parts can go in any order and in parallel, and part numbers needn't be consecutive. Re-uploading the same part number overwrites the earlier part. Record each part's number and ETag.</li>
+    <li><strong>Complete</strong> (<code>CompleteMultipartUpload</code>): send the upload ID and the list of part numbers with their ETags. S3 concatenates the parts in ascending part-number order into the object, and the parts then no longer exist. The final ETag isn't necessarily an MD5 of the data.</li>
+  </ol>
+  <p>Don't build the completion list from a listing call. The docs say to maintain your own list of part numbers and ETags rather than using the list-parts output.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 300" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="g1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#7A7A80"/></marker></defs>
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">MULTIPART UPLOAD: THREE STEPS</text>
+      <rect x="20" y="50" width="120" height="44" rx="6" fill="#0E0E10" stroke="#F2EFE9"/>
+      <text x="80" y="70" fill="#F2EFE9" font-size="10.5" text-anchor="middle" font-weight="700">1 Initiate</text>
+      <text x="80" y="84" fill="#7A7A80" font-size="8.5" text-anchor="middle">get upload ID</text>
+      <rect x="170" y="40" width="270" height="140" rx="8" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="305" y="60" fill="#6FCF97" font-size="10.5" text-anchor="middle" font-weight="700">2 Upload parts (parallel, any order)</text>
+      <rect x="185" y="76" width="60" height="26" rx="4" fill="#131316" stroke="#7A7A80"/><text x="215" y="93" fill="#C9C7C1" font-size="9" text-anchor="middle">part 1</text>
+      <rect x="255" y="76" width="60" height="26" rx="4" fill="#131316" stroke="#7A7A80"/><text x="285" y="93" fill="#C9C7C1" font-size="9" text-anchor="middle">part 2</text>
+      <rect x="325" y="76" width="60" height="26" rx="4" fill="#131316" stroke="#C8453A"/><text x="355" y="93" fill="#C8453A" font-size="9" text-anchor="middle">part 3 x</text>
+      <rect x="395" y="76" width="35" height="26" rx="4" fill="#131316" stroke="#7A7A80"/><text x="412" y="93" fill="#C9C7C1" font-size="9" text-anchor="middle">...</text>
+      <text x="305" y="128" fill="#C9C7C1" font-size="9.5" text-anchor="middle">part 3 failed: retry just part 3</text>
+      <text x="305" y="148" fill="#C9C7C1" font-size="9.5" text-anchor="middle">keep (part number, ETag) for each part</text>
+      <text x="305" y="166" fill="#7A7A80" font-size="9" text-anchor="middle">part size 5 MiB to 5 GiB; last part may be smaller</text>
+      <rect x="470" y="50" width="130" height="44" rx="6" fill="#0E0E10" stroke="#F2EFE9"/>
+      <text x="535" y="70" fill="#F2EFE9" font-size="10.5" text-anchor="middle" font-weight="700">3 Complete</text>
+      <text x="535" y="84" fill="#7A7A80" font-size="8.5" text-anchor="middle">S3 assembles object</text>
+      <line x1="142" y1="72" x2="168" y2="72" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#g1)"/>
+      <line x1="442" y1="72" x2="468" y2="72" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#g1)"/>
+      <rect x="170" y="206" width="270" height="62" rx="8" fill="#131316" stroke="#C8453A"/>
+      <text x="305" y="230" fill="#C8453A" font-size="10.5" text-anchor="middle">OR Abort: parts deleted, no more billing</text>
+      <text x="305" y="250" fill="#C8453A" font-size="10" text-anchor="middle">never finish = parts keep costing storage</text>
+    </svg>
+    <figcaption>Fig 1. Until you complete or abort, the uploaded parts sit in your bucket and are billed.</figcaption>
+  </figure>
+
+  <p><strong>The limits table</strong> (from the docs' multipart limits page): maximum object size 48.8 TiB; up to 10,000 parts; part size 5 MiB to 5 GiB (no minimum for the last part); list-parts and list-uploads each return at most 1,000 results per request. <em>Flag:</em> other pages say different things about maximum sizes (the console and single-GET pages mention 5 TB and 50 TB figures, and one SDK sample mentions 5 TB for multipart), so treat the limits page as the authoritative one and re-check it live.</p>
+
+  <p><strong>Checksums.</strong> The docs say the SDK and console use a checksum algorithm by default, and S3 can validate integrity server-side, failing the request with <code>BadDigest</code> on mismatch. If you use checksums on a multipart upload, part numbers must be consecutive starting at 1, otherwise completing returns a 500 error.</p>
+
+  <p><strong>Cost trap and the cleanup rule.</strong> After you initiate and upload even one part, you're billed for the stored parts until you complete or stop the upload. The docs' recommended cleanup is a lifecycle rule with the <code>AbortIncompleteMultipartUpload</code> action (this is the same lifecycle engine from the storage classes digest). Their JSON example:</p>
+<pre><code>{
+  "Rules": [{
+    "ID": "abort-stale-uploads",
+    "Status": "Enabled",
+    "Filter": {"Prefix": ""},
+    "AbortIncompleteMultipartUpload": {"DaysAfterInitiation": 7}
+  }]
+}</code></pre>
+  <p>Applied with <code>aws s3api put-bucket-lifecycle-configuration --bucket NAME --lifecycle-configuration file://lifecycle.json</code>. The docs say this applies to existing and future uploads, doesn't affect completed uploads or delete any objects, and incurs no early-delete charge. Other cleanup facts: after stopping an upload you can't upload more parts with that ID, and in-flight part uploads can still succeed afterwards, so stop only after they finish.</p>
+
+  <p><strong>Concurrency and overwrites.</strong> Several multipart uploads can target the same key. In a versioned bucket, completing one always creates a new version, and the current version is whichever upload <em>started</em> most recently, not whichever finished last. In an unversioned bucket other requests in between can win. To prevent overwriting an existing key, the docs point to conditional writes on <code>CompleteMultipartUpload</code>.</p>
+
+  <p><strong>Permissions.</strong> Uploading parts needs <code>s3:PutObject</code>; aborting needs <code>s3:AbortMultipartUpload</code>; listing parts and uploads have their own actions. With SSE-KMS the caller needs <code>kms:GenerateDataKey</code> and <code>kms:Decrypt</code> on the key, as in the encryption digest.</p>
+
+  <p><strong>In practice,</strong> you rarely call these by hand. The docs say the high-level SDK transfer tools and the CLI's <code>aws s3 cp</code> handle the splitting automatically (the docs mention it kicks in around 8 MB for copies), and the low-level API is for pausing/resuming, varying part sizes, or unknown sizes. The console upload is capped at 160 GB; larger files need the CLI or SDK.</p>
+
+  <h3>2. Transfer Acceleration</h3>
+  <p>Transfer Acceleration is a bucket-level feature to speed transfers over long distances between a client and a general purpose bucket. Data enters at a nearby CloudFront edge location and is routed to S3 over an optimized network path. The docs say it fits cases like customers uploading from around the world to one central bucket, regularly moving gigabytes to terabytes across continents, or being unable to use available bandwidth over the public internet. Extra data transfer charges might apply.</p>
+  <p><strong>Requirements:</strong></p>
+  <ul>
+    <li>Virtual-hosted-style requests only.</li>
+    <li>The bucket name must be DNS-compliant and contain no periods.</li>
+    <li>You enable it on the bucket; the docs say it can take up to 20 minutes before speed improves. Only the bucket owner can set the state (or someone granted <code>s3:PutAccelerateConfiguration</code>).</li>
+    <li>You must use the accelerate endpoint <code>bucket-name.s3-accelerate.amazonaws.com</code> (or the dual-stack form for IPv6); the regular endpoint still works for ordinary transfers.</li>
+    <li>It's supported only in a listed set of Regions (the docs list fifteen, such as us-east-1, eu-west-1, ap-southeast-2), so check the live list.</li>
+    <li>The accelerate endpoint doesn't support <code>ListBuckets</code>, <code>CreateBucket</code> or <code>DeleteBucket</code>.</li>
+  </ul>
+  <p>Docs' CLI shapes:</p>
+<pre><code>aws s3api put-bucket-accelerate-configuration \
+  --bucket {bucket} --accelerate-configuration Status=Enabled
+
+aws configure set default.s3.use_accelerate_endpoint true</code></pre>
+  <p>The second line makes the CLI's <code>s3</code> and <code>s3api</code> commands use the accelerate endpoint for the default profile. You can suspend with <code>Status=Suspended</code>, after which the accelerated endpoint stops working. The docs also offer a Speed Comparison tool that uploads to various Regions with and without acceleration; use it to check whether acceleration helps for <em>your</em> location, since it's not guaranteed to be faster everywhere.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="g2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#7A7A80"/></marker></defs>
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">TRANSFER ACCELERATION: SHORTER PUBLIC-INTERNET LEG</text>
+      <rect x="20" y="60" width="110" height="50" rx="8" fill="#0E0E10" stroke="#F2EFE9"/><text x="75" y="90" fill="#F2EFE9" font-size="10.5" text-anchor="middle">client (far away)</text>
+      <rect x="250" y="60" width="120" height="50" rx="8" fill="#0E0E10" stroke="#C8453A"/><text x="310" y="84" fill="#C8453A" font-size="10.5" text-anchor="middle">nearby edge</text><text x="310" y="98" fill="#7A7A80" font-size="8.5" text-anchor="middle">CloudFront</text>
+      <rect x="490" y="60" width="110" height="50" rx="8" fill="#0E0E10" stroke="#6FCF97"/><text x="545" y="90" fill="#6FCF97" font-size="10.5" text-anchor="middle">S3 bucket</text>
+      <line x1="132" y1="85" x2="248" y2="85" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#g2)"/>
+      <line x1="372" y1="85" x2="488" y2="85" stroke="#C8453A" stroke-width="2.5" marker-end="url(#g2)"/>
+      <text x="190" y="76" fill="#7A7A80" font-size="9" text-anchor="middle">short hop</text>
+      <text x="430" y="76" fill="#C8453A" font-size="9" text-anchor="middle">optimized network path</text>
+      <line x1="132" y1="150" x2="488" y2="150" stroke="#7A7A80" stroke-width="1.2" stroke-dasharray="5 4" marker-end="url(#g2)"/>
+      <text x="310" y="170" fill="#7A7A80" font-size="9.5" text-anchor="middle">without acceleration: one long trip over the public internet</text>
+      <text x="310" y="204" fill="#7A7A80" font-size="10" text-anchor="middle">my simplified sketch; real routing is the service's business</text>
+    </svg>
+    <figcaption>Fig 2. The win depends on how far the client is from the bucket's Region.</figcaption>
+  </figure>
+
+  <h3>3. Byte-range fetches</h3>
+  <p>With the HTTP <code>Range</code> header on <code>GetObject</code>, you download only part of an object. Why bother? The docs give two reasons: multiple concurrent connections can each fetch a different range of the same object, giving higher aggregate throughput than one whole-object request; and small ranges retry faster if interrupted. The docs' CLI example:</p>
+<pre><code>aws s3api get-object --bucket {bucket} --key {key} \
+  --range bytes=0-500 {outfile}</code></pre>
+  <p>The range must be prefixed with <code>bytes=</code>. A key limit from the docs: <strong>S3 doesn't support retrieving multiple ranges in a single GET</strong>, so you issue one request per range. There's also a <code>partNumber</code> parameter on GET to address a single part directly. The docs' alignment tip: if you uploaded with multipart, it's best to GET in the same part sizes (or aligned to part boundaries).</p>
+  <p>The same page notes that single GETs are limited to 5 TB, so larger objects must be read with concurrent range or part-number requests. For big downloads, the docs recommend the SDK/CLI transfer managers, which can split downloads for you.</p>
+
+  <h3>4. Related performance guidance</h3>
+  <p>The performance guidelines page pulls this together: measure first; scale connections horizontally; use byte-range fetches; retry slow requests (aggressive timeouts and retries help latency consistency, since a retry is likely to take a different path); keep compute and storage in the same Region; use Transfer Acceleration for distance; and use current SDKs. The docs also state request-rate guidance of at least 3,500 PUT/COPY/POST/DELETE or 5,500 GET/HEAD requests per second per prefix in a bucket, with no limit on the number of prefixes. S3 may return HTTP 503 (Slow Down) while it scales to a new sustained rate, which you can monitor with CloudWatch request metrics.</p>
+
+  <h2>Why it matters</h2>
+  <p>Backups, video, datasets and ML artifacts are all big-object workloads, and these tools are what keep them from being slow or flaky. The multipart cleanup rule is also one of the most commonly forgotten cost controls in S3; it belongs in every bucket's lifecycle config. And knowing ranges exist is the basis of how analytics tools read just the footer of a large file instead of the whole thing.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Multipart upload = initiate, upload numbered parts (in parallel), complete with a list of part numbers and ETags. Parts are 5 MiB to 5 GiB, up to 10,000 of them.</li>
+      <li>Uploaded parts are billed until you complete or abort; add an <code>AbortIncompleteMultipartUpload</code> lifecycle rule.</li>
+      <li>Transfer Acceleration uses a separate endpoint, needs a period-free DNS-compliant bucket name and a supported Region, and can add charges; test whether it helps you.</li>
+      <li>Byte-range fetches use <code>Range</code>, one range per request, and pair well with parallel connections and part-aligned reads.</li>
+      <li>The docs disagree on some size figures across pages, so check the live limits page for numbers you rely on.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <p style="font-size:14px;color:#7A7A80;margin-top:0">Projects 1 and 2 are offline. Projects 3 to 5 use the AWS CLI on a scratch bucket. The <code>get-object --range</code>, accelerate and lifecycle commands are copied in shape from the docs. The low-level multipart CLI commands (<code>create-multipart-upload</code>, <code>upload-part</code>, <code>complete-multipart-upload</code>, <code>list-multipart-uploads</code>, <code>abort-multipart-upload</code>) are listed by name in the docs but I did not read their flag details, so check the CLI reference. Multipart storage and acceleration can cost money; abort uploads and delete the bucket afterwards.</p>
+    <ol>
+      <li><strong>Part planner (offline, ~30 min).</strong> Given an object size, choose a part size so you stay within 10,000 parts and the 5 MiB to 5 GiB limits; output the part count and last-part size. <em>Done when</em> it rejects sizes that can't fit and handles an exact multiple correctly.</li>
+      <li><strong>Mini multipart simulator (offline, ~1.5 hours).</strong> Split a local file into parts, "upload" them to a folder in random order with random failures and retries, record (part number, checksum), then assemble in part-number order. <em>Done when</em> the reassembled file's hash equals the original even with out-of-order, retried and overwritten parts.</li>
+      <li><strong>Range fetch.</strong> Upload a 1 MB file, then fetch <code>--range bytes=0-99</code> with <code>aws s3api get-object</code> and check the output file's size. Try two ranges in one command to see that you can't. <em>Done when</em> you get exactly 100 bytes and understand why the docs say one range per request.</li>
+      <li><strong>Parallel download.</strong> Write a small script that fetches a larger object as 4 ranges concurrently and stitches them together. <em>Done when</em> the result's hash matches a normal download.</li>
+      <li><strong>Leave a mess, then clean it.</strong> Initiate a multipart upload with the low-level CLI and upload one part, list in-progress uploads, then apply the docs' <code>AbortIncompleteMultipartUpload</code> lifecycle JSON and also abort the upload manually. <em>Done when</em> the upload no longer appears in the list and you can say what would have kept billing otherwise.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Read the docs' "Performance design patterns" page for prefix and request-rate patterns, and the checksum tutorial for multipart uploads. Next in this track (the last in S3): Object Lock, retention and legal hold, S3 Inventory, and Storage Lens.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpuoverview.html">Uploading and copying objects using multipart upload in Amazon S3</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/qfacts.html">Amazon S3 multipart upload limits</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpu-upload-object.html">Uploading an object using multipart upload</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpu-abort-incomplete-mpu-lifecycle-config.html">Configuring a bucket lifecycle configuration to delete incomplete multipart uploads</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/transfer-acceleration.html">Configuring fast, secure file transfers using Amazon S3 Transfer Acceleration</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/transfer-acceleration-examples.html">Enabling and using S3 Transfer Acceleration</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/download-objects.html">Downloading objects</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/optimizing-performance-guidelines.html">Performance guidelines for Amazon S3</a></li>
+  </ul>
+  <p class="src-note">This is a teaching draft, not a substitute for the AWS documentation. Verify anything you rely on against the live docs. Notes on uncertainty: docs read in October 2026; no prices quoted; commands were checked against the docs' examples where I say so, none were run against a live account; the docs give inconsistent maximum-size figures across pages (48.8 TiB on the limits page; 5 TB and 50 TB elsewhere), so I used the limits page; the "kicks in around 8 MB" comment comes from a note about copy operations on the multipart upload page and may not describe uploads; I did not read the checksum tutorial, abort/list pages, or the performance design patterns page in full.</p>
+
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
