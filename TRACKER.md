@@ -27,10 +27,11 @@ for reference, they are simply not continued.
 
 ## Current batch: tick each when you've studied it
 
-- [ ] DDIA — Ch.10 (Part 2): MapReduce and Distributed Filesystems (`docs/digests/ddia-ch10-part2-mapreduce-distributed-filesystems.html`)
-- [ ] AI Engineering — Ch.6 (Part 2, final): Agents — Tools, Planning, Failure Modes and Memory (`docs/digests/ai-eng-ch06-part2-agents.html`)
-- [ ] High Performance MySQL — Ch.7 (Part 2): Indexing Strategies — Prefix Indexes, Column Order, and Clustered Indexes (`docs/digests/hpmysql-ch07-part2-indexing-strategies.html`)
-- [ ] AWS — Topic 6: S3 Buckets, Objects, Keys — The Flat Namespace, Durability & Consistency (`docs/digests/aws-06-s3-buckets-objects-keys.html`)
+- [ ] AWS — Topic 7: CloudWatch Alarms — Static, Anomaly Detection, Composite and Alarm Actions (`docs/digests/aws-07-cloudwatch-alarms.html`)
+- [ ] AWS — Topic 7: EC2 Purchasing Options — On-Demand, Savings Plans, Reserved Instances, Spot and Friends (`docs/digests/aws-07-ec2-purchasing-options.html`)
+- [ ] AWS — Topic 7: S3 Storage Classes & Lifecycle Policies — Standard to Glacier, Intelligent-Tiering, and Automatic Transitions (`docs/digests/aws-07-s3-storage-classes-lifecycle.html`)
+- [ ] AWS — Topic 7: VPC Endpoints — Gateway vs. Interface, and PrivateLink (`docs/digests/aws-07-vpc-endpoints-privatelink.html`)
+- [ ] High Performance MySQL — Ch.7 (Part 3, final): Covering Indexes, Index Sorting, Redundant Indexes and Maintenance (`docs/digests/hpmysql-ch07-part3-covering-sorting-maintenance.html`)
 
 ## Track A: Designing Data-Intensive Applications
 
@@ -69,7 +70,7 @@ Focus: Ch.6, Ch.7, Ch.8. Nothing else from this book.
 | Ch | Title | Pages | Digested | Carousel | Notes |
 |---:|-------|-------|----------|----------|-------|
 | 6 | Schema Design and Management | 147-176 | 2026-08-09 (Pt.1, pp.147–168); 2026-08-18 (Pt.2, final, pp.168–176) | 2026-08-09 (Pt.1); 2026-08-18 (Pt.2, final) | Done. Part 2 = the closing ENUM/NULL gotchas plus Schema Management (source control, Flyway/Liquibase/Skeema/Vitess, native DDL vs. pt-online-schema-change vs. gh-ost, CI/CD pipeline design) through the chapter's own Summary. |
-| 7 | Indexing for High Performance | 177-212 | 2026-09-07 (Pt.1, pp.177–184); 2026-10-11 (Pt.2, printed pp.162–178 / PDF 184–200) | 2026-09-07 (Pt.1); 2026-10-11 (Pt.2) | In progress. Part 1 = chapter opener, "If I Use an ORM, Do I Need to Care?" sidebar, and all of "Indexing Basics" (B-tree indexes incl. adaptive hash index and leftmost-prefix behavior, full-text indexes, benefits of indexes). Stops before "Indexing Strategies for High Performance" begins. Part 2 = Indexing Strategies for High Performance from its start through "When Primary Key Order Is Worse" (prefix indexes, multicolumn/column order, clustered indexes); stops before "Covering Indexes". **Next High Performance MySQL unit:** Ch.7 Part 3 (final), covering indexes, index scans for sorts, redundant/duplicate/unused indexes, index and table maintenance, and the Summary. |
+| 7 | Indexing for High Performance | 177-212 | 2026-09-07 (Pt.1, pp.177–184); 2026-10-11 (Pt.2, printed pp.162–178 / PDF 184–200); 2026-10-25 (Pt.3, final, printed pp.178–190 / PDF 200–212) | 2026-09-07 (Pt.1); 2026-10-11 (Pt.2) | Done. Part 1 = chapter opener, "If I Use an ORM, Do I Need to Care?" sidebar, and all of "Indexing Basics" (B-tree indexes incl. adaptive hash index and leftmost-prefix behavior, full-text indexes, benefits of indexes). Stops before "Indexing Strategies for High Performance" begins. Part 2 = Indexing Strategies for High Performance from its start through "When Primary Key Order Is Worse" (prefix indexes, multicolumn/column order, clustered indexes); stops before "Covering Indexes". Part 3 = covering indexes, index scans for sorts, redundant/duplicate/unused indexes, index and table maintenance, and the chapter's own Summary. **Next High Performance MySQL unit:** Ch.8 Query Performance Optimization (Part 1). |
 | 8 | Query Performance Optimization | 213-248 | | | |
 
 *Already published (do not redo):* Ch.1; Ch.2; Ch.3 Part 1.
@@ -84,8 +85,8 @@ in-progress concept before starting the next. Source is the official AWS docs
 ### S3 (every concept)
 | # | Concept | Digested | Carousel | Notes |
 |--:|---------|----------|----------|-------|
-| 1 | Buckets, objects, keys, the flat namespace, durability & consistency model | 2026-10-11 | 2026-10-11 | Done. General purpose buckets (naming, global namespace), objects, keys and the flat namespace, durability design target and 3+ AZs, strong read-after-write consistency, conditional writes. CLI micro-projects checked against the CLI reference but not run against a live account. **Next AWS unit:** the rotation moves on to EC2 concept 2, Purchasing options. |
-| 2 | Storage classes & lifecycle policies (incl. Intelligent-Tiering, Glacier tiers) | | | |
+| 1 | Buckets, objects, keys, the flat namespace, durability & consistency model | 2026-10-11 | 2026-10-11 | Done. General purpose buckets (naming, global namespace), objects, keys and the flat namespace, durability design target and 3+ AZs, strong read-after-write consistency, conditional writes. CLI micro-projects checked against the CLI reference but not run against a live account. |
+| 2 | Storage classes & lifecycle policies (incl. Intelligent-Tiering, Glacier tiers) | 2026-10-25 | | Done. Storage classes as a price-vs-access trade (access speed, AZ count, retrieval fees, minimum duration and size), Intelligent-Tiering, Glacier tiers, and lifecycle rules for automatic transitions and expiry; no prices quoted. |
 | 3 | Versioning, delete markers, MFA delete | | | |
 | 4 | Encryption: SSE-S3, SSE-KMS, DSSE-KMS, SSE-C, bucket keys | | | |
 | 5 | Access control: bucket policies, IAM, ACLs, Block Public Access, access points | | | |
@@ -99,7 +100,7 @@ in-progress concept before starting the next. Source is the official AWS docs
 | # | Concept | Digested | Carousel | Notes |
 |--:|---------|----------|----------|-------|
 | 1 | Instances & AMIs: types/families, lifecycle, custom AMIs, stop vs. terminate | 2026-07-30 (Pt.1); 2026-08-09 (Pt.2, final) | 2026-07-30 (Pt.1); 2026-08-09 (Pt.2, final) | Done. Part 1 = Instances & AMIs (2026-07-30). Part 2 = Auto Scaling Groups & Elastic Load Balancing at an intro/pairing level (2026-08-09); deeper ASG/ELB detail is reserved for concepts 4 and 5 below. |
-| 2 | Purchasing options: on-demand, reserved, savings plans, spot | | | |
+| 2 | Purchasing options: on-demand, reserved, savings plans, spot | 2026-10-25 | | Done. The seven ways to pay for EC2 (On-Demand, Savings Plans, Reserved Instances, Spot, and capacity/dedicated-hardware options) framed as trade-offs of commitment, flexibility and certainty; no dollar prices quoted. |
 | 3 | EBS volumes, snapshots, instance store | | | |
 | 4 | Elastic Load Balancing in depth: ALB vs. NLB vs. GWLB, target groups, health checks | | | |
 | 5 | Auto Scaling in depth: launch templates, scaling policies, lifecycle hooks, warm pools | | | |
@@ -115,7 +116,7 @@ in-progress concept before starting the next. Source is the official AWS docs
 | 1 | Core networking: VPC, subnets, route tables, IGW, NAT gateway | 2026-07-20 | 2026-07-20 | Done. |
 | 2 | Transit Gateway & multi-VPC connectivity | 2026-07-27 | 2026-07-27 | Done. |
 | 3 | Security groups and network ACLs in depth | 2026-08-18 | 2026-08-18 | Done. Stateful security groups (instance/ENI level, allow-only) vs. stateless network ACLs (subnet level, allow+deny, ordered rules), ephemeral return-traffic ports, and default vs. custom rule sets, grounded in the live AWS VPC User Guide. |
-| 4 | VPC endpoints: gateway vs. interface, and PrivateLink | | | Not yet reached this cycle: the rotation moved on to CloudWatch after concept 3. This is next in line when the rotation cycles back to VPC (not "parked" in the permanent-scope sense). |
+| 4 | VPC endpoints: gateway vs. interface, and PrivateLink | 2026-10-25 | | Done. Gateway endpoints (route-table entry, S3 and DynamoDB only) vs. interface endpoints (network interfaces in your subnets via PrivateLink), and endpoint services. |
 | 5 | DNS in a VPC: Route 53 Resolver, private hosted zones, DHCP option sets | | | |
 | 6 | Flow Logs and traffic mirroring | | | |
 | 7 | IPv6 in a VPC, egress-only internet gateway | | | |
@@ -126,8 +127,8 @@ in-progress concept before starting the next. Source is the official AWS docs
 ### CloudWatch (every concept)
 | # | Concept | Digested | Carousel | Notes |
 |--:|---------|----------|----------|-------|
-| 1 | Metrics: namespaces, dimensions, resolution, custom metrics | 2026-09-07 | 2026-09-07 | Done. Namespaces, dimensions (up to identifying a metric uniquely), standard vs. high-resolution, and publishing custom metrics via PutMetricData, grounded in the live CloudWatch User Guide and API reference. **Next AWS unit:** the rotation moves on from CloudWatch, so it's S3 concept 1, Buckets, objects, keys, the flat namespace, durability & consistency model. (CloudWatch concept 2, Alarms, comes round on the next CloudWatch turn.) |
-| 2 | Alarms: static, anomaly detection, composite, and alarm actions | | | |
+| 1 | Metrics: namespaces, dimensions, resolution, custom metrics | 2026-09-07 | 2026-09-07 | Done. Namespaces, dimensions (up to identifying a metric uniquely), standard vs. high-resolution, and publishing custom metrics via PutMetricData, grounded in the live CloudWatch User Guide and API reference. |
+| 2 | Alarms: static, anomaly detection, composite, and alarm actions | 2026-10-25 | | Done. How an alarm evaluates (OK / ALARM / INSUFFICIENT_DATA), static threshold vs. anomaly detection vs. composite alarms, and actions on state changes. **Next AWS unit:** the rotation cycles back to S3 concept 3, Versioning, delete markers, MFA delete. |
 | 3 | Logs: log groups/streams, retention, metric filters, subscription filters | | | |
 | 4 | Logs Insights query language | | | |
 | 5 | Dashboards and cross-account / cross-region observability | | | |

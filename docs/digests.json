@@ -194,5 +194,40 @@
     "ch": "Topic 6",
     "title": "S3 Buckets, Objects, Keys: The Flat Namespace, Durability & Consistency",
     "date": "2026-10-11"
+  },
+  {
+    "slug": "aws-07-cloudwatch-alarms",
+    "book": "AWS",
+    "ch": "Topic 7",
+    "title": "CloudWatch Alarms: Static, Anomaly Detection, Composite and Alarm Actions",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-07-ec2-purchasing-options",
+    "book": "AWS",
+    "ch": "Topic 7",
+    "title": "EC2 Purchasing Options: On-Demand, Savings Plans, Reserved Instances, Spot and Friends",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-07-s3-storage-classes-lifecycle",
+    "book": "AWS",
+    "ch": "Topic 7",
+    "title": "S3 Storage Classes & Lifecycle Policies: Standard to Glacier, Intelligent-Tiering, and Automatic Transitions",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-07-vpc-endpoints-privatelink",
+    "book": "AWS",
+    "ch": "Topic 7",
+    "title": "VPC Endpoints: Gateway vs. Interface, and PrivateLink",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "hpmysql-ch07-part3-covering-sorting-maintenance",
+    "book": "High Performance MySQL",
+    "ch": "Ch.7 (Part 3, final)",
+    "title": "Covering Indexes, Index Sorting, Redundant Indexes and Maintenance",
+    "date": "2026-10-25"
   }
 ]
