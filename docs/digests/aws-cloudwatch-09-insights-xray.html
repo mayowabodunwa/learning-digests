@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: Container Insights, Lambda Insights, ServiceLens and X-Ray Tracing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS CLOUDWATCH &middot; CONCEPT 9 DIGEST</p>
+  <h1>Container Insights, Lambda Insights, ServiceLens and X-Ray Tracing</h1>
+  <p class="lead">Metrics tell you a number moved. Logs tell you what a component said. But in a modern application one user click can pass through a load balancer, a container, a Lambda function and a database, and the question "which hop is slow?" needs a different tool. This last concept in the track covers the opinionated "Insights" dashboards for containers and Lambda, and distributed tracing with X-Ray, including what happened to the feature called ServiceLens.</p>
+
+  <h2>In one line</h2>
+  <p>Container Insights and Lambda Insights give you ready-made metrics and logs for containers and Lambda functions, while X-Ray tracing follows a single request across all the services it touches and draws the result as a trace map.</p>
+
+  <h2>The big idea</h2>
+  <p>There are three kinds of telemetry people usually talk about: metrics (numbers over time), logs (records of events), and traces (the path of one request through many components). You've already met the first two in this track. This digest adds the third, plus two shortcuts for the first two on specific kinds of compute.</p>
+  <ul>
+    <li><strong>Container Insights</strong> collects, aggregates and summarises metrics and logs from containerised applications (on ECS, EKS, and other Kubernetes platforms) so you get cluster, node, pod, task and service views without hand-building them.</li>
+    <li><strong>Lambda Insights</strong> does the same for Lambda functions, adding diagnostics like cold starts.</li>
+    <li><strong>X-Ray</strong> traces requests end to end. <strong>ServiceLens</strong> was the CloudWatch feature that put traces, metrics and logs on one map; per the docs it has now been combined with the X-Ray service map into the <strong>trace map</strong> in the CloudWatch console, and CloudWatch has also added <strong>Application Signals</strong> for service-level views.</li>
+  </ul>
+  <p>A nice thread to notice: both Insights products work by writing structured performance log events and extracting metrics from them with the Embedded Metric Format from two digests ago. This concept leans on a lot of what you've learned.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Container Insights</span>: CloudWatch's collection of metrics and logs for containerised workloads on ECS, EKS, RedHat OpenShift on AWS, and Kubernetes on EC2, including clusters on Fargate for ECS and EKS.</li>
+    <li><span class="keyterm-term">Performance log event</span>: a structured JSON log entry, in embedded metric format, from which CloudWatch derives metrics.</li>
+    <li><span class="keyterm-term">Enhanced observability</span>: a newer Container Insights mode that adds more dimensions and metrics (down to container level); the docs recommend it over the original.</li>
+    <li><span class="keyterm-term">Lambda Insights</span>: a monitoring solution for Lambda that uses a Lambda extension (delivered as a layer) to collect system-level metrics and diagnostics.</li>
+    <li><span class="keyterm-term">Lambda layer / extension</span>: a packaged add-on that runs alongside your function code.</li>
+    <li><span class="keyterm-term">Trace</span>: all the data about one request as it moves through your application, tied together by a trace ID.</li>
+    <li><span class="keyterm-term">Segment</span>: the data one compute resource records about its part of the work on a request.</li>
+    <li><span class="keyterm-term">Subsegment</span>: a finer-grained piece inside a segment, such as one downstream call or one function.</li>
+    <li><span class="keyterm-term">Trace map / service graph</span>: the picture X-Ray builds of services (nodes) and their connections (edges).</li>
+    <li><span class="keyterm-term">Sampling</span>: tracing only a fraction of requests to control cost.</li>
+    <li><span class="keyterm-term">Annotation / metadata</span>: extra key-value data you attach to a trace; annotations are indexed for searching, metadata is not.</li>
+    <li><span class="keyterm-term">Application Signals</span>: a CloudWatch feature that auto-collects metrics and traces from your applications and shows services, dependencies and service level objectives (SLOs).</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>Grounding: why "the three pillars" need each other</h3>
+  <p>Picture an online shop. An alarm says checkout latency is high (a metric). Your logs show timeouts, but from which service? You'd have to hop between log groups and guess. A trace answers it directly: it shows the single request as a timeline, with the load balancer, the checkout service, the payment call and the database call laid out and timed. The Insights products take care of the other side: making sure the basic CPU, memory and restart metrics for your containers and functions exist at all, without you writing the collection code.</p>
+
+  <h3>1. Container Insights</h3>
+  <p>From the docs: Container Insights collects, aggregates and summarises metrics and logs from containerised applications and microservices, and supports ECS, EKS, RedHat OpenShift on AWS, and Kubernetes platforms on EC2. It includes clusters on Fargate for both ECS and EKS. Besides the usual CPU, memory, disk and network, it gives diagnostic information such as container restart failures. You can set CloudWatch alarms on its metrics.</p>
+  <ul>
+    <li><strong>How it collects:</strong> data arrives as <em>performance log events</em> in embedded metric format. CloudWatch creates aggregated metrics at the cluster, node, pod, task and service level from them. On EKS, ROSA and Kubernetes, a containerised version of the CloudWatch agent discovers running containers in the cluster.</li>
+    <li><strong>Where metrics live:</strong> for ECS, the namespace is <code>ECS/ContainerInsights</code>. Examples from the docs' table: <code>CpuUtilized</code>, <code>CpuReserved</code>, <code>MemoryUtilized</code>, <code>MemoryReserved</code>, <code>NetworkRxBytes</code>, <code>NetworkTxBytes</code>, <code>RunningTaskCount</code>, <code>DesiredTaskCount</code>, <code>PendingTaskCount</code>, <code>RestartCount</code>, with dimensions like <code>ClusterName</code>, <code>ServiceName</code> and <code>TaskDefinitionFamily</code>.</li>
+    <li><strong>A log group is created for you</strong> for the performance events (the ECS setup page mentions a path of the form <code>/aws/ecs/containerinsights/&lt;ClusterName&gt;/performance</code>).</li>
+    <li><strong>Cost control built in:</strong> the docs say CloudWatch does not automatically create all possible metrics from the log data; you can query the raw performance log events with Logs Insights for extra detail. Original Container Insights is charged as custom metrics and log ingestion; the enhanced observability version for EKS is charged per observation. No prices quoted here.</li>
+    <li><strong>Metrics appear late:</strong> the docs note they are not visible until container tasks have been running for some time, and not before setup is complete.</li>
+    <li><strong>Encryption:</strong> to encrypt this data with your own KMS key you manually enable KMS encryption on the log group; the docs say only symmetric keys are supported.</li>
+  </ul>
+  <p><strong>Turning it on for ECS (docs' CLI):</strong> <code>aws ecs put-account-setting --name containerInsights --value enabled</code> makes new clusters have it on by default, and <code>aws ecs update-cluster-settings --cluster &lt;cluster-name&gt; --settings name=containerInsights,value=enabled</code> adds it to an existing cluster. For the enhanced version, use <code>enhanced</code> instead of <code>enabled</code>. The docs add a subtle point: by default the account setting applies only to the currently authenticated user; to apply account-wide you specify the root user with <code>--principal-arn</code>. They also say to use an AMI with ECS agent version 1.29 or later for ECS on EC2.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 230" role="img" aria-label="Containers in an ECS cluster emit performance log events into a log group; CloudWatch extracts metrics at cluster, service and task level">
+      <defs><marker id="ah15" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#C9C7C1"/></marker></defs>
+      <rect x="10" y="25" width="190" height="180" rx="12" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="105" y="47" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#7A7A80">ECS cluster</text>
+      <rect x="25" y="60" width="160" height="40" rx="6" fill="#131316" stroke="#7A7A80"/>
+      <text x="105" y="84" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#C9C7C1">service A: tasks</text>
+      <rect x="25" y="110" width="160" height="40" rx="6" fill="#131316" stroke="#7A7A80"/>
+      <text x="105" y="134" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#C9C7C1">service B: tasks</text>
+      <text x="105" y="180" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#7A7A80">Container Insights switched on</text>
+      <rect x="250" y="60" width="150" height="90" rx="10" fill="#131316" stroke="#C8453A"/>
+      <text x="325" y="88" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#C8453A">performance</text>
+      <text x="325" y="103" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#C8453A">log events</text>
+      <text x="325" y="125" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#C9C7C1">JSON in a log group (EMF)</text>
+      <rect x="450" y="25" width="155" height="55" rx="8" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="527" y="47" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">metrics</text>
+      <text x="527" y="64" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#C9C7C1">ECS/ContainerInsights</text>
+      <rect x="450" y="95" width="155" height="55" rx="8" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="527" y="117" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">automatic dashboards</text>
+      <text x="527" y="134" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#C9C7C1">cluster / service / task</text>
+      <rect x="450" y="165" width="155" height="45" rx="8" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="527" y="192" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#C9C7C1">Logs Insights queries</text>
+      <g stroke="#C9C7C1" stroke-width="1.3" marker-end="url(#ah15)">
+        <path d="M202 105 L248 105"/><path d="M402 90 L448 55"/><path d="M402 105 L448 120"/><path d="M402 125 L448 185"/>
+      </g>
+    </svg>
+    <figcaption>Schematic: the Container Insights flow. Simplified: the real metric set is large and depends on setup choices.</figcaption>
+  </figure>
+
+  <h3>2. Lambda Insights</h3>
+  <p>Per the docs, Lambda Insights collects, aggregates and summarises system-level metrics (CPU time, memory, disk, network) and diagnostic information such as cold starts and Lambda worker shutdowns. It uses a CloudWatch Lambda extension supplied as a Lambda layer. When installed, the extension collects system-level metrics and emits <strong>one performance log event per invocation</strong>, and CloudWatch uses embedded metric format to extract the metrics from those events. (Two digests ago, EMF; here it is in action.)</p>
+  <ul>
+    <li><strong>Runtimes:</strong> it works with Lambda runtimes that support extensions; the docs also say the Lambda Insights agent is supported only on runtimes that use Amazon Linux 2 and Amazon Linux 2023.</li>
+    <li><strong>Enabling:</strong> a one-click toggle in the Lambda console, or the CLI, CloudFormation, SAM, CDK or Serverless Framework. The CLI route in the docs has three steps: attach the managed policy <code>CloudWatchLambdaInsightsExecutionRolePolicy</code> to the function's execution role (<code>aws iam attach-role-policy ...</code>); add the extension layer with <code>aws lambda update-function-configuration --function-name &lt;name&gt; --layers "&lt;extension layer ARN&gt;"</code>, where the ARN depends on your Region and the extension version; and, only for functions in a private subnet with no internet access, create a CloudWatch Logs interface VPC endpoint.</li>
+    <li><strong>Cost:</strong> you pay for metrics and logs, plus the Lambda execution time the extension consumes, billed in 1 ms increments. No prices quoted here.</li>
+  </ul>
+  <p><em>Caveat I'm adding from general knowledge, not from the page:</em> the <code>--layers</code> option sets the function's whole layer list, so if your function already uses layers, include them in the same command. Check the Lambda CLI reference before running it on a function you care about.</p>
+
+  <h3>3. X-Ray: how tracing works</h3>
+  <p>The docs define X-Ray as a service that collects data about requests your application serves, with tools to view, filter and gain insights into it. For any traced request you see not only the request and response, but the calls your application makes to downstream AWS resources, microservices, databases and web APIs.</p>
+  <ul>
+    <li><strong>Segments and subsegments.</strong> Each compute resource sends a <em>segment</em> describing its work: host, request, response, start and end times, and issues. A segment can be broken into <em>subsegments</em> for downstream calls (an AWS service, an HTTP API, a SQL database) or for specific functions in your code. For services that don't send their own segments, like DynamoDB, X-Ray uses subsegments to create <em>inferred segments</em>, so those dependencies still appear on the map.</li>
+    <li><strong>Trace ID and the tracing header.</strong> A trace ID tracks a request through your application. The first supported service the request hits adds a header named <code>X-Amzn-Trace-Id</code> carrying the trace ID and the sampling decision, which gets passed downstream. The docs show it looks like <code>Root=1-5759e988-bd862e3fe1be46a994272793;Parent=53995c3f42cd8ad8;Sampled=1</code>. They also note that clients can add this header themselves, so your app may remove it from incoming requests.</li>
+    <li><strong>Sending the data.</strong> Your SDK sends JSON segment documents to the X-Ray daemon (listening for UDP traffic), which batches and uploads them; the daemon is included on Elastic Beanstalk and Lambda platforms. The CloudWatch agent (version 1.300025.0 or later) can also collect traces from OpenTelemetry or X-Ray SDKs.</li>
+    <li><strong>Sampling.</strong> To control cost, the X-Ray SDK by default records the first request each second and five percent of additional requests. You can change the default rule or add rules by service or request properties, for example tracing every request that changes state while sampling low on health checks.</li>
+    <li><strong>Annotations vs metadata.</strong> Annotations are simple key-value pairs that are indexed for filter expressions (up to 50 indexed per trace); metadata can be any type and is not indexed.</li>
+    <li><strong>Error classes.</strong> <code>Error</code> is a client error (4xx), <code>Fault</code> is a server fault (5xx), and <code>Throttle</code> is a 429.</li>
+    <li><strong>Retention.</strong> The docs state trace data and service graph data are retained for 30 days.</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 620 240" role="img" aria-label="One request as a timeline: load balancer, API service, a downstream payment call and a database call shown as nested bars, with the database call being the slowest">
+      <text x="15" y="22" font-family="JetBrains Mono, monospace" font-size="11" fill="#7A7A80">trace 1-5759e988-... (one request)</text>
+      <path d="M150 35 L150 200" stroke="rgba(242,239,233,0.15)"/>
+      <g font-family="Inter, sans-serif" font-size="11" fill="#C9C7C1">
+        <text x="15" y="62">load balancer</text>
+        <text x="15" y="100">api service</text>
+        <text x="30" y="138">call: payment</text>
+        <text x="30" y="176">call: database</text>
+      </g>
+      <rect x="150" y="48" width="440" height="22" rx="4" fill="#131316" stroke="#7A7A80"/>
+      <rect x="165" y="86" width="410" height="22" rx="4" fill="#131316" stroke="#C9C7C1"/>
+      <rect x="180" y="124" width="95" height="22" rx="4" fill="#131316" stroke="#6FCF97"/>
+      <rect x="290" y="162" width="270" height="22" rx="4" fill="#C8453A" opacity="0.35" stroke="#C8453A"/>
+      <text x="425" y="178" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#F2EFE9">slowest hop</text>
+      <text x="330" y="220" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#7A7A80">each bar = a segment or subsegment; widths are invented for illustration</text>
+    </svg>
+    <figcaption>Schematic: a trace timeline makes the slow hop obvious in a way separate metrics don't.</figcaption>
+  </figure>
+
+  <h3>4. The trace map, ServiceLens and Application Signals</h3>
+  <p>X-Ray combines nodes from every service that processed requests with the same trace ID into one <em>service graph</em>, shown as a <em>trace map</em>. In the CloudWatch console it's under <strong>X-Ray traces, Trace Map</strong>. Per the docs, nodes are outlined by colour: red for server faults (5xx), yellow for client errors (4xx), purple for throttling (429). Selecting a node or edge shows metrics, response-time distribution, traces and, for supported nodes, related logs. The docs also say the map can display up to 10,000 nodes, supports cross-account tracing, and connects traces across event-driven apps that use SQS and Lambda.</p>
+  <p><strong>What happened to ServiceLens?</strong> The tracker lists ServiceLens as part of this concept. The docs page I fetched at the ServiceLens address returned the X-Ray trace map page, which states that "the X-Ray service map and CloudWatch ServiceLens map are combined into the X-Ray trace map within the Amazon CloudWatch console." So, as of these docs, ServiceLens as a separate feature has been merged into the trace map. Treat older tutorials that say "open ServiceLens" as pointing at this combined experience.</p>
+  <p><strong>Application Signals</strong> is the newer layer. The docs say it automatically collects metrics and traces from applications on EC2, ECS and Lambda (and EKS), shows call volume, availability, latency, faults and errors, discovers an application topology map, and lets you define and track service level objectives (SLOs). It supports Java, Python, Node.js and .NET applications. Using it incurs charges, and it works together with RUM and Synthetics canaries from the previous digest. This digest only introduces it.</p>
+  <p><em>Simplification:</em> I'm treating "metrics, logs, traces" as three separate signals. The docs show them linked: select a point on a graph in Application Signals to see correlated traces, and use "View logs" from a trace map node.</p>
+
+  <h3>5. Picking the right tool</h3>
+  <div class="card">
+    <p><strong>"Is my ECS or EKS cluster healthy, and how are tasks and pods using resources?"</strong> Container Insights.</p>
+    <p><strong>"Why is this function slow, how much memory does it really use, how often are cold starts?"</strong> Lambda Insights.</p>
+    <p><strong>"Where in the request path is the time or the error?"</strong> X-Ray traces and the trace map.</p>
+    <p><strong>"Are my services meeting their targets?"</strong> Application Signals with SLOs.</p>
+    <p><em>Simplification:</em> they overlap, and you can enable several at once. The docs also note Application Signals isn't required to use Synthetics or RUM.</p>
+  </div>
+
+  <h2>Why it matters</h2>
+  <p>As soon as an application has more than one moving part, "check the CPU graph" stops being enough. These tools provide the structure for diagnosing distributed systems: the cluster-level view, the function-level view, and the request-level view. They also close the loop on the whole track: metrics from namespaces and dimensions, alarms on them, logs and queries over events, dashboards, agents and EMF to produce the data, EventBridge to react, canaries and RUM to test from outside, and now traces to follow one request inside.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Container Insights and Lambda Insights both work by emitting performance log events in embedded metric format, from which CloudWatch extracts metrics.</li>
+      <li>Container Insights covers ECS, EKS, ROSA and Kubernetes on EC2 (incl. Fargate); Lambda Insights uses an extension layer on the function.</li>
+      <li>A trace follows one request via a trace ID in the <code>X-Amzn-Trace-Id</code> header; it is made of segments and subsegments.</li>
+      <li>X-Ray's default sampling is the first request each second plus five percent of the rest; data is kept 30 days.</li>
+      <li>ServiceLens's map is now merged into the X-Ray trace map in the CloudWatch console; Application Signals adds service-level views and SLOs.</li>
+    </ul>
+  </div>
+
+  <h2>Recall questions</h2>
+  <ol>
+    <li>What is a performance log event, and which earlier concept in this track does it rely on?</li>
+    <li>What does the Lambda Insights extension emit per invocation?</li>
+    <li>What's the difference between a segment and a subsegment? Why does DynamoDB still appear on the trace map though it sends no segment?</li>
+    <li>What's the difference between an X-Ray annotation and metadata?</li>
+    <li>Which of the three telemetry types would you reach for to find which hop in a request chain is slow?</li>
+  </ol>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Lambda Insights on a hello-world function.</strong> Create a tiny function, attach the managed policy to its role, add the extension layer for your Region (look up the ARN in the docs' version list), invoke it a few times. <em>Done when:</em> you find metrics in the Lambda Insights namespace and a performance log event in the matching log group, and can explain how the first became the second.</li>
+      <li><strong>Read a performance event.</strong> Open one of those events in Logs Insights. <em>Done when:</em> you've spotted the <code>_aws</code> block from the EMF digest and can name the namespace, dimensions and at least two metric fields.</li>
+      <li><strong>Container Insights on a small ECS cluster.</strong> Run <code>aws ecs put-account-setting --name containerInsights --value enabled</code> (mind the principal-arn caveat), launch one tiny service, wait several minutes. <em>Done when:</em> <code>RunningTaskCount</code> shows under <code>ECS/ContainerInsights</code> for your cluster and you've put an alarm on <code>RunningTaskCount</code> dropping to zero. Delete the cluster afterwards.</li>
+      <li><strong>Turn on active tracing.</strong> Enable X-Ray active tracing on your Lambda function (console toggle), invoke it, and open the trace map under X-Ray traces in CloudWatch. <em>Done when:</em> you can see your function as a node and open one trace's timeline.</li>
+      <li><strong>Break something and find it.</strong> Make the function call a non-existent endpoint or throw an error on purpose. <em>Done when:</em> the node outline changes colour and you've used "View logs" or the trace timeline to find the cause.</li>
+      <li><strong>Sampling arithmetic.</strong> On paper: with the default rule (first request each second plus five percent of additional requests), roughly how many traces per minute would a service handling 10 requests per second produce? Show your reasoning, state it is an estimate, and compare with a rule that traces everything. <em>Done when:</em> you can explain why the default is called conservative in the docs.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Read the Application Signals introduction and the SLO page, the X-Ray page on configuring sampling rules, and the list of metrics collected by Container Insights for EKS. If you want a next step in AWS, this track is now fully covered at the concept level; deeper work could mean running a real application through all of these tools together.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the official documentation. Verify anything you plan to rely on (limits, CLI syntax, pricing, permissions, console steps) against the live pages below. AWS docs change over time; these pages were read in October 2026.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/ContainerInsights.html" target="_blank" rel="noopener">Container Insights</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/deploy-container-insights-ECS-cluster.html" target="_blank" rel="noopener">Setting up Container Insights on Amazon ECS</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Container-Insights-metrics-ECS.html" target="_blank" rel="noopener">Amazon ECS Container Insights metrics</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Lambda-Insights.html" target="_blank" rel="noopener">Lambda Insights</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Lambda-Insights-Getting-Started-cli.html" target="_blank" rel="noopener">Use the AWS CLI to enable Lambda Insights on an existing Lambda function</a></li>
+    <li><a href="https://docs.aws.amazon.com/xray/latest/devguide/aws-xray.html" target="_blank" rel="noopener">What is AWS X-Ray?</a></li>
+    <li><a href="https://docs.aws.amazon.com/xray/latest/devguide/xray-concepts.html" target="_blank" rel="noopener">AWS X-Ray concepts</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/ServiceLens.html" target="_blank" rel="noopener">ServiceLens (address now returns the X-Ray trace map page)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Application-Monitoring-Sections.html" target="_blank" rel="noopener">Application Signals</a></li>
+  </ul>
+  <p class="src-note">Flagged: no pricing is quoted. I did not read the EKS Container Insights setup, the enhanced observability metrics, OTel Container Insights, the Lambda extension version list, the X-Ray SDK/daemon pages or the sampling-rule configuration page; they are only named. The statement that <code>--layers</code> replaces a function's existing layers is from my general knowledge and is not on the page I read. The "ServiceLens has been merged" statement relies on one sentence in the X-Ray trace map documentation. The sampling arithmetic exercise is an estimate you should work out yourself. The diagrams and example names are my own illustrations, and the micro-projects have not been run against a live account.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
