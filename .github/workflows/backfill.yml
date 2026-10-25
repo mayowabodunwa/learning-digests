@@ -179,13 +179,18 @@ jobs:
                is a failed digest.
             2. Write the sidecar docs/_entries/<slug>.json containing exactly:
                {"slug": "...", "book": "...", "ch": "...", "title": "...", "date": "YYYY-MM-DD"}
-               using today's UTC date. 'book' must be one of: Designing Data-Intensive
-               Applications, AI Engineering, High Performance MySQL, AWS - matching the
-               existing entries in docs/digests.json. 'ch' must NEVER promise a part total:
-               write 'Ch.10 (Part 3)', or 'Ch.10 (Part 4, final)' for the one that completes
-               the chapter, or plain 'Ch.8' when the chapter fits in a single unit, or
-               'Topic N' for AWS. Never 'Part 1 of 3' - that total goes stale and the library
-               then contradicts itself.
+               using today's UTC date. For a book track, 'book' is the book's full name as it
+               already appears in docs/digests.json: Designing Data-Intensive Applications,
+               AI Engineering, or High Performance MySQL. For an AWS area, 'book' is the AREA:
+               'AWS S3', 'AWS EC2', 'AWS VPC' or 'AWS CloudWatch'.
+               'ch' must NEVER promise a part total: write 'Ch.10 (Part 3)', or
+               'Ch.10 (Part 4, final)' for the one that completes the chapter, or plain 'Ch.8'
+               when the chapter fits in a single unit. Never 'Part 1 of 3' - that total goes
+               stale and the library then contradicts itself.
+               For AWS, 'ch' is 'Concept N', where N is that concept's number in its area
+               table in TRACKER.md (so the S3 table's row 4 is 'Concept 4'). Do NOT use a
+               running 'Topic N' across all of AWS: your area job cannot see what the other
+               three are numbering, so a global counter collides.
             3. Run: bash .claude/skills/book-digest-carousels/scripts/publish_digest.sh <slug>
                That commits and pushes just those two files. Do this after EVERY unit, before
                starting the next one, so the run cannot lose finished work.
