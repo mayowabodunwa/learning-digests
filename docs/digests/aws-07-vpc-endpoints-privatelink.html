@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: VPC Endpoints: Gateway vs. Interface, and PrivateLink</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS &middot; TOPIC 7 DIGEST</p>
+  <h1>VPC Endpoints: Gateway vs. Interface, and PrivateLink</h1>
+  <p class="lead">How a private subnet can talk to S3, DynamoDB or a partner's service without a NAT gateway or any trip through an internet gateway, and why AWS gives you two quite different tools to do it.</p>
+
+  <h2>In one line</h2>
+  <p>A VPC endpoint is a private doorway from your VPC to a service: a <em>gateway endpoint</em> works by adding a route (S3 and DynamoDB only), while an <em>interface endpoint</em> works by dropping network interfaces with private IPs into your subnets (this is the AWS PrivateLink way).</p>
+
+  <h2>The big idea</h2>
+  <p>In the earlier topics we built a VPC where a private subnet reaches the outside world through a NAT gateway and an internet gateway. That works for AWS services too, because they're normally reached through public endpoint names. The AWS docs point out that this traffic doesn't leave the AWS network, but it still takes a path through your internet gateway, and you pay for and manage the NAT in the middle. VPC endpoints give you a shorter, private path instead. There are two main flavours to learn first. Gateway endpoints are a routing trick (a special route-table entry pointing at the endpoint). Interface endpoints are real network interfaces sitting in your subnets, reached through DNS. Everything else in this topic (policies, DNS, security groups, costs) hangs off that one distinction.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">VPC endpoint</span>: the object a consumer creates in their VPC to connect privately to a service or resource. There are several types; you pick the one you need.</li>
+    <li><span class="keyterm-term">Gateway endpoint</span>: an endpoint type that sends traffic to Amazon S3 or DynamoDB via a route table entry. Per the docs, it does not use AWS PrivateLink.</li>
+    <li><span class="keyterm-term">Interface endpoint</span>: an endpoint type that creates network interfaces in your subnets so TCP or UDP traffic reaches an endpoint service. It does use PrivateLink.</li>
+    <li><span class="keyterm-term">AWS PrivateLink</span>: the technology that lets clients in your VPC reach services and resources in other VPCs using private IP addresses, as if they were hosted in your own VPC.</li>
+    <li><span class="keyterm-term">Endpoint service</span>: what a service provider creates to offer their service in a Region. The provider has to put a load balancer in front of it, and by default nobody can connect until the provider grants permissions to specific AWS principals.</li>
+    <li><span class="keyterm-term">Service provider / consumer</span>: the provider owns the service (AWS, an AWS Partner, or another account). The consumer is whoever connects to it from their VPC.</li>
+    <li><span class="keyterm-term">Endpoint network interface</span>: a requester-managed network interface that AWS creates in each subnet you choose for an interface endpoint. You can see it in your account, but you can't manage it yourself.</li>
+    <li><span class="keyterm-term">Prefix list</span>: a named set of CIDR ranges. For gateway endpoints, AWS owns a prefix list for the service and the route table's destination is that list.</li>
+    <li><span class="keyterm-term">Endpoint policy</span>: an IAM-style resource policy attached to the endpoint that says which principals can use <em>that endpoint</em> to do what.</li>
+    <li><span class="keyterm-term">Private DNS</span>: an interface endpoint option that makes the service's normal public name resolve to the endpoint's private IPs, using a hidden AWS-managed private hosted zone.</li>
+    <li><span class="keyterm-term">Route 53 Resolver</span>: the DNS server Amazon provides for your VPC.</li>
+    <li><span class="keyterm-term">Longest prefix match</span>: the rule that the most specific route wins when several routes match a destination.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>Grounding: the problem endpoints solve</h3>
+  <p>Almost every AWS service is reached by a public Regional name, written like <code>service_code.region_code.amazonaws.com</code> (the docs give <code>monitoring.us-east-2.amazonaws.com</code> for CloudWatch). Without endpoints, an instance in a public subnet reaches that name through the internet gateway. An instance in a private subnet needs a NAT gateway in a public subnet, then the internet gateway. The docs say this traffic traverses the internet gateway but does not leave the AWS network. So the point of an endpoint isn't "stop traffic going over the public internet" (the docs say it already stays on the AWS network). The point is that you can reach the service with no internet gateway or NAT device in the path at all, and get extra controls such as endpoint policies.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three paths from a private subnet to a service">
+      <rect x="10" y="10" width="300" height="230" rx="10" fill="none" stroke="#7A7A80" stroke-dasharray="5 4"/>
+      <text x="22" y="30" fill="#7A7A80" font-family="monospace" font-size="11">YOUR VPC</text>
+      <rect x="30" y="95" width="90" height="50" rx="6" fill="#131316" stroke="#F2EFE9"/>
+      <text x="75" y="125" fill="#F2EFE9" font-family="monospace" font-size="11" text-anchor="middle">private subnet</text>
+      <rect x="190" y="40" width="100" height="34" rx="6" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="240" y="61" fill="#C8453A" font-family="monospace" font-size="11" text-anchor="middle">NAT + IGW</text>
+      <rect x="190" y="105" width="100" height="34" rx="6" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="240" y="126" fill="#6FCF97" font-family="monospace" font-size="11" text-anchor="middle">gateway endpoint</text>
+      <rect x="190" y="170" width="100" height="34" rx="6" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="240" y="191" fill="#6FCF97" font-family="monospace" font-size="11" text-anchor="middle">interface endpoint</text>
+      <path d="M120 110 L190 57" stroke="#C8453A" fill="none"/>
+      <path d="M120 120 L190 122" stroke="#6FCF97" fill="none"/>
+      <path d="M120 130 L190 187" stroke="#6FCF97" fill="none"/>
+      <rect x="420" y="80" width="170" height="90" rx="10" fill="#131316" stroke="#F2EFE9"/>
+      <text x="505" y="120" fill="#F2EFE9" font-family="monospace" font-size="12" text-anchor="middle">AWS service</text>
+      <text x="505" y="140" fill="#7A7A80" font-family="monospace" font-size="11" text-anchor="middle">(S3, DynamoDB, ...)</text>
+      <path d="M290 57 L420 105" stroke="#C8453A" fill="none"/>
+      <path d="M290 122 L420 125" stroke="#6FCF97" fill="none"/>
+      <path d="M290 187 L420 145" stroke="#6FCF97" fill="none"/>
+    </svg>
+    <figcaption>Three ways out of a private subnet. Gateway endpoints only exist for S3 and DynamoDB; interface endpoints cover many more services.</figcaption>
+  </figure>
+
+  <h3>1. Gateway endpoints: a route, not a machine</h3>
+  <p><strong>What it is.</strong> A gateway endpoint gives you connectivity to Amazon S3 and DynamoDB without an internet gateway or NAT device. There is no additional charge for using it. When you create one you choose which route tables it applies to, and AWS adds a route to each: destination is the service's <em>prefix list</em>, target is the endpoint. You can look at that route, but you can't edit or delete it. It disappears when you disassociate the route table or delete the endpoint.</p>
+  <p><strong>Example.</strong> You have a private subnet whose route table sends <code>0.0.0.0/0</code> to a NAT gateway, and your app uploads lots of files to S3. You create a gateway endpoint for <code>com.amazonaws.&lt;region&gt;.s3</code> and select that subnet's route table. Now S3-bound traffic matches the more specific prefix-list route and bypasses the NAT. Other destinations still go through the NAT.</p>
+  <p><strong>Why the more specific route wins.</strong> The docs say routing uses the most specific matching route (longest prefix match). So with a <code>0.0.0.0/0</code> route to an internet gateway, the endpoint route still takes precedence for that service in the current Region. Two details from the docs: traffic to the same service in a <em>different</em> Region goes to the internet gateway, because prefix lists are Region-specific; and a route that spells out the exact IP range for the service in the same Region would beat the endpoint route.</p>
+  <p><strong>Who uses it.</strong> It's route-table based, so every instance in subnets tied to an associated route table uses it automatically. Subnets whose route tables aren't associated keep using the public service endpoint.</p>
+  <p><strong>Your firewalls still apply.</strong> The instances still talk to the service's public endpoint address, so (per the docs) the security group must allow the traffic, and you can reference the service's prefix list ID in a security group rule. Network ACLs can't reference prefix lists, so there you list the CIDR ranges from the prefix list. This ties straight back to Topic 4.</p>
+  <p><strong>Limits worth knowing.</strong> A gateway endpoint works only in the Region where you created it, so it must match your buckets' Region. The S3 page says gateway endpoints don't allow access from on-premises networks, from peered VPCs in other Regions, or through a transit gateway; endpoint connections can't be extended out of the VPC, so things across a VPN, peering connection, transit gateway or Direct Connect can't use it. The docs state a default quota of 20 gateway endpoints per Region (adjustable) and 255 per VPC. Creating or modifying one switches network routes and disconnects open TCP connections, so don't do it in the middle of something critical.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Route table with a prefix list route to a gateway endpoint">
+      <rect x="20" y="20" width="360" height="150" rx="8" fill="#0E0E10" stroke="#F2EFE9" stroke-opacity="0.3"/>
+      <text x="36" y="44" fill="#7A7A80" font-family="monospace" font-size="11">ROUTE TABLE (private subnet)</text>
+      <text x="36" y="74" fill="#C9C7C1" font-family="monospace" font-size="12">10.0.0.0/16     local</text>
+      <text x="36" y="104" fill="#6FCF97" font-family="monospace" font-size="12">pl-xxxx (S3)    vpce-xxxx   (added by AWS)</text>
+      <text x="36" y="134" fill="#C9C7C1" font-family="monospace" font-size="12">0.0.0.0/0       nat-xxxx</text>
+      <text x="420" y="74" fill="#7A7A80" font-family="monospace" font-size="11">more specific</text>
+      <text x="420" y="92" fill="#7A7A80" font-family="monospace" font-size="11">than 0.0.0.0/0 for</text>
+      <text x="420" y="110" fill="#7A7A80" font-family="monospace" font-size="11">S3's addresses, so</text>
+      <text x="420" y="128" fill="#6FCF97" font-family="monospace" font-size="11">the endpoint wins</text>
+      <path d="M400 100 L372 100" stroke="#6FCF97" marker-end="url(#a)"/>
+    </svg>
+    <figcaption>Illustrative route table (IDs are placeholders). The endpoint route is added for you and can't be edited.</figcaption>
+  </figure>
+
+  <h3>2. Interface endpoints and PrivateLink: a doorway in your subnet</h3>
+  <p><strong>What it is.</strong> An interface endpoint sends TCP or UDP traffic to an endpoint service, and traffic is directed to it using DNS. For each subnet you choose, AWS creates an endpoint network interface there with a private IP from the subnet's range. The docs say traffic between the endpoint and the service stays within the AWS network without traversing the public internet.</p>
+  <p><strong>Who it's for.</strong> Many AWS services (CloudWatch is the docs' running example), services offered by partners or other accounts, and even your own: a provider creates an endpoint service backed by a load balancer, shares the service name, and adds permissions. The consumer creates the endpoint and the provider can accept or reject the connection request (AWS services accept automatically). The connection only goes one way: consumer to service, the service can't initiate requests back through the endpoint.</p>
+  <p><strong>Costs.</strong> Unlike the gateway type, you're billed for each hour the endpoint is provisioned in each Availability Zone plus per GB processed. Check the AWS PrivateLink pricing page for numbers; I'm not quoting any here.</p>
+  <p><strong>Security group and subnets.</strong> You attach security groups to the endpoint network interfaces (the VPC's default security group if you don't choose). It has to allow the expected traffic from your resources, for example inbound HTTPS if the CLI will call the service. You may pick one subnet per Availability Zone, not several in the same AZ. The docs recommend at least two AZs for production, and note that with a single AZ, if that AZ is impaired, resources in other AZs lose access. Endpoint IPs don't change for the endpoint's lifetime. Also: interface endpoints don't respond to ping, so use <code>nc</code> or <code>nmap</code> to test.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Interface endpoint with interfaces in two AZs">
+      <rect x="10" y="10" width="400" height="210" rx="10" fill="none" stroke="#7A7A80" stroke-dasharray="5 4"/>
+      <text x="22" y="30" fill="#7A7A80" font-family="monospace" font-size="11">YOUR VPC</text>
+      <rect x="30" y="45" width="170" height="160" rx="8" fill="#131316" stroke="#F2EFE9" stroke-opacity="0.3"/>
+      <text x="40" y="63" fill="#7A7A80" font-family="monospace" font-size="10">AZ a / subnet</text>
+      <rect x="45" y="75" width="80" height="30" rx="5" fill="#0E0E10" stroke="#F2EFE9"/>
+      <text x="85" y="94" fill="#F2EFE9" font-family="monospace" font-size="10" text-anchor="middle">app</text>
+      <rect x="45" y="140" width="140" height="40" rx="5" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="115" y="158" fill="#6FCF97" font-family="monospace" font-size="10" text-anchor="middle">endpoint ENI</text>
+      <text x="115" y="172" fill="#6FCF97" font-family="monospace" font-size="10" text-anchor="middle">10.0.1.x</text>
+      <rect x="220" y="45" width="170" height="160" rx="8" fill="#131316" stroke="#F2EFE9" stroke-opacity="0.3"/>
+      <text x="230" y="63" fill="#7A7A80" font-family="monospace" font-size="10">AZ b / subnet</text>
+      <rect x="235" y="75" width="80" height="30" rx="5" fill="#0E0E10" stroke="#F2EFE9"/>
+      <text x="275" y="94" fill="#F2EFE9" font-family="monospace" font-size="10" text-anchor="middle">app</text>
+      <rect x="235" y="140" width="140" height="40" rx="5" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="305" y="158" fill="#6FCF97" font-family="monospace" font-size="10" text-anchor="middle">endpoint ENI</text>
+      <text x="305" y="172" fill="#6FCF97" font-family="monospace" font-size="10" text-anchor="middle">10.0.2.x</text>
+      <rect x="470" y="80" width="140" height="70" rx="10" fill="#131316" stroke="#F2EFE9"/>
+      <text x="540" y="120" fill="#F2EFE9" font-family="monospace" font-size="11" text-anchor="middle">endpoint service</text>
+      <path d="M185 160 L470 115" stroke="#6FCF97" fill="none"/>
+      <path d="M375 160 L470 125" stroke="#6FCF97" fill="none"/>
+    </svg>
+    <figcaption>An interface endpoint with an endpoint network interface in each chosen subnet. Placeholder IPs.</figcaption>
+  </figure>
+
+  <h3>3. DNS: how your app finds the doorway</h3>
+  <p>Creating an interface endpoint gives you Regional and zonal DNS names of the form <code>endpoint_id.service_id.region.vpce.amazonaws.com</code> (and the same with an AZ name added for zonal). You could point apps at those, but the nicer option is <strong>private DNS</strong>. With private DNS on (and DNS hostnames plus DNS resolution enabled on the VPC), AWS creates a hidden private hosted zone so the service's normal public name resolves to the endpoint's private IPs. Existing apps and SDK calls then use the endpoint with no code change. The docs recommend enabling it for AWS services. One more fact: the endpoint's DNS names are publicly resolvable, but they return private IPs, so they're useless without access to the VPC.</p>
+  <p>With the Regional name, traffic is spread across healthy endpoint interfaces with round robin; if you prefer to stay in the same AZ, use the zonal name or the interface's IP.</p>
+  <p><strong>On-premises caveat.</strong> The VPC's Route 53 Resolver can't be used from outside the VPC. To reach an interface endpoint from on-premises by name you use Route 53 Resolver endpoints and rules.</p>
+
+  <h3>4. Endpoint policies: a second lock on the door</h3>
+  <p>An endpoint policy is a resource policy on the endpoint. By default it allows all actions by all principals on all resources through that endpoint. Important: per the docs it does <em>not</em> override or replace identity-based or resource-based policies. Think of it as one more gate that a request has to be allowed through, on top of IAM and, for S3, bucket policies. Details from the docs: it must include a <code>Principal</code>; max size 20,480 characters; changes can take a few minutes; not every service supports endpoint policies (if not, full access is allowed). For gateway endpoints the <code>Principal</code> must be <code>*</code> and you narrow who with the <code>aws:PrincipalArn</code> condition key. Writing the principal as just an account ID grants the account root user only, not all its users and roles.</p>
+  <p><strong>S3 pairing.</strong> Buckets can also insist on your endpoint with a bucket policy: the docs show a Deny with <code>StringNotEquals</code> on <code>aws:sourceVpce</code> (a specific endpoint) or <code>aws:sourceVpc</code> (a VPC). They warn that such a policy also blocks access through the AWS console. And <code>aws:SourceIp</code> doesn't work for requests via a VPC endpoint; use <code>aws:VpcSourceIp</code>. This connects to the S3 access control concept coming up in the S3 rotation.</p>
+
+  <h3>5. Choosing, and the S3 special case</h3>
+  <p>For S3 and DynamoDB you can use either type. <em>Simplification for beginners:</em> use the free gateway endpoint for traffic from inside the VPC, and reach for an interface endpoint when you need what the gateway can't do (on-premises, other-Region peered VPCs, or via a transit gateway, per the S3 page). Caveat: the right pick depends on your network; read the S3 and DynamoDB comparison pages.</p>
+  <p>The docs also describe a cost optimisation for S3: with both endpoints present and private DNS enabled only for the inbound Resolver endpoint, on-premises requests use the interface endpoint while VPC requests use the free gateway endpoint. If you enable plain private DNS without that option, VPC traffic also goes through the interface endpoint, and you pay for it.</p>
+  <p>Other endpoint types exist (Gateway Load Balancer, Resource, Service network, Tunnel). They're named here so you recognise them; this digest doesn't go deep on them.</p>
+
+  <h3>Comparison at a glance</h3>
+  <div class="card">
+    <ul>
+      <li><strong>Services:</strong> gateway = S3 and DynamoDB. Interface = many AWS services plus partner/own endpoint services.</li>
+      <li><strong>Mechanism:</strong> gateway = route table entry to a prefix list. Interface = network interfaces in your subnets, found via DNS.</li>
+      <li><strong>Cost:</strong> gateway = no additional charge (docs). Interface = hourly per AZ plus per GB.</li>
+      <li><strong>PrivateLink:</strong> gateway = no. Interface = yes.</li>
+      <li><strong>Reach beyond the VPC:</strong> gateway = no (not via VPN, peering, TGW, Direct Connect). Interface = it can be used from on-premises (with DNS set up as above).</li>
+      <li><strong>Security groups:</strong> gateway = your instances' groups must allow the service (prefix list). Interface = a group on the endpoint interfaces.</li>
+    </ul>
+  </div>
+
+  <h2>Why it matters</h2>
+  <p>Endpoints are how you build private-subnet architectures that don't need a NAT for AWS-service traffic, lock buckets down to your VPC, and consume or sell services across accounts safely. They also touch everything we've covered: route tables and longest-prefix routing (Topic 1), security groups and NACLs (Topic 4), and later DNS (the next VPC concept) and S3 access control.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Gateway endpoint = a route to a prefix list, S3 and DynamoDB only, no extra charge, doesn't use PrivateLink.</li>
+      <li>Interface endpoint = ENIs with private IPs in your subnets, found via DNS, billed per AZ-hour plus data.</li>
+      <li>Private DNS lets unchanged apps use an interface endpoint through the service's normal name.</li>
+      <li>An endpoint policy adds a gate; it doesn't replace IAM or bucket policies. Default is allow all.</li>
+      <li>Use at least two AZs for interface endpoints in production (AWS recommendation).</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Gateway endpoint for S3.</strong> In a test VPC with a private subnet, create a gateway endpoint (console, or <code>aws ec2 create-vpc-endpoint --vpc-id &lt;vpc&gt; --service-name com.amazonaws.&lt;region&gt;.s3 --route-table-ids &lt;rtb&gt;</code>). <em>Done when:</em> you can see the new prefix-list route in the route table and that you can't edit it.</li>
+      <li><strong>Prove the bypass.</strong> Remove the NAT route from that private subnet's route table (in a throwaway VPC) and, from an instance with an appropriate role, list a bucket in the same Region. <em>Done when:</em> S3 works but a call to some other service times out. Note: this one needs a live account, and I haven't run it for you.</li>
+      <li><strong>Read the DNS entries.</strong> Create an interface endpoint for a service of your choice with private DNS on, then run <code>aws ec2 describe-vpc-endpoints --vpc-endpoint-id &lt;id&gt; --query VpcEndpoints[*].DnsEntries</code>. <em>Done when:</em> you can label the Regional, zonal and private-hosted-zone entries. (Interface endpoints cost money while they exist: delete it afterwards.)</li>
+      <li><strong>Resolve from inside and outside.</strong> From an instance in the VPC and from your laptop, resolve the service's public name. <em>Done when:</em> you can explain why the VPC answer is a private IP, and what happens to the laptop's answer.</li>
+      <li><strong>Lock a bucket to your endpoint.</strong> Write a bucket policy with a Deny and <code>aws:sourceVpce</code> as in the docs' example, applied to a scratch bucket. <em>Done when:</em> access from the instance works and access from your laptop is denied. Warn yourself first that the console is blocked too; keep a way to remove the policy.</li>
+      <li><strong>Paper design.</strong> Draw a VPC with two AZs, a private app tier, S3 via gateway and CloudWatch via interface endpoint. <em>Done when:</em> you've marked every route-table entry, security group rule, and subnet involved.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Read the AWS PrivateLink concepts page for the provider side: endpoint services, load balancers, and connection acceptance, which this digest only touched on. Then see how DNS in a VPC works (the next VPC concept).</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the official documentation. Quotas, pricing, supported services and CLI syntax change, so verify anything you plan to rely on against the live pages below.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/privatelink/concepts.html" target="_blank" rel="noopener">AWS PrivateLink concepts</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/privatelink/privatelink-access-aws-services.html" target="_blank" rel="noopener">Access AWS services through AWS PrivateLink</a> (DNS, subnets and AZs, pricing)</li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/privatelink/create-interface-endpoint.html" target="_blank" rel="noopener">Access an AWS service using an interface VPC endpoint</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html" target="_blank" rel="noopener">Gateway endpoints</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-s3.html" target="_blank" rel="noopener">Gateway endpoints for Amazon S3</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-access.html" target="_blank" rel="noopener">Control access to VPC endpoints using endpoint policies</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/create-vpc-endpoint.html" target="_blank" rel="noopener">CLI reference: create-vpc-endpoint</a></li>
+  </ul>
+  <p class="src-note">Flagged: the CLI commands were checked against the CLI reference and docs text but not run against a live account. The CLI reference's own interface example writes <code>--security-group-id</code> (singular); the option table documents <code>--security-group-ids</code>, which is what to use. Pricing figures, the DynamoDB gateway page, and the per-service endpoint-policy support table were not read for this digest.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
