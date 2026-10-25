@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: EC2 Instance Metadata, User Data and Instance Profiles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS EC2 &middot; CONCEPT 7 DIGEST</p>
+  <h1>Instance Metadata (IMDSv2), User Data, Instance Profiles and IAM Roles</h1>
+  <p class="lead">How does a freshly launched server know its own instance ID, run your setup script, and call AWS APIs without anyone pasting access keys onto it? Three linked features: the instance metadata service, user data, and IAM roles delivered through instance profiles. They also form one of the best-known security boundaries on EC2.</p>
+
+  <h2>In one line</h2>
+  <p>Every instance can ask a local, link-local address (169.254.169.254) about itself; it can be handed a launch-time script (user data); and it can receive temporary AWS credentials for an IAM role via an instance profile, with IMDSv2 as the safer, token-based way to read all of it.</p>
+
+  <h2>The big idea</h2>
+  <p>A virtual server needs three things at birth: knowledge about itself ("who am I, where am I?"), instructions ("what should I set up?"), and an identity AWS trusts ("what am I allowed to do?"). EC2 answers each with a mechanism that lives <em>on the instance's own network interface</em>, so no secrets need to travel through your code or your AMI.</p>
+  <p>They connect: user data scripts run on the instance, call the metadata service to learn their instance ID, and use role credentials from the same service to call other AWS services. That makes the metadata service a juicy target if something on the instance can be tricked into making web requests, which is why IMDSv2 exists.</p>
+  <p>This builds on earlier EC2 digests (AMIs, Auto Scaling launch templates, Systems Manager). I quote no prices; everything here is configuration.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Instance metadata</span>: data about a running instance (instance ID, AMI ID, type, network, placement, IAM info, and more), readable only from within the instance.</li>
+    <li><span class="keyterm-term">IMDS</span>: the Instance Metadata Service, the local endpoint that serves it.</li>
+    <li><span class="keyterm-term">IMDSv1 / IMDSv2</span>: the older request/response method, and the newer session-token method.</li>
+    <li><span class="keyterm-term">Session token</span>: a short-lived, instance-specific key that IMDSv2 requires on requests.</li>
+    <li><span class="keyterm-term">User data</span>: a blob of text you provide at launch (often a script) that the instance can read and act on.</li>
+    <li><span class="keyterm-term">cloud-init</span>: the package on many Linux images that reads user data and does first-boot setup.</li>
+    <li><span class="keyterm-term">IAM role</span>: a set of permissions that a trusted entity (here, an EC2 instance) can assume.</li>
+    <li><span class="keyterm-term">Instance profile</span>: the container that passes a single IAM role to an EC2 instance.</li>
+    <li><span class="keyterm-term">Temporary credentials</span>: an access key, secret key and session token that expire and are rotated automatically.</li>
+    <li><span class="keyterm-term">SSRF</span>: server-side request forgery, tricking a server into making a request on an attacker's behalf. (A concept the docs reference via IMDSv2's design; defined here in my words.)</li>
+    <li><span class="keyterm-term">Hop limit</span>: how many network hops the token response may travel (IP time-to-live).</li>
+    <li><span class="keyterm-term">Base64</span>: a text encoding for binary-safe transfer; user data must be base64-encoded in transit.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>0. Grounding: a phone line that only the instance can dial</h3>
+  <p>The IMDS runs locally on every instance, at <code>169.254.169.254</code> (IPv4), plus an IPv6 endpoint <code>[fd00:ec2::254]</code> that is only supported on Nitro-based instances in IPv6-supported subnets, and which you must enable explicitly. The docs say you can access metadata and user data only from within the instance itself.</p>
+  <p><strong>But the important caveat:</strong> the data is "not protected by authentication or cryptographic methods". Anyone with direct access to the instance, and potentially any software running on it, can read it. So the docs say not to store passwords or long-lived encryption keys in user data.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="ar9" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#C9C7C1"/></marker></defs>
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">WHAT AN INSTANCE CAN ASK ABOUT ITSELF</text>
+      <rect x="30" y="50" width="220" height="150" rx="10" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="140" y="70" fill="#7A7A80" font-size="10.5" text-anchor="middle">YOUR INSTANCE</text>
+      <rect x="50" y="85" width="180" height="32" rx="6" fill="#131316" stroke="#7A7A80"/><text x="140" y="106" fill="#C9C7C1" font-size="10.5" text-anchor="middle">your app / boot script</text>
+      <rect x="50" y="135" width="180" height="50" rx="6" fill="#131316" stroke="#C8453A" stroke-dasharray="4 3"/><text x="140" y="155" fill="#C8453A" font-size="10.5" text-anchor="middle">cloud-init</text><text x="140" y="171" fill="#C9C7C1" font-size="9.5" text-anchor="middle">runs user data</text>
+      <rect x="360" y="50" width="240" height="150" rx="10" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="480" y="70" fill="#6FCF97" font-size="10.5" text-anchor="middle" font-weight="700">169.254.169.254 (IMDS)</text>
+      <g font-size="10" fill="#C9C7C1"><text x="375" y="95">/latest/meta-data/instance-id</text><text x="375" y="115">/latest/meta-data/placement/...</text><text x="375" y="135">/latest/meta-data/iam/...</text><text x="375" y="155">user data (separate path)</text></g>
+      <path d="M230 100 L360 100" stroke="#C9C7C1" marker-end="url(#ar9)"/>
+      <path d="M230 160 L360 150" stroke="#C9C7C1" marker-end="url(#ar9)"/>
+      <text x="310" y="228" fill="#7A7A80" font-size="10" text-anchor="middle">local to the instance, but not authenticated: treat what's here as readable by software on the box</text>
+    </svg>
+    <figcaption>Original schematic: the metadata service is a local endpoint, not a public one.</figcaption>
+  </figure>
+
+  <h3>1. What's in instance metadata</h3>
+  <p>The docs group metadata into categories. A sample from their table: <code>ami-id</code>, <code>instance-id</code>, <code>instance-type</code>, <code>hostname</code>, <code>local-ipv4</code>, <code>public-ipv4</code>, <code>placement/availability-zone</code>, <code>placement/region</code>, <code>security-groups</code>, <code>mac</code>, network details under <code>network/interfaces/macs/...</code>, <code>iam/info</code> and <code>iam/security-credentials/&lt;role-name&gt;</code> (only present if a role is attached), <code>spot/instance-action</code> (present only when a Spot Instance has been marked for interruption), and <code>events/maintenance/...</code>. Instance tags are available only if you explicitly allow access to tags in instance metadata. <em>Dynamic data</em> such as the instance identity document is generated at launch.</p>
+  <p>Use <code>latest</code> in the path instead of a dated version so code doesn't need updating when AWS releases new categories. On Nitro-based instances, you can only retrieve metadata categories that were available at launch; Xen instances can refresh them by stopping and starting.</p>
+
+  <h3>2. IMDSv1 vs. IMDSv2</h3>
+  <p><strong>IMDSv1</strong> is a plain request/response: a simple GET returns the answer. <strong>IMDSv2</strong> is session-oriented:</p>
+  <ol>
+    <li>Send a <code>PUT</code> to <code>/latest/api/token</code> with a header <code>X-aws-ec2-metadata-token-ttl-seconds</code> (the docs' example uses 21600, i.e. six hours; the valid range is one second to six hours). The response is a token.</li>
+    <li>Include that token in a header <code>X-aws-ec2-metadata-token</code> on every <code>GET</code> (or <code>HEAD</code>).</li>
+  </ol>
+  <p>The token is instance-specific and is rejected on other instances. By default <strong>both versions are allowed</strong>; you can configure an instance to require IMDSv2, in which case requests without a valid token get <code>401 Unauthorized</code>. If those headers are present the request is treated as IMDSv2, otherwise as IMDSv1.</p>
+  <p><strong>Why the extra step helps</strong> (docs details plus my plain-language reading, not an official explanation): the PUT response by default has an IP hop limit of 1, and PUT requests carrying an <code>X-Forwarded-For</code> header are rejected. Together with the need to craft a PUT with a custom header, that makes it harder for a simple "fetch this URL for me" bug or a misconfigured proxy to hit the service. The docs link a security blog post about defence in depth against open firewalls, reverse proxies and SSRF for the full argument.</p>
+  <p><strong>Caveats.</strong> A hop limit of 1 can cause trouble for containers on the instance (the docs advise raising it, up to 64, when needed). SDKs must be recent enough: the docs list minimum versions (for example AWS CLI 1.16.289, Boto3 1.12.6). And requiring IMDSv2 breaks anything still using IMDSv1.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="ar10" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#C9C7C1"/></marker></defs>
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">IMDSv2 IN TWO STEPS</text>
+      <rect x="40" y="50" width="120" height="130" rx="8" fill="#131316" stroke="#7A7A80"/><text x="100" y="72" fill="#C9C7C1" font-size="11" text-anchor="middle">software on</text><text x="100" y="88" fill="#C9C7C1" font-size="11" text-anchor="middle">the instance</text>
+      <rect x="460" y="50" width="120" height="130" rx="8" fill="#131316" stroke="#6FCF97"/><text x="520" y="72" fill="#6FCF97" font-size="11" text-anchor="middle">IMDS</text>
+      <path d="M160 85 L460 85" stroke="#C8453A" marker-end="url(#ar10)"/><text x="310" y="78" fill="#C8453A" font-size="10" text-anchor="middle">1. PUT /latest/api/token  (+ TTL header)</text>
+      <path d="M460 112 L160 112" stroke="#6FCF97" marker-end="url(#ar10)"/><text x="310" y="106" fill="#6FCF97" font-size="10" text-anchor="middle">token</text>
+      <path d="M160 145 L460 145" stroke="#C8453A" marker-end="url(#ar10)"/><text x="310" y="138" fill="#C8453A" font-size="10" text-anchor="middle">2. GET /latest/meta-data/...  (+ token header)</text>
+      <path d="M460 170 L160 170" stroke="#6FCF97" marker-end="url(#ar10)"/><text x="310" y="164" fill="#6FCF97" font-size="10" text-anchor="middle">the value</text>
+      <text x="310" y="212" fill="#7A7A80" font-size="10" text-anchor="middle">IMDSv1 skips step 1: a bare GET works, unless the instance is set to "token required"</text>
+    </svg>
+    <figcaption>Original sketch of the IMDSv2 exchange.</figcaption>
+  </figure>
+
+  <h3>3. Configuring the IMDS: where, and who wins</h3>
+  <p>The options per instance (docs): IMDS enabled or disabled; IPv6 endpoint; metadata version (<code>httpTokens</code> optional or required); response hop limit (1 to 64); and access to tags in metadata. They can be set at three levels, with this precedence for a new instance: (1) the launch request or launch template, (2) account-level defaults per Region, (3) the AMI (<code>imds-support: v2.0</code> sets IMDSv2 and a hop limit of 2). Each option is evaluated separately. You can change options after launch on a running or stopped instance, unless an IAM policy or SCP forbids it. There is also an account-level enforcement setting; when it's on, launches that don't resolve to <code>required</code> fail.</p>
+  <p>CLI form checked on the reference page: <code>aws ec2 modify-instance-metadata-options --instance-id i-... --http-tokens required --http-endpoint enabled</code>. Docs warning: turning the endpoint off breaks anything that relies on it, so test first. Note this connects to the Systems Manager digest: its Default Host Management Configuration requires instances to use IMDSv2.</p>
+
+  <h3>4. User data: first-boot instructions</h3>
+  <ul>
+    <li>Opaque to EC2: what you give is what you get back; the instance interprets it. On Linux, two types: shell scripts (starting with <code>#!</code>) and cloud-init directives (starting with <code>#cloud-config</code>). On Windows, the launch agents handle it, using tags like <code>&lt;script&gt;</code> or <code>&lt;powershell&gt;</code>.</li>
+    <li>Must be base64-encoded in transit; the console and the <code>run-instances</code> CLI do it for you. Limit: 16 KB raw (before encoding). I computed that 16 KB becomes 21,848 characters after base64 using the docs' formula ceil(n/3)*4.</li>
+    <li>By default it runs <strong>only on the first boot</strong> of a launch; you can configure it to run on every restart (on Windows, <code>&lt;persist&gt;true&lt;/persist&gt;</code>).</li>
+    <li>Linux scripts run as root, so don't use <code>sudo</code>; they aren't interactive (e.g. use <code>-y</code> flags). Output goes to <code>/var/log/cloud-init-output.log</code> for debugging, and the script is stored under <code>/var/lib/cloud/instances/&lt;instance-id&gt;/</code>, so delete it before making an AMI from the instance or it will be baked in.</li>
+    <li>User data is an instance attribute and is not included in an AMI made from the instance. You can edit it only while the instance is stopped (and root must be EBS); a changed script does not rerun by default.</li>
+    <li>Boot time grows with what you run: allow a few minutes. For heavy setup, the idea of baking an AMI (digest 1) is the common alternative.</li>
+    <li>If a user data script calls AWS APIs, the instance needs an instance profile.</li>
+  </ul>
+
+  <h3>5. IAM roles and instance profiles: credentials without secrets</h3>
+  <p>Applications must sign API requests with AWS credentials. Shipping long-term keys to instances (especially ones AWS creates for you like Spot or Auto Scaling) is hard and risky. The docs' answer: create an IAM role, define who can assume it and what it can do, attach it to the instance, and let the app fetch <strong>temporary credentials</strong>.</p>
+  <ul>
+    <li>An <strong>instance profile</strong> is the container that passes a role to the instance. If you create the role in the IAM console, a profile with the same name is made automatically; with the CLI/API they are separate actions and can have different names. A profile holds one role; a role can be in many profiles. You attach at most one instance profile to an instance.</li>
+    <li>Credentials are retrieved from <code>iam/security-credentials/&lt;role-name&gt;</code> and look like AccessKeyId, SecretAccessKey, Token, Expiration. They're rotated automatically, with new ones available at least five minutes before the old ones expire. The AWS SDKs, CLI and PowerShell tools fetch and refresh them for you, so application code rarely touches this path.</li>
+    <li>To change permissions, replace the instance profile; the docs advise against removing a role from a profile because the change can take up to an hour. Edits to the role's policy propagate to all instances using it.</li>
+    <li>Attach with the console (Actions, Security, Modify IAM role) or CLI. The reference page shows: <code>aws ec2 associate-iam-instance-profile --instance-id i-... --iam-instance-profile Name=admin-role</code>, usable on running or stopped instances.</li>
+    <li>Use least-privilege policies; the docs suggest IAM Access Analyzer can generate a policy template from CloudTrail activity.</li>
+  </ul>
+  <p><strong>Warning from the docs:</strong> services that make HTTP calls on your behalf (HTTP proxies, HTML/CSS validators, XML processors with inclusion) can expose these credentials if they can be pointed at the metadata address.</p>
+  <p><strong>Instance identity role (a different thing).</strong> Every instance also gets an automatic instance identity role used by a few integrated AWS features (such as EC2 Instance Connect and Systems Manager Default Host Management Configuration) to identify the instance. The docs say its credentials have no policies attached, so they give no extra API permissions beyond identification.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 220" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="ar11" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#C9C7C1"/></marker></defs>
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">ROLE, PROFILE, INSTANCE</text>
+      <rect x="20" y="60" width="120" height="60" rx="8" fill="#131316" stroke="#C8453A"/><text x="80" y="86" fill="#C8453A" font-size="11" text-anchor="middle" font-weight="700">IAM role</text><text x="80" y="104" fill="#C9C7C1" font-size="9.5" text-anchor="middle">permissions</text>
+      <rect x="190" y="60" width="130" height="60" rx="8" fill="#131316" stroke="#7A7A80"/><text x="255" y="86" fill="#F2EFE9" font-size="11" text-anchor="middle">instance profile</text><text x="255" y="104" fill="#C9C7C1" font-size="9.5" text-anchor="middle">holds 1 role</text>
+      <rect x="370" y="60" width="110" height="60" rx="8" fill="#131316" stroke="#7A7A80"/><text x="425" y="86" fill="#F2EFE9" font-size="11" text-anchor="middle">EC2 instance</text>
+      <rect x="520" y="60" width="85" height="60" rx="8" fill="#131316" stroke="#6FCF97"/><text x="562" y="86" fill="#6FCF97" font-size="10" text-anchor="middle">temp</text><text x="562" y="102" fill="#6FCF97" font-size="10" text-anchor="middle">credentials</text>
+      <path d="M140 90 L190 90" stroke="#C9C7C1" marker-end="url(#ar11)"/><path d="M320 90 L370 90" stroke="#C9C7C1" marker-end="url(#ar11)"/><path d="M480 90 L520 90" stroke="#C9C7C1" marker-end="url(#ar11)"/>
+      <text x="500" y="140" fill="#7A7A80" font-size="9.5" text-anchor="middle">via IMDS, auto-rotated</text>
+      <text x="310" y="190" fill="#7A7A80" font-size="10" text-anchor="middle">one profile per instance; one role per profile; many instances can share a profile's role</text>
+    </svg>
+    <figcaption>Original schematic of how permissions reach an instance.</figcaption>
+  </figure>
+
+  <h2>Why it matters</h2>
+  <p>This trio explains a lot of real-world EC2 security. It is why you never need to paste keys on an instance, why a bug that lets an attacker make your server fetch an arbitrary URL can become a credential leak, and why "require IMDSv2" is a common hardening step. It also underlies Systems Manager and Auto Scaling bootstrapping (user data plus lifecycle hooks).</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>The IMDS is a local, unauthenticated endpoint at 169.254.169.254: don't put secrets in user data or metadata.</li>
+      <li>IMDSv2 = PUT for a token (up to six hours), then send the token on every GET; by default both v1 and v2 are allowed until you require v2.</li>
+      <li>User data is base64, max 16 KB raw, runs as root on first boot only by default, and isn't copied into AMIs.</li>
+      <li>An instance profile carries one IAM role; the instance gets auto-rotated temporary credentials via the IMDS; SDKs fetch them for you.</li>
+      <li>Setting precedence for IMDS options: launch request, then account default, then AMI; each option separately.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <p style="font-size:14px;color:var(--muted);">Projects 1 and 2 run locally with no AWS account. Projects 3 to 5 use a small EC2 instance you should terminate afterwards (it may cost money). The metadata curl commands and the two CLI commands are as shown on the docs pages I fetched; I did not run any of them against a live account.</p>
+    <ol>
+      <li><strong>Fake IMDS (no AWS).</strong> Write a tiny HTTP server that accepts <code>PUT /latest/api/token</code> with a TTL header, returns a random token, and only answers <code>GET /latest/meta-data/instance-id</code> when the token header is valid and unexpired (otherwise 401). <em>Done when:</em> a request with no token fails, a valid one succeeds, and an expired one fails.</li>
+      <li><strong>Precedence resolver (no AWS).</strong> Implement the three-level precedence (launch value, account default, AMI) for <code>HttpTokens</code> and the hop limit. <em>Done when:</em> it reproduces the docs' Example 1 (tokens required from the AMI, hop limit 1 from the account).</li>
+      <li><strong>Read your own metadata.</strong> SSH or Session Manager into a small instance and run the docs' IMDSv2 two-step with curl to read <code>instance-id</code> and <code>placement/region</code>. <em>Done when:</em> you get both values, and a bare GET behaves as expected for your instance's setting.</li>
+      <li><strong>Require IMDSv2.</strong> Run <code>aws ec2 modify-instance-metadata-options --instance-id &lt;id&gt; --http-tokens required</code>, then retry the bare GET. <em>Done when:</em> the bare request returns 401 and the token-based one works.</li>
+      <li><strong>User data with a role.</strong> Launch an instance with an instance profile that allows only read access to one S3 bucket of yours and user data that writes the instance ID into a file. Check <code>/var/log/cloud-init-output.log</code>. <em>Done when:</em> the file exists, and you can explain why the script didn't need any stored keys. Then try an action the role doesn't allow and read the error.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Next: the IAM role trust policy and permissions for passing a role to an instance (<code>iam:PassRole</code>), enforcing IMDSv2 at the account level and with IAM condition keys, tags in instance metadata, EC2 Instance Connect, EC2Launch v2 for Windows, and combining shell scripts and cloud-init in a MIME multi-part file (which the docs describe).</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the official docs. Verify security-relevant details (IMDS options, SDK minimum versions, credential behaviour) against the live pages. Source accessed on 2026-10-25.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html" target="_blank" rel="noopener">Use instance metadata to manage your EC2 instance</a> (categories, caveats)</li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html" target="_blank" rel="noopener">Use the Instance Metadata Service to access instance metadata</a> (IMDSv2 mechanics, examples, SDK versions)</li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-options.html" target="_blank" rel="noopener">Configure the Instance Metadata Service options</a></li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html" target="_blank" rel="noopener">Run commands when you launch an EC2 instance with user data input</a></li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html" target="_blank" rel="noopener">IAM roles for Amazon EC2</a> and <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-metadata-security-credentials.html" target="_blank" rel="noopener">Retrieve security credentials from instance metadata</a></li>
+    <li>AWS CLI reference: <a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/modify-instance-metadata-options.html" target="_blank" rel="noopener">modify-instance-metadata-options</a> and <a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/associate-iam-instance-profile.html" target="_blank" rel="noopener">associate-iam-instance-profile</a></li>
+  </ul>
+  <p class="src-note">Flagged: (1) My "why IMDSv2 helps" paragraph combines docs facts (hop limit 1, X-Forwarded-For rejection, token requirement) with my own interpretation; the AWS security blog post linked from the docs is the authoritative explanation and I did not fetch it. (2) Not fetched: IAM-side trust policy details, <code>iam:PassRole</code>, account-level IMDSv2 enforcement page, and EC2 Instance Connect. (3) The 21,848-character figure is my arithmetic from the docs' formula. (4) No commands were run against a live account. No prices quoted.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
