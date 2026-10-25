@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: EC2 Instance Monitoring, Status Checks and Auto Recovery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS EC2 &middot; CONCEPT 10 DIGEST</p>
+  <h1>Instance Monitoring, Status Checks and Auto Recovery</h1>
+  <p class="lead">Instances fail in two broad ways: the AWS side under them breaks, or the thing you put on them breaks. EC2 gives you built-in tests that tell those apart, metrics that show how busy an instance is, and two recovery mechanisms that can move a struggling instance to healthy hardware. This is the last EC2 concept in the series, and it ties together alarms, Systems Manager, Auto Scaling and storage.</p>
+
+  <h2>In one line</h2>
+  <p>EC2 runs status checks every minute (system, instance, attached EBS, plus opt-in application checks), publishes CloudWatch metrics (5-minute by default, 1-minute with detailed monitoring), and can automatically recover an instance when the system check fails, but recovery is a single-instance repair, not a substitute for a resilient design.</p>
+
+  <h2>The big idea</h2>
+  <p>The distinction that unlocked this topic for me: <strong>who has to fix it</strong>. EC2's two classic checks are named after the owner of the problem. A failed <em>system</em> status check means something is wrong with the AWS host the instance runs on, so AWS (or a move to another host) fixes it. A failed <em>instance</em> status check means something is wrong inside your instance (networking config, memory, file system, kernel), so you fix it.</p>
+  <p>Once you know that, recovery is easy to reason about: automatic recovery reacts to system check failures only. The docs say plainly that it "does not operate if only the instance status check fails".</p>
+  <p>Cost notes in words only: status check metrics are free at 1-minute frequency; detailed monitoring charges per metric sent to CloudWatch; CloudWatch action based recovery might incur CloudWatch charges; simplified automatic recovery has no additional cost. No dollar figures.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Status check</span>: an automated EC2 test of instance health, run every minute, giving pass or fail.</li>
+    <li><span class="keyterm-term">System status check</span>: tests the AWS systems the instance runs on.</li>
+    <li><span class="keyterm-term">Instance status check</span>: tests the software and network configuration of your own instance.</li>
+    <li><span class="keyterm-term">Impaired</span>: the overall status when one or more checks fail (versus OK when all pass).</li>
+    <li><span class="keyterm-term">Basic / detailed monitoring</span>: 5-minute vs. 1-minute metric periods for most EC2 metrics.</li>
+    <li><span class="keyterm-term">CloudWatch metric / alarm</span>: a time series of measurements, and a rule that reacts when it crosses a threshold.</li>
+    <li><span class="keyterm-term">Instance recovery</span>: moving an instance from a faulty host to a different host.</li>
+    <li><span class="keyterm-term">Simplified automatic recovery</span>: the AWS-managed, on-by-default recovery mechanism.</li>
+    <li><span class="keyterm-term">CloudWatch action based recovery</span>: a recovery you configure through a CloudWatch alarm action.</li>
+    <li><span class="keyterm-term">Volatile memory (RAM)</span>: working memory, emptied when the instance is moved.</li>
+    <li><span class="keyterm-term">Health Dashboard</span>: where AWS posts events about your resources, including recovery successes and failures.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>0. Grounding: what does "healthy" mean for a virtual server?</h3>
+  <p>An instance can be "running" (in the lifecycle sense from the first digest) and still be useless: unreachable, out of memory, or on a sick host. State tells you what EC2 intends; status checks tell you what actually works. The CloudWatch metrics add the numbers (CPU, network) over time.</p>
+
+  <h3>1. The five status checks</h3>
+  <p>EC2 offers five types. Four are managed by EC2 and cannot be disabled or deleted; application checks are opt-in. All run every minute and return pass or fail; all pass means <code>OK</code>, otherwise <code>impaired</code>.</p>
+  <div class="card">
+  <ul>
+    <li><strong>System status check</strong> (AWS side): examples of causes in the docs are loss of network connectivity, loss of system power, software issues on the physical host, and hardware issues on the host affecting reachability. Fix options: wait for AWS, or for an EBS-backed instance <strong>stop and start</strong> it, which in most cases migrates it to a new host. (Instance-store-backed Linux instances: terminate and replace.) Metric: <code>StatusCheckFailed_System</code>.</li>
+    <li><strong>Instance status check</strong> (your side): EC2 sends an ARP request to the instance's network interface. Failures can come from incorrect networking or startup configuration, exhausted memory, a corrupted file system or an incompatible kernel (and from a failing system check, or from a reboot in progress). You typically fix it yourself, for example by rebooting or changing configuration. Metric: <code>StatusCheckFailed_Instance</code>.</li>
+    <li><strong>Attached EBS status check</strong>: whether attached EBS volumes are reachable and can complete I/O. Metric <code>StatusCheckFailed_AttachedEBS</code>, available only for Nitro instances. Suggested responses: wait, replace the volume, stop and start the instance, or fail over; Auto Scaling groups can be configured to replace instances with impaired EBS volumes.</li>
+    <li><strong>Application status check</strong> (opt-in): you configure an HTTP or HTTPS path and the response codes that count as healthy; failures increment <code>StatusCheckFailed_Application</code>. You can suppress them during deployments to avoid false alarms.</li>
+    <li><strong>Performance status check</strong>: for supported accelerated-computing instances, spotting hardware issues that hurt performance without making the instance unreachable (the docs' example is a GPU memory error that a reboot can clear).</li>
+  </ul>
+  </div>
+  <p>Aggregate metric <code>StatusCheckFailed</code> reports whether the instance passed all checks in the last minute (0 passed, 1 failed). Newly launched instances have status check data only after initialisation. Bare metal restarts can make checks fail temporarily.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 260" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">WHO OWNS THE PROBLEM?</text>
+      <rect x="30" y="50" width="260" height="150" rx="10" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="160" y="72" fill="#C8453A" font-size="11" font-weight="700" text-anchor="middle">SYSTEM check fails</text>
+      <g font-size="10" fill="#C9C7C1"><text x="45" y="98">host power / network / hardware</text><text x="45" y="116">= AWS side of the line</text><text x="45" y="144" fill="#6FCF97">fix: wait, or stop + start</text><text x="45" y="160" fill="#6FCF97">(moves to a new host, usually)</text><text x="45" y="184" fill="#7A7A80">auto recovery acts on this</text></g>
+      <rect x="330" y="50" width="260" height="150" rx="10" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="460" y="72" fill="#6FCF97" font-size="11" font-weight="700" text-anchor="middle">INSTANCE check fails</text>
+      <g font-size="10" fill="#C9C7C1"><text x="345" y="98">bad network/boot config, memory,</text><text x="345" y="116">file system, kernel</text><text x="345" y="144" fill="#6FCF97">fix: you (reboot, reconfigure)</text><text x="345" y="184" fill="#7A7A80">auto recovery does NOT act</text></g>
+      <text x="310" y="235" fill="#7A7A80" font-size="10" text-anchor="middle">Simplification: causes overlap (a failed system check can also fail the instance check).</text>
+    </svg>
+    <figcaption>Original schematic of the two classic checks.</figcaption>
+  </figure>
+
+  <h3>2. Metrics: basic vs. detailed monitoring</h3>
+  <p>EC2 sends metrics to CloudWatch in the <code>AWS/EC2</code> namespace, kept for 15 months per the docs. Under basic monitoring, status check metrics arrive every minute and everything else every 5 minutes. With <strong>detailed monitoring</strong> (enabled at launch, or later with <code>aws ec2 monitor-instances --instance-ids ...</code> and turned off with <code>unmonitor-instances</code>), metrics come in 1-minute periods and you can aggregate across similar instances. Detailed monitoring is charged per metric; status check metrics are free.</p>
+  <p>Key metrics from the docs table:</p>
+  <ul>
+    <li><code>CPUUtilization</code> (percent of physical CPU time EC2 uses to run the instance, including hypervisor time; operating system tools may show a different number).</li>
+    <li><code>NetworkIn</code> / <code>NetworkOut</code> (bytes), <code>NetworkPacketsIn/Out</code> (basic monitoring only). To get bytes per second with the Sum statistic, divide by 300 (basic) or 60 (detailed).</li>
+    <li><code>DiskReadOps/WriteOps/ReadBytes/WriteBytes</code>: these cover <strong>instance store</strong> volumes only; with none, 0 or nothing is reported. EBS volumes have separate metrics (and Nitro instances add <code>EBSReadOps</code> and friends), which links back to the storage digest.</li>
+    <li>Burstable instance credit metrics (<code>CPUCreditBalance</code>, <code>CPUCreditUsage</code>, 5-minute only), and <code>MetadataNoToken</code> / <code>ImdsV1Enabled</code> to track IMDSv2 migration (the metadata digest).</li>
+  </ul>
+  <p><strong>What EC2 metrics don't include</strong> (my inference from the metric tables, which list no memory or file system usage metrics; the docs point to the CloudWatch agent for additional metrics): memory and disk-space usage need the CloudWatch agent, which is the topic of a later CloudWatch concept. Dimensions: <code>InstanceId</code>, <code>AutoScalingGroupName</code>, <code>ImageId</code> and <code>InstanceType</code> (the latter two need detailed monitoring).</p>
+  <p>Alarm actions on EC2 alarms can stop, terminate, reboot or recover an instance, per the monitoring topic list; see the earlier alarms digest for how alarms evaluate.</p>
+
+  <h3>3. Automatic instance recovery</h3>
+  <p>If AWS detects an instance is unavailable because of an underlying hardware or software issue (a system status check failure), recovery tries to move it to a different host. To the instance it looks like an unplanned reboot. Two mechanisms:</p>
+  <div class="card">
+  <ul>
+    <li><strong>Simplified automatic recovery</strong>: enabled by default at launch on supported instances; fixed AWS-managed behaviour; basic notifications through the Health Dashboard (events <code>AWS_EC2_SIMPLIFIED_AUTO_RECOVERY_SUCCESS</code> / <code>_FAILURE</code>); no additional cost. Not supported for metal instances, instances with instance store volumes, Elastic Fabric Adapter, Dedicated Hosts, or Auto Scaling group members, among others. Toggle with <code>aws ec2 modify-instance-maintenance-options --instance-id ... --auto-recovery disabled</code> or <code>default</code>.</li>
+    <li><strong>CloudWatch action based recovery</strong>: you create a CloudWatch alarm on <code>StatusCheckFailed_System</code> (alarm when the value is 1) with the recover action. More customisable, SNS notifications, the docs say faster recovery attempts, and it supports metal instances and selected instance-store types (data on instance store is lost). Not supported for Dedicated Hosts, EFA, Auto Scaling group members, or instances in scheduled maintenance. May incur CloudWatch charges. I read the concept page but not the alarm-creation procedure, so I don't give its steps.</li>
+  </ul>
+  </div>
+  <p><strong>What survives and what doesn't</strong> (docs): preserved are the instance ID, public/private/Elastic IP addresses, instance metadata, placement group, attached EBS volumes and the Availability Zone. Lost are RAM contents and the OS uptime counter (and instance store data with CloudWatch action based recovery). A manual stop and start, by contrast, gives you a new public IPv4 address unless you have an Elastic IP.</p>
+  <p><strong>Limits of recovery:</strong> it only works if the instance is running, no AWS Health Dashboard service events apply, and capacity exists. There is a maximum number of recovery attempts per day, after which the instance might be retired if hardware degradation was the cause. Recovery must be configured <em>before</em> a failure happens.</p>
+  <p><strong>The docs' own caveat:</strong> these mechanisms are for individual instances. For a resilient system, use Elastic Load Balancing and Auto Scaling so traffic fails over to healthy instances. That is the same architecture the earlier digests built toward.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="ar14" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#C9C7C1"/></marker></defs>
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">RECOVERY, BEFORE AND AFTER</text>
+      <rect x="20" y="45" width="170" height="110" rx="8" fill="#0E0E10" stroke="#C8453A"/><text x="105" y="65" fill="#C8453A" font-size="10.5" text-anchor="middle">host A (fault)</text>
+      <rect x="40" y="80" width="130" height="55" rx="6" fill="#131316" stroke="#7A7A80"/><text x="105" y="102" fill="#C9C7C1" font-size="10" text-anchor="middle">instance</text><text x="105" y="118" fill="#C8453A" font-size="9.5" text-anchor="middle">system check FAIL</text>
+      <rect x="430" y="45" width="170" height="110" rx="8" fill="#0E0E10" stroke="#6FCF97"/><text x="515" y="65" fill="#6FCF97" font-size="10.5" text-anchor="middle">host B (healthy)</text>
+      <rect x="450" y="80" width="130" height="55" rx="6" fill="#131316" stroke="#6FCF97"/><text x="515" y="102" fill="#C9C7C1" font-size="10" text-anchor="middle">same instance ID</text><text x="515" y="118" fill="#6FCF97" font-size="9.5" text-anchor="middle">looks like a reboot</text>
+      <path d="M190 107 L450 107" stroke="#C9C7C1" marker-end="url(#ar14)"/><text x="320" y="98" fill="#C9C7C1" font-size="10" text-anchor="middle">recovery</text>
+      <text x="320" y="130" fill="#7A7A80" font-size="9.5" text-anchor="middle">kept: IDs, IPs, EBS, AZ</text>
+      <text x="320" y="146" fill="#7A7A80" font-size="9.5" text-anchor="middle">lost: RAM, uptime</text>
+      <text x="310" y="190" fill="#7A7A80" font-size="10" text-anchor="middle">requires configuration beforehand, capacity, and no active service event</text>
+    </svg>
+    <figcaption>Original schematic of instance recovery.</figcaption>
+  </figure>
+
+  <h2>Why it matters</h2>
+  <p>Almost every incident review for an EC2-based service eventually asks "was it the host or us?" and "did we get alerted?" The status checks answer the first, alarms on status check metrics answer the second, and recovery narrows the window of downtime for single instances. It also completes the EC2 picture: instances (digest 1), what you pay (2), disks (3), traffic (4), scaling (5), operations (6), identity (7), hardware (8), network access (9), and now health (10).</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>System check = AWS side (host), instance check = your side (OS and config); checks run every minute and can't be disabled; application checks are opt-in.</li>
+      <li>Basic monitoring: 5-minute metrics, 1-minute status checks. Detailed monitoring: 1-minute metrics, charged per metric.</li>
+      <li>Automatic recovery only reacts to system check failures, moves the instance to another host, keeps IDs, IPs and EBS, and loses RAM.</li>
+      <li>Simplified recovery is on by default (supported instances, not instance-store ones); CloudWatch action based recovery is alarm-driven and customisable.</li>
+      <li>Recovery repairs one instance; use load balancing and Auto Scaling for resilience.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <p style="font-size:14px;color:var(--muted);">Projects 1 and 2 need no AWS account. Projects 3 to 5 use a small instance (it may cost money; terminate afterwards) and read-only or low-risk commands. <code>describe-instance-status</code>, <code>monitor-instances</code>, <code>unmonitor-instances</code> and <code>modify-instance-maintenance-options</code> appeared on the docs pages or CLI reference page I fetched, but I did not run any of them against a live account.</p>
+    <ol>
+      <li><strong>Triage flowchart (no AWS).</strong> Write a function that takes (system_check, instance_check, ebs_check) as pass/fail and returns who should act and a first action, using only the docs' wording. <em>Done when:</em> system-fail returns "AWS / stop-start or auto recovery" and instance-fail-only returns "you / reboot or fix config, and recovery will not act".</li>
+      <li><strong>Per-second maths (no AWS).</strong> Given a Sum of NetworkOut over a period, compute bytes per second for basic (300 s) and detailed (60 s). <em>Done when:</em> your function matches the docs' divide-by rules and you can explain why packets metrics only exist at 5 minutes.</li>
+      <li><strong>Read your status.</strong> Run <code>aws ec2 describe-instance-status --instance-ids &lt;id&gt;</code> on a running instance. <em>Done when:</em> you can point to SystemStatus and InstanceStatus in the output, both with a <code>reachability</code> detail, and explain the possible Status values (ok, impaired, insufficient-data, not-applicable, initializing).</li>
+      <li><strong>Flip detailed monitoring.</strong> Enable it with <code>aws ec2 monitor-instances</code>, look at <code>CPUUtilization</code> in the console graphs after a few minutes, then turn it off with <code>unmonitor-instances</code>. <em>Done when:</em> you've observed the change in granularity and removed the extra charge.</li>
+      <li><strong>Build the alarm in the console.</strong> Create a CloudWatch alarm on <code>StatusCheckFailed_System</code> for one instance (alarm when the value is 1) with an SNS notification only, not the recover action. <em>Done when:</em> you can describe what would need to change to add the recover action, and which instance types or setups the docs say can't use it (for example Auto Scaling group members). Delete the alarm afterwards.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Next: creating alarms for failing status checks (the docs' procedure), application status check setup and deployment suppression, EC2 scheduled events and retirement, Health Dashboard and EventBridge events for recovery, the CloudWatch agent for memory and disk metrics (coming in the CloudWatch series), and Auto Scaling replacement of impaired instances and EBS volumes.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the official docs. Supported instance types, defaults and charges change; verify against the live pages. Source accessed on 2026-10-25.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-system-instance-status-check.html" target="_blank" rel="noopener">Status checks for Amazon EC2 instances</a></li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-cloudwatch.html" target="_blank" rel="noopener">Monitor your instances using CloudWatch</a>, <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/viewing_metrics_with_cloudwatch.html" target="_blank" rel="noopener">CloudWatch metrics that are available for your instances</a> and <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/manage-detailed-monitoring.html" target="_blank" rel="noopener">Manage detailed monitoring</a></li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-recover.html" target="_blank" rel="noopener">Automatic instance recovery</a>, <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-configuration-recovery.html" target="_blank" rel="noopener">simplified automatic recovery</a> and <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/cloudwatch-recovery.html" target="_blank" rel="noopener">CloudWatch action based recovery</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-instance-status.html" target="_blank" rel="noopener">AWS CLI reference: ec2 describe-instance-status</a></li>
+  </ul>
+  <p class="src-note">Flagged: (1) "EC2 metrics don't include memory or disk space" is my inference from the metric tables plus the docs' pointer to the CloudWatch agent; I did not fetch a page that states it outright. (2) Not fetched: the procedure for creating status check alarms and recover actions, application status check setup, scheduled events, CLI reference pages for monitor-instances and modify-instance-maintenance-options (their syntax comes from the user guide pages). (3) I intentionally did not copy the supported instance type lists, which change often; use the <code>auto-recovery-supported</code> filter the docs describe. (4) The maximum daily recovery attempts figure is not stated in the docs I read, so I give no number. No prices quoted; no command run against a live account.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
