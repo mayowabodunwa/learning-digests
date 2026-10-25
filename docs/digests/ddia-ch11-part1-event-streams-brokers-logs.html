@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DDIA: Ch.11 Event Streams, Message Brokers, and Partitioned Logs (Part 1)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+  pre { background:#0A0A0B; border:1px solid var(--hairline); border-radius:8px; padding:14px 16px; overflow-x:auto; font-family:"JetBrains Mono",monospace; font-size:11.5px; line-height:1.5; color:var(--body); margin:10px 0 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">SYSTEMS &middot; CH.11 DIGEST (PART 1)</p>
+  <h1>Event Streams, Message Brokers, and Partitioned Logs</h1>
+  <p class="lead">Batch processing assumed the input was a finite pile of files. Real data keeps arriving, so this chapter asks what happens if you stop waiting for "the end of the day" and process each event as it happens. This first part covers the plumbing: what an event stream is, why polling a database is a poor way to move events, how traditional message brokers deliver them, and why a different design, the partitioned log, ends up feeling a lot like the batch world's files. It stops right before "Databases and Streams".</p>
+
+  <h2>In one line</h2>
+  <p>A stream is an unbounded sequence of events, and the main design choice in moving them around is whether messages are transient and deleted once delivered (traditional brokers) or durably kept in an append-only log that consumers read at their own pace (log-based brokers).</p>
+
+  <h2>The big idea</h2>
+  <p>Chapter 10's batch jobs needed bounded input: a sort can't emit its first output until it has seen the last input. But most real data is unbounded (your users made data yesterday and will tomorrow), so batch systems chop it into artificial chunks like "a day's worth". The cost is delay: a change shows up in the output a day later. Shrink the chunks to a second, or to nothing at all, and you have stream processing. To do that you need a way to hand events from the things that produce them to the things that react to them, with low delay, without losing them, and without one slow reader breaking everyone else. Messaging systems solve this in several ways, and the differences matter.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Bounded / unbounded data</span>: finite and known size versus never-ending and arriving over time.</li>
+    <li><span class="keyterm-term">Stream</span>: data made available incrementally over time. (The source notes the idea appears in Unix stdin/stdout, lazy lists, file APIs, TCP connections, and audio/video delivery.)</li>
+    <li><span class="keyterm-term">Event</span>: a small, self-contained, immutable record of something that happened at some time, usually with a timestamp. The streaming word for a "record".</li>
+    <li><span class="keyterm-term">Producer (publisher, sender) / consumer (subscriber, recipient)</span>: who writes events, who reads them.</li>
+    <li><span class="keyterm-term">Topic (stream)</span>: a named group of related events.</li>
+    <li><span class="keyterm-term">Messaging system / publish-subscribe</span>: producers send messages that are delivered to interested consumers.</li>
+    <li><span class="keyterm-term">Backpressure (flow control)</span>: blocking a producer from sending more when the consumer can't keep up.</li>
+    <li><span class="keyterm-term">Webhook</span>: registering a callback URL so another service calls you when something happens.</li>
+    <li><span class="keyterm-term">Message broker (message queue)</span>: a server, essentially a database optimized for message streams, that producers write to and consumers read from.</li>
+    <li><span class="keyterm-term">Load balancing / fan-out</span>: each message goes to one consumer in a group, or to all of them.</li>
+    <li><span class="keyterm-term">Acknowledgment (ack) / redelivery</span>: a consumer tells the broker it finished a message; without an ack, the broker delivers it again.</li>
+    <li><span class="keyterm-term">Log-based message broker</span>: a broker that stores messages in an append-only, partitioned log (Kafka, Kinesis, DistributedLog are the source's examples).</li>
+    <li><span class="keyterm-term">Offset</span>: the increasing sequence number of a message within a partition.</li>
+    <li><span class="keyterm-term">Consumer group</span>: consumers sharing the work of a topic, usually by being assigned whole partitions.</li>
+    <li><span class="keyterm-term">Head-of-line blocking</span>: one slow item holds up the ones behind it.</li>
+    <li><span class="keyterm-term">Segment</span>: a chunk of the log file; old segments are deleted or archived to free disk space.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>Grounding first. In Chapter 10 the interface between jobs was a file. In a stream the equivalent is a sequence of events. An event is generated once by a producer and may be processed by many consumers, just as a file is written once and read by many jobs. Events are encoded as text, JSON or binary (Chapter 4), so they can be stored or sent over the network. Examples from the source: a user viewing a page or buying something, a temperature sensor reading, a CPU metric, or one line of a web server log.</p>
+  <p>Why not just have the producer write to a database and have consumers poll it? In principle that works; it is what a daily batch job does. But as you move toward continual, low-delay processing, polling gets expensive: the more often you poll, the smaller the share of requests that find anything new. Consumers should be <em>notified</em> when events arrive. Databases have traditionally been weak at this: triggers exist, but the source calls them limited and "somewhat of an afterthought". So specialized tools for event delivery appeared.</p>
+
+  <h3>Messaging systems: two questions to ask</h3>
+  <p>A direct channel like a Unix pipe or TCP connection links one sender to one receiver. Messaging systems generalize this so that many producers can write to a topic and many consumers can read from it (publish/subscribe). There's no single right design; the source suggests asking two questions of any system:</p>
+  <ol>
+    <li><strong>What if producers send faster than consumers can process?</strong> Three options: drop messages, buffer them in a queue, or apply backpressure. Unix pipes and TCP use backpressure (a small fixed buffer; when it fills, the sender blocks). If you buffer, ask what happens as the queue grows: does the system crash when it no longer fits in memory, or spill to disk, and how does that affect performance?</li>
+    <li><strong>What if nodes crash or go offline: are messages lost?</strong> Durability costs something (writing to disk and/or replication). If you can sometimes lose messages you can get higher throughput and lower latency. Whether that is acceptable depends on the use: an occasional missing sensor reading is probably fine (another is coming soon, though if many are dropped it may not be obvious the metrics are wrong); counting events needs reliable delivery since each lost message makes the counter wrong.</li>
+  </ol>
+  <p>A reminder from batch processing: failed tasks are retried and partial output discarded, so the output is as if no failure occurred. Later parts show how to get a similar guarantee for streams.</p>
+
+  <h3>Direct messaging from producers to consumers</h3>
+  <p>Some systems skip intermediaries. The source lists: UDP multicast (used in finance for stock feeds where low latency matters; UDP is unreliable, but application-level protocols can recover lost packets if the producer remembers what it sent); brokerless libraries such as ZeroMQ and nanomsg (publish/subscribe over TCP or IP multicast); StatsD and Brubeck (metrics collection over unreliable UDP, so counter metrics are at best approximate); and direct HTTP or RPC calls, as in <strong>webhooks</strong>. These work well for the situations they were designed for, but application code must be aware of possible message loss, and they generally assume producers and consumers are always online: a consumer that is offline may miss messages, and a retrying producer that crashes loses its buffer.</p>
+
+  <h3>Message brokers</h3>
+  <p>A widely used alternative is a <strong>message broker</strong>, which runs as a server that producers and consumers connect to as clients. Because data is centralized in the broker, clients can come, go and crash more easily, and durability becomes the broker's problem. Some brokers keep messages only in memory; others, depending on configuration, write them to disk. With slow consumers they generally allow unbounded queueing (again, configuration-dependent). Consequently consumers are usually <em>asynchronous</em>: the producer waits only for the broker to confirm it buffered the message, not for it to be processed, and delivery happens at some undetermined future moment (often within a fraction of a second, longer if there is a backlog).</p>
+  <p><strong>Brokers versus databases.</strong> Some brokers can even take part in two-phase commit (XA/JTA), which makes them database-like, but the source lists practical differences. Databases keep data until it is explicitly deleted; most brokers delete a message once delivered, so they are not for long-term storage. Brokers assume a small working set (short queues); a large backlog slows each message and may degrade throughput. Databases offer secondary indexes and search; brokers usually offer subscription to topics matching a pattern. And a database query returns a point-in-time result and doesn't tell you when it becomes outdated, whereas brokers don't support arbitrary queries but do notify you when new messages arrive. This is the "traditional view" captured by the JMS and AMQP standards and software such as RabbitMQ, ActiveMQ, HornetQ, Qpid, TIBCO EMS, IBM MQ, Azure Service Bus and Google Cloud Pub/Sub (the source's list).</p>
+
+  <h3>Multiple consumers: load balancing and fan-out</h3>
+  <p>When several consumers read a topic, two patterns apply (and can be combined):</p>
+  <ul>
+    <li><strong>Load balancing:</strong> each message goes to <em>one</em> of the consumers, so they share the work. Useful when messages are expensive to process and you want to add consumers to parallelize. (AMQP: several clients on the same queue; JMS: shared subscription.)</li>
+    <li><strong>Fan-out:</strong> each message goes to <em>all</em> consumers, letting several independent consumers tune in to the same broadcast, like several batch jobs reading the same file. (JMS: topic subscriptions; AMQP: exchange bindings.)</li>
+  </ul>
+  <p>Combined example: two groups each subscribe to the topic so each group as a whole gets every message, but within a group only one node gets any given message.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">LOAD BALANCING vs FAN-OUT</text>
+      <g font-size="9.5" text-anchor="middle">
+        <text x="150" y="46" fill="#7A7A80">load balancing: one consumer per message</text>
+        <rect x="20" y="70" width="70" height="40" rx="5" fill="#0E0E10" stroke="#C9C7C1"/><text x="55" y="94" fill="#F2EFE9">topic</text>
+        <rect x="200" y="52" width="90" height="28" rx="5" fill="#0E0E10" stroke="#C8453A"/><text x="245" y="70" fill="#C8453A">consumer 1: m1, m3</text>
+        <rect x="200" y="100" width="90" height="28" rx="5" fill="#0E0E10" stroke="#C8453A"/><text x="245" y="118" fill="#C8453A">consumer 2: m2, m4</text>
+        <line x1="90" y1="85" x2="200" y2="66" stroke="#7A7A80"/><line x1="90" y1="95" x2="200" y2="114" stroke="#7A7A80"/>
+        <text x="480" y="46" fill="#7A7A80">fan-out: every consumer gets every message</text>
+        <rect x="350" y="70" width="70" height="40" rx="5" fill="#0E0E10" stroke="#C9C7C1"/><text x="385" y="94" fill="#F2EFE9">topic</text>
+        <rect x="520" y="52" width="100" height="28" rx="5" fill="#0E0E10" stroke="#6FCF97"/><text x="570" y="70" fill="#6FCF97">consumer A: m1-m4</text>
+        <rect x="520" y="100" width="100" height="28" rx="5" fill="#0E0E10" stroke="#6FCF97"/><text x="570" y="118" fill="#6FCF97">consumer B: m1-m4</text>
+        <line x1="420" y1="85" x2="520" y2="66" stroke="#7A7A80"/><line x1="420" y1="95" x2="520" y2="114" stroke="#7A7A80"/>
+      </g>
+      <text x="320" y="170" fill="#C9C7C1" font-size="10" text-anchor="middle">combine them: each group fans out, members within a group load-balance</text>
+      <text x="320" y="214" fill="#7A7A80" font-size="9" text-anchor="middle">my own sketch with invented message names</text>
+    </svg>
+    <figcaption>Fig 1. Two ways several consumers can share one topic.</figcaption>
+  </figure>
+
+  <h3>Acknowledgments and redelivery, and why order breaks</h3>
+  <p>A consumer can crash after receiving a message but before finishing it. So brokers use <strong>acknowledgments</strong>: the consumer explicitly tells the broker when it has finished, and only then is the message removed. If the connection closes or times out with no ack, the broker assumes it wasn't processed and redelivers to another consumer. (It's possible the message was fully processed and only the ack was lost; handling that properly needs an atomic commit protocol, per the source.) Combined with load balancing, redelivery changes ordering: if consumer 2 crashes on message m3 while consumer 1 is busy with m4, the unacknowledged m3 is later redelivered to consumer 1, which sees m4, m3, m5. The source says the combination of load balancing with redelivery <em>inevitably</em> leads to reordering, even if the broker tries to preserve order as the JMS and AMQP standards require. Avoid it by using a separate queue per consumer (no load balancing). Reordering is harmless when messages are independent, but matters when there are causal dependencies.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 210" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">REDELIVERY REORDERS MESSAGES</text>
+      <g font-size="9.5">
+        <text x="20" y="52" fill="#7A7A80">sent order:</text>
+        <rect x="110" y="38" width="50" height="24" fill="#0E0E10" stroke="#C9C7C1"/><text x="135" y="54" fill="#F2EFE9" text-anchor="middle">m3</text>
+        <rect x="170" y="38" width="50" height="24" fill="#0E0E10" stroke="#C9C7C1"/><text x="195" y="54" fill="#F2EFE9" text-anchor="middle">m4</text>
+        <rect x="230" y="38" width="50" height="24" fill="#0E0E10" stroke="#C9C7C1"/><text x="255" y="54" fill="#F2EFE9" text-anchor="middle">m5</text>
+        <text x="20" y="100" fill="#7A7A80">consumer 1:</text>
+        <rect x="110" y="86" width="50" height="24" fill="#0E0E10" stroke="#6FCF97"/><text x="135" y="102" fill="#6FCF97" text-anchor="middle">m4</text>
+        <rect x="170" y="86" width="50" height="24" fill="#0E0E10" stroke="#C8453A"/><text x="195" y="102" fill="#C8453A" text-anchor="middle">m3</text>
+        <rect x="230" y="86" width="50" height="24" fill="#0E0E10" stroke="#6FCF97"/><text x="255" y="102" fill="#6FCF97" text-anchor="middle">m5</text>
+        <text x="20" y="150" fill="#7A7A80">consumer 2:</text>
+        <rect x="110" y="136" width="170" height="24" fill="#0E0E10" stroke="#C8453A"/><text x="195" y="152" fill="#C8453A" text-anchor="middle">crashes while on m3, no ack</text>
+      </g>
+      <text x="320" y="196" fill="#7A7A80" font-size="9.5" text-anchor="middle">m3 comes back after m4: processing order differs from send order</text>
+    </svg>
+    <figcaption>Fig 2. Load balancing plus redelivery. (My own sketch.)</figcaption>
+  </figure>
+
+  <h3>Partitioned logs</h3>
+  <p>Ordinary network sends leave no trace, and even durable brokers delete messages once delivered. Databases and filesystems take the opposite stance: whatever is written is kept until someone deletes it. This difference matters for derived data. A batch job can be rerun any number of times without harming its read-only input; with AMQP/JMS-style messaging, receiving a message is destructive, so you can't rerun a consumer and get the same result. A newly added consumer sees only messages sent after it registered. The question: can we have the durable storage of a database with the low-latency notification of messaging? That's the <strong>log-based message broker</strong>.</p>
+  <p>A <strong>log</strong> is just an append-only sequence of records on disk (as in storage engines and replication). A producer appends to the end; a consumer reads sequentially and, at the end, waits to be notified of new appends (like <code>tail -f</code>). To exceed one disk's throughput, partition the log (Chapter 6): each partition is a separate log, possibly on a different machine, and a <strong>topic</strong> is a group of partitions carrying the same type of message. Within a partition, the broker gives each message a monotonically increasing <strong>offset</strong>; messages in a partition are totally ordered, but there is <strong>no ordering guarantee across partitions</strong>.</p>
+  <p>The source names Apache Kafka, Amazon Kinesis Streams and Twitter's DistributedLog as log-based brokers (Google Cloud Pub/Sub is architecturally similar but exposes a JMS-style API). Although they write everything to disk they reach millions of messages per second by partitioning, and get fault tolerance by replicating messages.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">A TOPIC WITH TWO PARTITIONS, EACH ITS OWN LOG</text>
+      <g font-size="9.5" text-anchor="middle">
+        <text x="40" y="62" fill="#7A7A80" text-anchor="start">partition 0</text>
+        <g stroke="#C9C7C1" fill="#0E0E10"><rect x="130" y="46" width="60" height="26"/><rect x="190" y="46" width="60" height="26"/><rect x="250" y="46" width="60" height="26"/><rect x="310" y="46" width="60" height="26"/><rect x="370" y="46" width="60" height="26"/></g>
+        <text x="160" y="63" fill="#F2EFE9">0</text><text x="220" y="63" fill="#F2EFE9">1</text><text x="280" y="63" fill="#F2EFE9">2</text><text x="340" y="63" fill="#F2EFE9">3</text><text x="400" y="63" fill="#F2EFE9">4</text>
+        <text x="40" y="132" fill="#7A7A80" text-anchor="start">partition 1</text>
+        <g stroke="#C9C7C1" fill="#0E0E10"><rect x="130" y="116" width="60" height="26"/><rect x="190" y="116" width="60" height="26"/><rect x="250" y="116" width="60" height="26"/></g>
+        <text x="160" y="133" fill="#F2EFE9">0</text><text x="220" y="133" fill="#F2EFE9">1</text><text x="280" y="133" fill="#F2EFE9">2</text>
+        <text x="500" y="59" fill="#6FCF97">producer appends here -></text>
+        <line x1="430" y1="59" x2="450" y2="59" stroke="#6FCF97"/>
+        <path d="M250 80 L250 96" stroke="#C8453A"/><text x="250" y="108" fill="#C8453A">consumer X</text><text x="250" y="120" fill="#C8453A">offset = 2</text>
+      </g>
+      <text x="320" y="178" fill="#C9C7C1" font-size="10" text-anchor="middle">order is guaranteed inside a partition, not between partitions</text>
+      <text x="320" y="196" fill="#C9C7C1" font-size="10" text-anchor="middle">consumers read in order and remember where they are</text>
+      <text x="320" y="218" fill="#7A7A80" font-size="9" text-anchor="middle">my own sketch</text>
+    </svg>
+    <figcaption>Fig 3. Offsets are positions in one partition. (Illustrative; a consumer normally tracks one offset per partition.)</figcaption>
+  </figure>
+
+  <h3>Logs compared to traditional messaging</h3>
+  <p>Fan-out is trivial: readers don't affect each other because reading doesn't delete. For load balancing, instead of assigning individual messages the broker assigns <em>whole partitions</em> to nodes in a consumer group; each consumer reads its partitions sequentially, usually single-threaded. Downsides: the number of consumers sharing a topic is at most the number of partitions (a partition's messages go to one node); and one slow message holds up the ones behind it in its partition (head-of-line blocking). So, per the source: if messages are expensive to process, you want per-message parallelism, and order isn't important, the JMS/AMQP style fits better; if throughput is high, each message is quick, and order matters, the log-based approach works very well. (Parallelism can be raised with more partitions.)</p>
+  <p><strong>Consumer offsets.</strong> Because a consumer reads a partition sequentially, "everything below my offset is done, everything above isn't" is enough bookkeeping; the broker needn't track acks per message, just record offsets periodically. That lowers overhead and allows batching and pipelining, which raises throughput. It's the same idea as the log sequence number in database replication (Chapter 5): the broker acts like the leader and the consumer like a follower. If a consumer fails, another node takes its partitions and resumes at the last recorded offset; messages processed after that offset was recorded will be processed again (the chapter returns to this issue later).</p>
+  <p><strong>Disk space.</strong> The log is split into segments, and old ones are deleted or archived, so effectively it's a bounded circular buffer on disk. A consumer that falls so far behind that its offset points to a deleted segment misses messages. The source's back-of-the-envelope calculation: a typical large hard drive (at the time of writing) holds 6 TB and writes 150 MB/s, so writing at full speed fills it in about 11 hours (my own check: 6 TB / 150 MB/s is roughly 40,000 seconds, about 11 hours). Real deployments rarely write at full bandwidth, so logs typically hold several days or weeks. Throughput stays roughly constant regardless of retention since everything is written to disk anyway, unlike brokers that keep messages in memory by default and slow down once they spill to disk.</p>
+  <p><strong>When consumers can't keep up.</strong> In the earlier taxonomy (drop, buffer, backpressure), the log is buffering with a large but fixed-size buffer. You can monitor how far a consumer is behind the head and alert a human, who has a long time to fix it. A lagging consumer affects only itself, so you can experimentally consume a production log for testing or debugging without disrupting others. When a consumer shuts down it consumes no resources; only its offset remains, unlike traditional brokers where queues of dead consumers keep accumulating messages unless deleted.</p>
+  <p><strong>Replaying old messages.</strong> Consuming from a log is read-only; the only side effect is the offset moving, and the offset is under the consumer's control. You can start a copy of a consumer from yesterday's offsets, write to a different place, and reprocess the last day, as many times as you like with different code. That makes log-based messaging more like the batch processing of Chapter 10, with derived data cleanly separated from input and easier recovery from bugs: "a good tool for integrating dataflows within an organization".</p>
+
+  <figure>
+    <svg viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">TRADITIONAL BROKER vs LOG-BASED BROKER</text>
+      <g font-size="9.5">
+        <rect x="14" y="34" width="612" height="24" fill="#131316" stroke="#7A7A80"/>
+        <text x="24" y="50" fill="#7A7A80">question</text><text x="230" y="50" fill="#7A7A80">AMQP/JMS style</text><text x="430" y="50" fill="#7A7A80">log-based</text>
+        <text x="24" y="80" fill="#C9C7C1">after delivery</text><text x="230" y="80" fill="#C9C7C1">message deleted</text><text x="430" y="80" fill="#C9C7C1">message stays (until retention)</text>
+        <text x="24" y="104" fill="#C9C7C1">new consumer</text><text x="230" y="104" fill="#C9C7C1">sees only new messages</text><text x="430" y="104" fill="#C9C7C1">can start from an old offset</text>
+        <text x="24" y="128" fill="#C9C7C1">load balancing</text><text x="230" y="128" fill="#C9C7C1">per message</text><text x="430" y="128" fill="#C9C7C1">per partition</text>
+        <text x="24" y="152" fill="#C9C7C1">ordering</text><text x="230" y="152" fill="#C9C7C1">may reorder after redelivery</text><text x="430" y="152" fill="#C9C7C1">in order within a partition</text>
+        <text x="24" y="176" fill="#C9C7C1">slow message</text><text x="230" y="176" fill="#C9C7C1">others proceed in parallel</text><text x="430" y="176" fill="#C9C7C1">blocks its partition</text>
+      </g>
+      <text x="320" y="206" fill="#7A7A80" font-size="9.5" text-anchor="middle">my condensed comparison of the chapter's points</text>
+    </svg>
+    <figcaption>Fig 4. Same job, two mindsets: transient delivery versus durable log.</figcaption>
+  </figure>
+
+  <h2>Why it matters</h2>
+  <p>Almost any system that reacts to events, from metrics pipelines to order processing to change feeds, sits on one of these two designs. Knowing the trade-off tells you why Kafka-style systems let you replay history, why a work queue is a better fit for slow, independent jobs, and why "just poll the database" stops working as latency targets shrink. It also sets up the next part, where the log idea connects streams and databases.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>A stream is unbounded; an event is a small immutable record; producers write, consumers read. Notification beats polling when delay matters.</li>
+      <li>Ask two questions of any messaging system: what happens when consumers are slower (drop, buffer, backpressure), and what happens on crashes (are messages lost).</li>
+      <li>Traditional brokers delete after ack, load-balance per message, and can reorder after redelivery.</li>
+      <li>Log-based brokers append to partitioned logs: ordered within a partition, offsets as consumer position, durable for a retention window, replayable.</li>
+      <li>Max consumers in a group equals the number of partitions, and a slow message blocks its partition.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Tiny log broker.</strong> Implement a topic as N append-only lists with a hash of the key picking the partition, and a consumer that tracks an offset per partition. Done when per-key order is preserved and a consumer restarted at offset 0 sees everything again.</li>
+      <li><strong>Replay.</strong> Run two consumers over the same log with different code (one counts events, one sums a field), then reset one to an older offset. Done when you can reproduce a result exactly by rerunning from the same offset.</li>
+      <li><strong>Load balancing with redelivery.</strong> Build a simple queue with acks, two workers, and a worker that randomly "crashes" before acking. Done when you can show an out-of-order processing sequence and a duplicate, and explain each.</li>
+      <li><strong>Backpressure vs buffer vs drop.</strong> Connect a fast producer to a slow consumer three ways: bounded blocking queue, unbounded queue, and drop-oldest ring buffer. Done when you can report memory use, loss, and producer delay for each.</li>
+      <li><strong>Lag alarm.</strong> Add a function that computes how far each consumer's offset is behind the log head and prints a warning past a threshold you choose. Done when slowing one consumer triggers only its own warning.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Reread the "Logs compared to traditional messaging" decision rule and pick two systems you know of; which side would each sit on? Next up is how streams relate to databases.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, written to help you build a mental model quickly. It is not a substitute for the source; verify anything you plan to rely on against the original before using it for real.</p>
+  <ul class="src-list">
+    <li>Martin Kleppmann, <em>Designing Data-Intensive Applications</em> (O'Reilly, 2017), Chapter 11, "Stream Processing": the chapter opener and "Transmitting Event Streams" (Messaging Systems, Partitioned Logs): printed pages 439 to 451 (PDF pages 461 to 473 of the supplied file). It stops right before "Databases and Streams".</li>
+  </ul>
+  <p class="src-note">Flagged for accuracy: (1) Product names and capabilities (Kafka, Kinesis, DistributedLog, Pub/Sub, RabbitMQ, ZeroMQ, StatsD, and so on) are the book's 2017 statements and not checked against current versions. (2) The 6 TB / 150 MB/s / 11 hours figure is the book's illustration of hardware at the time of writing; I only re-did the arithmetic. (3) "Inevitably leads to reordering" is the book's wording about load balancing combined with redelivery. (4) My tiny log-broker script was run on made-up keys and behaved as described; it is a toy. (5) Diagrams are original with invented values. (6) Nothing outside the supplied chapter was consulted.</p>
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
