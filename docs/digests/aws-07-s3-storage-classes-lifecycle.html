@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: S3 Storage Classes &amp; Lifecycle Policies</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+  pre { background: var(--panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 16px; }
+  pre code { background: none; padding: 0; font-size: 12.5px; line-height: 1.55; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS &middot; TOPIC 7 DIGEST</p>
+  <h1>S3 Storage Classes &amp; Lifecycle Policies: Standard to Glacier, Intelligent-Tiering, and Automatic Transitions</h1>
+  <p class="lead">Every object in S3 sits in a storage class, and the class is basically a price-versus-access trade. Cheap storage usually costs you something else: retrieval fees, minimum stay times, fewer data centers, or a wait before you can read the data. Lifecycle rules are how you tell S3 to shuffle objects down that ladder (or delete them) on a schedule so you don't have to.</p>
+
+  <h2>In one line</h2>
+  <p>A storage class sets how an object is stored and billed (how fast you can read it, how many Availability Zones hold it, what you pay to store versus retrieve it), and an S3 Lifecycle configuration is a set of bucket-level rules that automatically moves objects between classes or expires them as they age.</p>
+
+  <h2>The big idea</h2>
+  <p>Last time we looked at what S3 is made of: buckets, objects, keys. This time we ask a money question. Data you wrote yesterday and read all day is very different from a backup you'll probably never open again, so paying the same price for both makes little sense. S3 offers a range of storage classes so that the price can follow how you actually use the data.</p>
+  <p>Two ideas carry the whole topic. First, the classes differ along a few axes (access speed, number of Availability Zones, retrieval fees, minimum storage duration, minimum billable size), and you pick by weighing those against your access pattern. Second, you rarely want to do that picking by hand for millions of objects, so you write lifecycle rules and let S3 do it, or you hand the decision to the S3 Intelligent-Tiering class, which watches access for you.</p>
+  <p>One honest note before we start: I deliberately don't quote prices in this digest. The docs point to the S3 pricing page for rates, and prices change by Region and over time. Everything below is about the <em>shape</em> of the trade-offs, which is what the docs describe.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Storage class</span>: a per-object setting that decides how S3 stores and bills that object. If you don't choose one at upload, S3 Standard is used.</li>
+    <li><span class="keyterm-term">Availability Zone (AZ)</span>: one or more discrete data centers in a Region with separate power and networking. Recap from the last digest.</li>
+    <li><span class="keyterm-term">Durability (design target)</span>: how unlikely data loss is. The docs list 99.999999999% (eleven nines) as the <em>designed-for</em> figure for most classes. It is a design target, not a contract.</li>
+    <li><span class="keyterm-term">Availability (design target)</span>: how likely a request is to succeed at a given moment. It varies by class.</li>
+    <li><span class="keyterm-term">Infrequent access (IA)</span>: the family of classes for data you read rarely, priced with cheaper storage but a per-GB retrieval fee.</li>
+    <li><span class="keyterm-term">Retrieval fee</span>: a per-GB charge when you read data out of some classes.</li>
+    <li><span class="keyterm-term">Minimum storage duration</span>: if you delete, overwrite or move an object out of some classes before a set number of days, you are still billed as if it stayed that long.</li>
+    <li><span class="keyterm-term">Minimum billable object size</span>: some classes bill small objects as if they were 128 KB.</li>
+    <li><span class="keyterm-term">Archived object / restore</span>: in the Glacier Flexible Retrieval and Deep Archive classes you can't read the object directly. You first request a restore, which makes a temporary readable copy.</li>
+    <li><span class="keyterm-term">Intelligent-Tiering</span>: a storage class that moves each object between internal access tiers based on how recently it was accessed.</li>
+    <li><span class="keyterm-term">Access tier</span>: a level <em>inside</em> Intelligent-Tiering (Frequent, Infrequent, Archive Instant, and two optional archive tiers). Moving between tiers does not change the storage class.</li>
+    <li><span class="keyterm-term">Lifecycle configuration</span>: the set of rules attached to a bucket (one configuration per bucket, up to 1,000 rules).</li>
+    <li><span class="keyterm-term">Transition action</span>: a rule action that moves objects to another storage class.</li>
+    <li><span class="keyterm-term">Expiration action</span>: a rule action that makes objects expire; S3 deletes them on your behalf.</li>
+    <li><span class="keyterm-term">Filter</span>: the part of a rule that picks which objects it applies to (prefix, tags, object size, or a combination).</li>
+    <li><span class="keyterm-term">Noncurrent version</span>: in a versioned bucket, an older version of an object that has been overwritten or deleted. Versioning gets its own digest later; here you only need to know lifecycle has separate actions for these.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>Grounding first. When you upload an object, S3 records which storage class it belongs to as part of the object. You can set it in the request (the CLI and SDKs expose a storage class option) or leave it, in which case you get S3 Standard. Changing it later means either a lifecycle transition or copying the object over itself with a new class. All the classes the docs describe for general purpose buckets are designed for the same eleven-nines durability except the legacy Reduced Redundancy class, so the choice is mostly about cost, speed and how many AZs hold your data, not about whether the data is safe.</p>
+  <p><strong>Simplification, with a caveat:</strong> "same durability" is the <em>designed-for</em> number from the comparison table in the docs. Classes differ in availability and in how many AZs hold the data, and a single-AZ class is, in the docs' words, not resilient to the loss of that Availability Zone. Read the durability column together with the AZ column.</p>
+
+  <h3>1. The frequently accessed classes</h3>
+  <p><strong>S3 Standard</strong> (<code>STANDARD</code>) is the default. The docs list it as designed for data you access more than about once a month with millisecond access, 99.99% availability, three or more AZs, and no minimum storage duration and no minimum object size. Think of it as the "no strings attached" class: you pay more per GB stored than the colder classes, but you pay no retrieval fee and no early-delete penalty.</p>
+  <p><strong>S3 Express One Zone</strong> (<code>EXPRESS_ONEZONE</code>) is a special-purpose class for latency-sensitive applications. The docs say it delivers consistent single-digit millisecond access, stores data in a single AZ that you choose, and lists 99.95% availability. It lives in directory buckets rather than general purpose buckets (we met bucket types last time). It's a performance class, not a cheap-archive class, so I'll mention it here and leave it.</p>
+  <p><strong>Reduced Redundancy Storage</strong> (<code>REDUCED_REDUNDANCY</code>) is a legacy class. The docs recommend not using it because S3 Standard is more cost-effective, and list its design durability as 99.99%. You'll see it in old tutorials; just know it's there.</p>
+
+  <h3>2. The infrequent-access classes</h3>
+  <p><strong>S3 Standard-IA</strong> (<code>STANDARD_IA</code>) and <strong>S3 One Zone-IA</strong> (<code>ONEZONE_IA</code>) are for long-lived data that you read rarely but still want in milliseconds when you do. The trade: storage is cheaper than Standard, but there's a per-GB retrieval fee. Both have a 30-day minimum storage duration and a 128 KB minimum billable object size.</p>
+  <p>Concretely, the docs say that an object smaller than 128 KB is billed as 128 KB, and that deleting, overwriting or transitioning an object out before 30 days incurs the normal storage charge plus a prorated charge for the rest of the 30 days. So IA is a poor fit for tiny files and for data that churns quickly.</p>
+  <p>The difference between the two is the AZ count. Standard-IA spreads data across multiple AZs and is resilient to losing one. One Zone-IA keeps it in one AZ, which is cheaper, but the docs say it isn't resilient to the physical loss of that AZ (for example from a disaster), and list availability as 99.5% versus 99.9%. The docs' guidance: Standard-IA for a primary or only copy that you can't recreate; One Zone-IA for data you can recreate, or for replica copies in cross-Region replication (which we'll cover in the replication digest).</p>
+
+  <figure>
+    <svg viewBox="0 0 620 340" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">THE CLASS LADDER: COLDER MEANS CHEAPER STORAGE, MORE STRINGS</text>
+      <!-- header -->
+      <text x="20" y="48" fill="#7A7A80" font-size="10">CLASS</text>
+      <text x="210" y="48" fill="#7A7A80" font-size="10">READ IT</text>
+      <text x="330" y="48" fill="#7A7A80" font-size="10">AZs</text>
+      <text x="385" y="48" fill="#7A7A80" font-size="10">MIN STAY</text>
+      <text x="470" y="48" fill="#7A7A80" font-size="10">RETRIEVAL FEE</text>
+      <line x1="20" y1="54" x2="600" y2="54" stroke="#7A7A80" stroke-width="0.8"/>
+
+      <rect x="20" y="62" width="580" height="34" rx="6" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.2"/>
+      <text x="30" y="83" fill="#6FCF97" font-size="11" font-weight="700">Standard</text>
+      <text x="210" y="83" fill="#C9C7C1" font-size="10.5">ms</text><text x="330" y="83" fill="#C9C7C1" font-size="10.5">3+</text>
+      <text x="385" y="83" fill="#C9C7C1" font-size="10.5">none</text><text x="470" y="83" fill="#C9C7C1" font-size="10.5">no</text>
+
+      <rect x="20" y="102" width="580" height="34" rx="6" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.2"/>
+      <text x="30" y="123" fill="#F2EFE9" font-size="11" font-weight="700">Standard-IA</text>
+      <text x="210" y="123" fill="#C9C7C1" font-size="10.5">ms</text><text x="330" y="123" fill="#C9C7C1" font-size="10.5">3+</text>
+      <text x="385" y="123" fill="#C9C7C1" font-size="10.5">30 days</text><text x="470" y="123" fill="#C9C7C1" font-size="10.5">yes, per GB</text>
+
+      <rect x="20" y="142" width="580" height="34" rx="6" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.2"/>
+      <text x="30" y="163" fill="#F2EFE9" font-size="11" font-weight="700">One Zone-IA</text>
+      <text x="210" y="163" fill="#C9C7C1" font-size="10.5">ms</text><text x="330" y="163" fill="#C8453A" font-size="10.5" font-weight="700">1</text>
+      <text x="385" y="163" fill="#C9C7C1" font-size="10.5">30 days</text><text x="470" y="163" fill="#C9C7C1" font-size="10.5">yes, per GB</text>
+
+      <rect x="20" y="182" width="580" height="34" rx="6" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.2"/>
+      <text x="30" y="203" fill="#F2EFE9" font-size="11" font-weight="700">Glacier Instant</text>
+      <text x="210" y="203" fill="#C9C7C1" font-size="10.5">ms</text><text x="330" y="203" fill="#C9C7C1" font-size="10.5">3+</text>
+      <text x="385" y="203" fill="#C9C7C1" font-size="10.5">90 days</text><text x="470" y="203" fill="#C9C7C1" font-size="10.5">yes, per GB</text>
+
+      <rect x="20" y="222" width="580" height="34" rx="6" fill="#0E0E10" stroke="#C8453A" stroke-width="1.2"/>
+      <text x="30" y="243" fill="#F2EFE9" font-size="11" font-weight="700">Glacier Flexible</text>
+      <text x="210" y="243" fill="#C8453A" font-size="10.5" font-weight="700">restore first</text><text x="330" y="243" fill="#C9C7C1" font-size="10.5">3+</text>
+      <text x="385" y="243" fill="#C9C7C1" font-size="10.5">90 days</text><text x="470" y="243" fill="#C9C7C1" font-size="10.5">yes, per GB</text>
+
+      <rect x="20" y="262" width="580" height="34" rx="6" fill="#0E0E10" stroke="#C8453A" stroke-width="1.2"/>
+      <text x="30" y="283" fill="#F2EFE9" font-size="11" font-weight="700">Glacier Deep Archive</text>
+      <text x="210" y="283" fill="#C8453A" font-size="10.5" font-weight="700">restore first</text><text x="330" y="283" fill="#C9C7C1" font-size="10.5">3+</text>
+      <text x="385" y="283" fill="#C9C7C1" font-size="10.5">180 days</text><text x="470" y="283" fill="#C9C7C1" font-size="10.5">yes, per GB</text>
+
+      <text x="310" y="322" fill="#7A7A80" font-size="9.5" text-anchor="middle">Values as listed in the S3 docs' class comparison table. Prices deliberately omitted.</text>
+    </svg>
+    <figcaption>Fig 1. The class ladder (rows ordered roughly from hot to cold). My own summary of the docs' comparison table.</figcaption>
+  </figure>
+
+  <h3>3. The Glacier classes: archive-grade storage</h3>
+  <p>Three classes are built for long-term archives. All three list three or more AZs, and require minimum storage durations plus retrieval fees, so the docs say they are most effective for rarely accessed data.</p>
+  <ul>
+    <li><strong>S3 Glacier Instant Retrieval</strong> (<code>GLACIER_IR</code>): archive pricing, but still millisecond access. The docs list it for data accessed about once a quarter. 90-day minimum, 128 KB minimum billable size.</li>
+    <li><strong>S3 Glacier Flexible Retrieval</strong> (<code>GLACIER</code>): for archives accessed about once a year, where retrieval takes minutes to hours. 90-day minimum. Not readable in real time.</li>
+    <li><strong>S3 Glacier Deep Archive</strong> (<code>DEEP_ARCHIVE</code>): the coldest class. The docs list it for data accessed less than once a year, with retrieval measured in hours. 180-day minimum. Not readable in real time.</li>
+  </ul>
+  <p><strong>Where it trips beginners.</strong> The docs make three points worth underlining. (1) These objects are still S3 objects in your bucket. You can't reach them through the separate Amazon Glacier service. (2) For Flexible Retrieval and Deep Archive, each archived object carries 40 KB of extra metadata: 32 KB billed at the Glacier rate (to identify and restore the object) and 8 KB billed at the S3 Standard rate (to keep the name and metadata). So archiving millions of tiny objects can cost more than expected, and the docs suggest bundling many small objects into fewer big ones. (3) Each object transitioned into these classes counts as a transition request, which has a cost.</p>
+
+  <h3>4. Restoring an archived object</h3>
+  <p>An object in Glacier Flexible Retrieval or Deep Archive can't be read directly. You send a <strong>restore request</strong>, wait, and then S3 holds a temporary copy for the number of days you asked for. After that the temporary copy is removed and the object stays archived. During the restore window, a <code>HeadObject</code> or <code>GetObject</code> still reports the storage class as the archive class, because the restored copy is just a copy.</p>
+  <p>You pay for both the archived object and the temporary restored copy (charged at the S3 Standard rate) while it exists. If you want a permanent readable object, you restore and then copy it into a new object with a different class (the docs say the console doesn't support copying restored archive objects, so use the CLI, SDKs or REST API for that).</p>
+  <p>The CLI shape from the docs, restoring for 25 days with the Standard retrieval tier:</p>
+  <pre><code>aws s3api restore-object --bucket amzn-s3-demo-bucket --key dir1/example.obj \
+  --restore-request '{"Days":25,"GlacierJobParameters":{"Tier":"Standard"}}'
+
+aws s3api head-object --bucket amzn-s3-demo-bucket --key dir1/example.obj</code></pre>
+  <p>The <code>head-object</code> output includes a <code>Restore</code> field: <code>ongoing-request="true"</code> while it works, then <code>ongoing-request="false"</code> with an <code>expiry-date</code> when it's done. The docs list retrieval tiers as Bulk, Standard and Expedited, with Expedited available for Flexible Retrieval (and the Intelligent-Tiering Archive Access tier) but not Deep Archive. I'm not quoting exact wait times for the Glacier classes because I only confirmed the broad "minutes to hours" and "hours" descriptions; check the restore docs for current numbers.</p>
+
+  <h3>5. S3 Intelligent-Tiering: let S3 watch the access</h3>
+  <p>If you don't know how often data will be read, or the pattern changes, <strong>S3 Intelligent-Tiering</strong> (<code>INTELLIGENT_TIERING</code>) moves each object between access tiers automatically. You pay a small monthly monitoring and automation fee per object, and the docs say there are no retrieval fees and no minimum storage duration for the class.</p>
+  <p>Inside the class there are three automatic tiers and two optional ones:</p>
+  <ul>
+    <li><strong>Frequent Access</strong>: where every object starts.</li>
+    <li><strong>Infrequent Access</strong>: objects not accessed for 30 consecutive days move here.</li>
+    <li><strong>Archive Instant Access</strong>: objects not accessed for 90 consecutive days move here. Still millisecond access.</li>
+    <li><strong>Archive Access</strong> (optional, you opt in): objects not accessed for at least 90 days (configurable up to 730 days) are archived, with Glacier Flexible Retrieval-like performance. Standard retrieval is listed as 3 to 5 hours.</li>
+    <li><strong>Deep Archive Access</strong> (optional): at least 180 days of no access (configurable up to 730 days), with Deep Archive-like performance. Standard retrieval is listed as within 12 hours.</li>
+  </ul>
+  <p>The first three tiers have low latency and high throughput. Only turn on the two optional tiers if your application can tolerate asynchronous access, because reading from them requires a <code>RestoreObject</code> first. If an object in Infrequent Access or Archive Instant Access is accessed again, it moves back to Frequent Access automatically. Restoring from the optional archive tiers also returns the object to Frequent Access, and those restores don't take a <code>Days</code> value.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#7A7A80"/></marker></defs>
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">INTELLIGENT-TIERING: ONE CLASS, SEVERAL TIERS INSIDE</text>
+      <rect x="15" y="36" width="590" height="196" rx="10" fill="none" stroke="#7A7A80" stroke-dasharray="4 4"/>
+      <text x="25" y="52" fill="#7A7A80" font-size="9.5">storage class = INTELLIGENT_TIERING (stays the same while objects move)</text>
+
+      <rect x="28" y="72" width="110" height="64" rx="8" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="83" y="98" fill="#6FCF97" font-size="11" text-anchor="middle" font-weight="700">Frequent</text>
+      <text x="83" y="114" fill="#7A7A80" font-size="9" text-anchor="middle">start here</text>
+
+      <rect x="170" y="72" width="110" height="64" rx="8" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.3"/>
+      <text x="225" y="98" fill="#F2EFE9" font-size="11" text-anchor="middle" font-weight="700">Infrequent</text>
+      <text x="225" y="114" fill="#7A7A80" font-size="9" text-anchor="middle">30 days idle</text>
+
+      <rect x="312" y="72" width="130" height="64" rx="8" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.3"/>
+      <text x="377" y="98" fill="#F2EFE9" font-size="11" text-anchor="middle" font-weight="700">Archive Instant</text>
+      <text x="377" y="114" fill="#7A7A80" font-size="9" text-anchor="middle">90 days idle, ms</text>
+
+      <line x1="140" y1="104" x2="168" y2="104" stroke="#7A7A80" stroke-width="1.3" marker-end="url(#ar)"/>
+      <line x1="282" y1="104" x2="310" y2="104" stroke="#7A7A80" stroke-width="1.3" marker-end="url(#ar)"/>
+
+      <path d="M377,72 C377,50 83,50 83,70" fill="none" stroke="#6FCF97" stroke-width="1.2" stroke-dasharray="3 3" marker-end="url(#ar)"/>
+      <text x="230" y="62" fill="#6FCF97" font-size="9" text-anchor="middle">any access moves it back up</text>
+
+      <rect x="312" y="160" width="130" height="58" rx="8" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3" stroke-dasharray="5 3"/>
+      <text x="377" y="184" fill="#F2EFE9" font-size="10.5" text-anchor="middle" font-weight="700">Archive Access</text>
+      <text x="377" y="200" fill="#7A7A80" font-size="9" text-anchor="middle">optional, 90+ days idle</text>
+
+      <rect x="462" y="160" width="130" height="58" rx="8" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3" stroke-dasharray="5 3"/>
+      <text x="527" y="184" fill="#F2EFE9" font-size="10.5" text-anchor="middle" font-weight="700">Deep Archive Access</text>
+      <text x="527" y="200" fill="#7A7A80" font-size="9" text-anchor="middle">optional, 180+ days idle</text>
+
+      <line x1="440" y1="189" x2="460" y2="189" stroke="#7A7A80" stroke-width="1.3" marker-end="url(#ar)"/>
+      <text x="170" y="195" fill="#C8453A" font-size="9.5">dashed = you opt in; needs RestoreObject</text>
+      <text x="170" y="209" fill="#C8453A" font-size="9.5">before reading</text>
+    </svg>
+    <figcaption>Fig 2. Intelligent-Tiering tiers and the day thresholds the docs list (my own sketch).</figcaption>
+  </figure>
+
+  <p><strong>What counts as "access"?</strong> This matters because it resets the timers. The docs say downloads, <code>GetObject</code>, <code>PutObject</code>, <code>CopyObject</code> (on the source), <code>RestoreObject</code> and <code>CompleteMultipartUpload</code> count and move an object in Infrequent or Archive Instant Access back up. Calls like <code>HeadObject</code>, tagging calls and list calls do <em>not</em> count. The docs give that as a sample, not a complete list.</p>
+  <p><strong>Small-object caveat.</strong> Objects under 128 KB aren't monitored and aren't eligible for auto-tiering; they sit in the Frequent Access tier permanently. So Intelligent-Tiering is not a good fit for a bucket full of tiny files.</p>
+  <p>You can make it the default for new data by setting the storage class to <code>INTELLIGENT-TIERING</code> in the upload request header (the docs write that spelling for the <code>x-amz-storage-class</code> header, while the class constant in the API tables is <code>INTELLIGENT_TIERING</code>; I'd copy whichever form the specific API reference shows for the tool you use).</p>
+
+  <h3>6. Lifecycle configurations: rules that run on the bucket</h3>
+  <p>A lifecycle configuration is attached to a bucket and holds rules. Each rule has an ID, a status (<code>Enabled</code> or <code>Disabled</code>), a filter that selects objects, and one or more actions. There are two main action types: <strong>transition</strong> (move to another class) and <strong>expiration</strong> (delete). When you add a configuration, it applies to existing objects as well as new ones: a 30-day expiration rule will queue anything already older than 30 days for removal.</p>
+  <p>The filter can use a key prefix (like <code>logs/</code>), object tags, an object size range (<code>ObjectSizeGreaterThan</code> and <code>ObjectSizeLessThan</code>, in bytes, both exclusive), or a combination wrapped in <code>And</code>. An empty filter means every object in the bucket. A filter holds only one prefix. To cover two prefixes, write two rules.</p>
+  <p>Here's a configuration shape built from the CLI reference's syntax: logs move to Standard-IA at 30 days, to Glacier Flexible Retrieval at 90 days, and expire at 365 days.</p>
+  <pre><code>{
+  "Rules": [
+    {
+      "ID": "tier-and-expire-logs",
+      "Filter": { "Prefix": "logs/" },
+      "Status": "Enabled",
+      "Transitions": [
+        { "Days": 30, "StorageClass": "STANDARD_IA" },
+        { "Days": 90, "StorageClass": "GLACIER" }
+      ],
+      "Expiration": { "Days": 365 }
+    }
+  ]
+}</code></pre>
+  <pre><code>aws s3api put-bucket-lifecycle-configuration \
+  --bucket amzn-s3-demo-bucket \
+  --lifecycle-configuration file://lifecycle.json</code></pre>
+  <p><strong>Watch out:</strong> the CLI reference warns that this call overwrites any existing lifecycle configuration, so include every rule you want to keep.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="ar2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#7A7A80"/></marker></defs>
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">ONE OBJECT'S LIFE UNDER THE RULE ABOVE (logs/ prefix)</text>
+      <line x1="30" y1="110" x2="590" y2="110" stroke="#7A7A80" stroke-width="2"/>
+      <circle cx="40" cy="110" r="6" fill="#6FCF97"/>
+      <circle cx="200" cy="110" r="6" fill="#F2EFE9"/>
+      <circle cx="380" cy="110" r="6" fill="#F2EFE9"/>
+      <circle cx="570" cy="110" r="6" fill="#C8453A"/>
+      <text x="40" y="90" fill="#6FCF97" font-size="10.5" text-anchor="middle" font-weight="700">day 0</text>
+      <text x="200" y="90" fill="#F2EFE9" font-size="10.5" text-anchor="middle" font-weight="700">day 30</text>
+      <text x="380" y="90" fill="#F2EFE9" font-size="10.5" text-anchor="middle" font-weight="700">day 90</text>
+      <text x="570" y="90" fill="#C8453A" font-size="10.5" text-anchor="middle" font-weight="700">day 365</text>
+      <text x="40" y="136" fill="#C9C7C1" font-size="10" text-anchor="middle">Standard</text>
+      <text x="40" y="150" fill="#7A7A80" font-size="9" text-anchor="middle">uploaded</text>
+      <text x="200" y="136" fill="#C9C7C1" font-size="10" text-anchor="middle">Standard-IA</text>
+      <text x="200" y="150" fill="#7A7A80" font-size="9" text-anchor="middle">30-day min stay</text>
+      <text x="380" y="136" fill="#C9C7C1" font-size="10" text-anchor="middle">Glacier Flexible</text>
+      <text x="380" y="150" fill="#7A7A80" font-size="9" text-anchor="middle">90-day min stay</text>
+      <text x="570" y="136" fill="#C9C7C1" font-size="10" text-anchor="middle">expired</text>
+      <text x="570" y="150" fill="#7A7A80" font-size="9" text-anchor="middle">deleted</text>
+      <text x="310" y="196" fill="#7A7A80" font-size="9.5" text-anchor="middle">"Days" count from creation; S3 rounds each action time up to the next midnight UTC, and acts asynchronously.</text>
+    </svg>
+    <figcaption>Fig 3. A transition timeline for one object (illustration of the example rule, not a billing calculator).</figcaption>
+  </figure>
+
+  <h3>7. Timing: days, midnight UTC, and delays</h3>
+  <p>The <code>Days</code> value in <code>Transition</code> and <code>Expiration</code> is days since the object was created (the docs treat creation as the same as last-modified, so overwriting resets it). S3 adds that many days to the creation time and rounds the result up to the next midnight UTC. The docs' example: created 1/15/2014 at 10:30 AM UTC with a 3-day rule gives 1/19/2014 00:00 UTC. You can also use a fixed <code>Date</code> in ISO 8601 format; the time is always midnight UTC. A date-based action isn't one-time: it keeps applying to new matching objects while the rule is enabled. The docs also say you can't create date-based rules in the console but you can view, disable or delete them.</p>
+  <p>The docs also warn that actions run asynchronously, so there can be a delay between the date and the actual transition or removal. For billing, charges switch as soon as the object becomes eligible, even if S3 hasn't acted yet. The docs give one exception: for transitions into Intelligent-Tiering, billing changes only after the transition completes. And a separate Glacier note: for Flexible Retrieval and Deep Archive transitions, the minimum-duration clock and the per-object overhead also start when the rule is satisfied, not when the physical move finishes.</p>
+
+  <h3>8. Rules and constraints that bite</h3>
+  <ul>
+    <li><strong>Transitions only go "down the waterfall".</strong> The docs describe a waterfall: Standard can go to IA, Intelligent-Tiering, One Zone-IA or any Glacier class; Standard-IA to Intelligent-Tiering, One Zone-IA or Glacier classes; One Zone-IA to Glacier Flexible or Deep Archive; Glacier Instant to Flexible or Deep Archive; Flexible to Deep Archive only. Deep Archive can't be transitioned out by a lifecycle rule at all. To move something back up, restore it and copy it over with a new class.</li>
+    <li><strong>Small objects don't transition by default.</strong> Since September 2024 the default stops objects under 128 KB from transitioning to any class, because each transition is a billed request and can cost more than it saves. Configurations created earlier keep the previous behavior (small objects could go only to Flexible or Deep Archive) until you create, edit or delete a rule. You can override with an <code>ObjectSizeGreaterThan</code>/<code>ObjectSizeLessThan</code> filter, or with <code>--transition-default-minimum-object-size</code> (values <code>varies_by_storage_class</code> or <code>all_storage_classes_128K</code>) on general purpose buckets.</li>
+    <li><strong>Minimum durations are enforced on you, not just billed.</strong> A single rule can't move an object out of a class before its minimum duration has passed. The docs' example: Glacier Instant Retrieval (90 days) then Deep Archive after 20 days is invalid, so the second transition must be at least 94 days. Two separate rules can force it, but you still pay the minimum-duration charge.</li>
+    <li><strong>Conflict resolution leans cheap.</strong> If rules overlap, an object gets only one lifecycle action per day and S3 picks the least costly one: permanent deletion beats transition; transition beats creating delete markers; Glacier Flexible beats an IA transition. If two expirations overlap, the shorter wins. Intelligent-Tiering is favored over other classes except Glacier Flexible and Deep Archive.</li>
+    <li><strong>A bucket policy can't stop lifecycle.</strong> For general purpose buckets, even a policy denying all actions to all principals doesn't block a lifecycle rule.</li>
+    <li><strong>Tag filters are evaluated daily and rechecked at run time.</strong> If you remove the triggering tag before the queued action runs, it won't proceed, but timing isn't deterministic, so don't rely on tag removal as an instant stop. Rule changes can take up to 15 minutes to propagate.</li>
+    <li><strong>Scale limit:</strong> one configuration per bucket, up to 1,000 rules, and the docs say that limit isn't adjustable.</li>
+  </ul>
+
+  <h3>9. Expiration, versioning, and housekeeping actions</h3>
+  <p>What <code>Expiration</code> does depends on the bucket's versioning state. In a non-versioned bucket the object is permanently removed. In a versioning-enabled bucket, if the current version isn't a delete marker, S3 adds a delete marker (the old version becomes noncurrent and is kept). In a versioning-suspended bucket it creates a delete marker with a <code>null</code> version ID. We'll go deep on versioning in the next digest, so treat this as a preview.</p>
+  <p>For versioned buckets there are extra actions: <code>NoncurrentVersionTransition</code>, <code>NoncurrentVersionExpiration</code> (permanent and unrecoverable), with <code>NoncurrentDays</code> and optionally <code>NewerNoncurrentVersions</code> (1 to 100; requires a filter, otherwise you get an <code>InvalidRequest</code> error), <code>ExpiredObjectDeleteMarker</code> to clean up delete markers with nothing behind them, and <code>AbortIncompleteMultipartUpload</code> with <code>DaysAfterInitiation</code> to clean up abandoned multipart uploads (regular expiration does not remove those). The docs note the last two can't be used in a rule whose filter uses object tags.</p>
+  <p>Two cost footnotes. Expiring an object that hasn't met its class's minimum duration (30 days for IA, 90 for Flexible, 180 for Deep Archive) is billed for the full minimum. And transitions have no data retrieval charge, but each one is a request with a per-request cost.</p>
+
+  <h3>10. Choosing a class: a decision sketch</h3>
+  <p><strong>Simplification, with a caveat:</strong> this is a mental model, not a recommendation for your workload. Real choices depend on object sizes, pricing in your Region, and how reliably you can predict access.</p>
+  <ul>
+    <li>Read often, or unsure, small objects: <strong>Standard</strong>.</li>
+    <li>Unknown or shifting pattern, objects 128 KB and up: consider <strong>Intelligent-Tiering</strong> (accept the per-object monitoring fee).</li>
+    <li>Known cooling pattern (logs, reports): <strong>Standard, then lifecycle to IA, then a Glacier class, then expire</strong>.</li>
+    <li>Rarely read but must be instant: <strong>Standard-IA</strong> or <strong>Glacier Instant Retrieval</strong>.</li>
+    <li>Compliance archive, restore wait acceptable: <strong>Glacier Flexible Retrieval</strong> or <strong>Deep Archive</strong>.</li>
+    <li>Re-creatable data, want lower cost than Standard-IA: <strong>One Zone-IA</strong>, accepting single-AZ risk.</li>
+  </ul>
+  <p>The docs also mention S3 analytics Storage Class Analysis as a tool to help you decide when to move data from Standard to Standard-IA. I haven't gone into it here.</p>
+
+  <h2>Why it matters</h2>
+  <p>Storage cost is usually one of the first things that grows without anyone deciding it should. A bucket of logs and backups with no lifecycle rules keeps every byte at Standard rates forever. A few lines of lifecycle JSON, or switching a bucket's default to Intelligent-Tiering, is one of the most common cost controls in AWS. It also ties into everything coming next in this track: versioning creates noncurrent versions that lifecycle must clean up, replication can target cheaper classes, and Object Lock and Inventory interact with expiration and transitions.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>A storage class is a per-object trade between storage price and access speed, retrieval fees, minimum stay, and AZ count. Standard is the default.</li>
+      <li>Most classes are designed for eleven-nines durability, but One Zone classes keep data in a single AZ, so read durability alongside AZ count.</li>
+      <li>Glacier Flexible Retrieval and Deep Archive need a restore request before you can read an object; the restored copy is temporary and billed on top of the archive.</li>
+      <li>Intelligent-Tiering moves objects between tiers for you, but objects under 128 KB aren't auto-tiered and there's a per-object monitoring fee.</li>
+      <li>Lifecycle rules (filter plus transition or expiration actions) run at midnight UTC granularity, asynchronously, only move down the waterfall, and won't transition objects under 128 KB by default.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <p style="font-size:14px;color:#7A7A80;margin-top:0">Projects 1 and 2 run offline. Projects 3 to 5 use the AWS CLI against your own account and a scratch bucket. I checked the commands against the CLI reference, but I haven't run them against a live account. Delete the scratch bucket when you're done.</p>
+    <ol>
+      <li><strong>Midnight-UTC calculator (offline, ~20 min).</strong> Write a small function that takes a creation timestamp and a number of days and returns the rule's action time using "add the days, round up to next midnight UTC". Test it on the docs' example (1/15/2014 10:30 UTC, 3 days gives 1/19/2014 00:00 UTC). <em>Done when</em> the example matches and you've decided (and noted) what your code does for a timestamp that is exactly midnight, since the docs' wording doesn't settle that edge.</li>
+      <li><strong>Conflict resolver (offline, ~1 hour).</strong> Model a list of rules (prefix, action type, days). For a given object age and key, compute which rules are eligible and pick the winner using the docs' order: delete beats transition, Glacier Flexible beats IA, shorter expiration wins. <em>Done when</em> your resolver gives the same answers as the four overlapping-rule examples in the "conflicts in lifecycle configurations" doc page.</li>
+      <li><strong>Write and validate a lifecycle config.</strong> Create <code>lifecycle.json</code> from section 6, create a scratch bucket, and apply it with <code>put-bucket-lifecycle-configuration</code>, then read it back with <code>aws s3api get-bucket-lifecycle-configuration --bucket ...</code>. <em>Done when</em> the returned rules match what you sent. Then add a second rule for a different prefix and notice you must resend both.</li>
+      <li><strong>Upload straight into a class.</strong> Upload three small files with <code>aws s3 cp file s3://bucket/key --storage-class STANDARD_IA</code> (and <code>GLACIER_IR</code>, <code>INTELLIGENT_TIERING</code>), then run <code>aws s3api head-object</code> on each. <em>Done when</em> you can see the <code>StorageClass</code> field in each response and you can explain the 128 KB caveat for each.</li>
+      <li><strong>Restore drill (optional, may cost money and takes hours).</strong> Upload a tiny object with <code>--storage-class GLACIER</code>, run the <code>restore-object</code> command from section 4 with a 1-day restore and the Bulk or Standard tier, and poll <code>head-object</code> to watch the <code>Restore</code> field change. <em>Done when</em> you observed <code>ongoing-request="false"</code> with an expiry date, and confirmed <code>StorageClass</code> still says <code>GLACIER</code>.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Read the Intelligent-Tiering overview page for the exact list of operations that count as access, then ask: for my own data, would that reset the timer in a surprising way (for example, a nightly job that reads everything)? Next in the S3 track: versioning, delete markers and MFA delete, which is where the noncurrent-version lifecycle actions above come into their own.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-class-intro.html">Understanding and managing Amazon S3 storage classes</a> (class descriptions and the comparison table)</li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/intelligent-tiering-overview.html">How S3 Intelligent-Tiering works</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lifecycle-mgmt.html">Managing the lifecycle of objects</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/lifecycle-transition-general-considerations.html">Transitioning objects using Amazon S3 Lifecycle</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/lifecycle-expire-general-considerations.html">Expiring objects</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/intro-lifecycle-rules.html">Lifecycle configuration elements</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/lifecycle-conflicts.html">How Amazon S3 handles conflicts in lifecycle configurations</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/restoring-objects.html">Restoring an archived object</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/s3api/put-bucket-lifecycle-configuration.html">AWS CLI: put-bucket-lifecycle-configuration</a></li>
+    <li><a href="https://aws.amazon.com/s3/pricing/">Amazon S3 pricing</a> (for any rates; none are quoted here)</li>
+  </ul>
+  <p class="src-note">This is a teaching draft, not a substitute for the AWS documentation. Verify anything you rely on against the live docs, because limits, defaults and class details change. Notes on uncertainty: the docs were read in October 2026; Glacier restore wait times and all prices were left out on purpose; the CLI commands were checked against the reference, not run against a live account; the JSON example was assembled from the CLI reference's syntax block (the page's own example differs); and the exact handling of a timestamp that lands exactly on midnight UTC isn't stated in the pages I read.</p>
+
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
