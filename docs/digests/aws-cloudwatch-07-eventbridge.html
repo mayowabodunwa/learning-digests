@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: Amazon EventBridge: Rules, Event Patterns, Schedules and Their Link to CloudWatch Events</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS CLOUDWATCH &middot; CONCEPT 7 DIGEST</p>
+  <h1>Amazon EventBridge: Rules, Event Patterns, Schedules and Their Link to CloudWatch Events</h1>
+  <p class="lead">Alarms and dashboards tell humans what's happening. EventBridge is how you make <em>software</em> react: "when an EC2 instance terminates, run this Lambda function", or "every weekday at 6pm, kick off this job". This digest covers events, event buses, rules, event patterns, targets and schedules, and how all of this relates to the older name you'll still see: CloudWatch Events.</p>
+
+  <h2>In one line</h2>
+  <p>EventBridge receives events (small JSON records saying "something happened"), checks each one against your rules, and delivers the matching events to targets such as Lambda functions, queues or other services, and it can also fire things on a schedule.</p>
+
+  <h2>The big idea</h2>
+  <p>The usual way to wire two pieces of software together is to have one call the other directly. That makes them tightly coupled: if the second one moves or breaks, the first one must change. EventBridge supports a looser style, called event-driven architecture in the docs: components announce what happened, and other components subscribe to the announcements they care about. The announcer doesn't need to know who is listening.</p>
+  <p>Inside AWS this is already happening. Many AWS services emit events automatically (an EC2 instance changing state is the docs' recurring example) to a bus that exists in every account. You write a <strong>rule</strong> with an <strong>event pattern</strong> describing the events you care about, and attach up to five <strong>targets</strong> that should be invoked when one matches. That's the whole loop. The scheduled variant just replaces "when an event matches" with "when the clock says so".</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Event</span>: a JSON record describing something that happened. Standard fields include <code>source</code>, <code>detail-type</code>, <code>account</code>, <code>time</code>, <code>region</code>, <code>resources</code> and a free-form <code>detail</code> object.</li>
+    <li><span class="keyterm-term">Event bus</span>: a router that receives events and delivers them to zero or more targets. Every account has a default event bus that automatically receives events from AWS services.</li>
+    <li><span class="keyterm-term">Rule</span>: attached to a bus; says which events go to which targets. A rule either matches on an event pattern or runs on a schedule.</li>
+    <li><span class="keyterm-term">Event pattern</span>: a JSON document with the same shape as the events it matches. An event either matches it or doesn't.</li>
+    <li><span class="keyterm-term">Target</span>: the resource EventBridge sends a matching event to: a Lambda function, SNS topic, SQS queue, Step Functions state machine, another event bus, an API destination, and many more.</li>
+    <li><span class="keyterm-term">Execution role</span>: an IAM role EventBridge assumes to call a target on your behalf, for target types that need one.</li>
+    <li><span class="keyterm-term">Input transformer</span>: a way to reshape the event before it reaches the target.</li>
+    <li><span class="keyterm-term">Dead-letter queue (DLQ)</span>: an SQS queue where events can be sent if delivery to a target ultimately fails.</li>
+    <li><span class="keyterm-term">Rate / cron expression</span>: the two ways to say when a scheduled rule fires.</li>
+    <li><span class="keyterm-term">EventBridge Scheduler</span>: a separate, newer scheduling feature that the docs recommend over scheduled rules.</li>
+    <li><span class="keyterm-term">Pipes</span>: point-to-point connections from one source to one target with optional filtering and enrichment.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>Grounding: how this relates to CloudWatch Events</h3>
+  <p>The tracker for this area calls this concept "its relation to CloudWatch Events". Here's what I could pin down. CloudWatch Events was the earlier name for this capability. When I fetched the old CloudWatch Events documentation address, it returned the EventBridge user guide's "What is EventBridge?" page, which tells me the old docs now live under EventBridge. The command line group is still called <code>aws events</code> and the console address still contains <code>/events/</code>, which looks like a trace of the earlier name. My reading is that they are the same service under a newer name with extra capabilities (like pipes and scheduler), but <strong>I did not find a docs sentence stating that outright</strong> in the pages I read, so treat that as my interpretation and check the EventBridge FAQ if it matters to you.</p>
+  <p>What does connect directly to the rest of this track: the docs say that when a matched event came from CloudWatch Alarms, the alarm state change details can be passed on (their example is an Incident Manager response plan target). So alarms are event sources too. A CloudWatch alarm can drive an EventBridge rule.</p>
+
+  <h3>1. Events: the thing being routed</h3>
+  <p>The docs' example, an EC2 state-change event, looks like this:</p>
+  <p><code>{ "version": "0", "id": "6a7e8feb-b491-4cf7-a9f1-bf3703467718", "detail-type": "EC2 Instance State-change Notification", "source": "aws.ec2", "account": "111122223333", "time": "2017-12-22T18:43:48Z", "region": "us-west-1", "resources": [ "arn:aws:ec2:us-west-1:123456789012:instance/i-1234567890abcdef0" ], "detail": { "instance-id": "i-1234567890abcdef0", "state": "terminated" } }</code></p>
+  <p>Notice two kinds of information: fields <em>about</em> the event (<code>source</code>, <code>detail-type</code>, <code>account</code>, <code>time</code>) and fields from the event body, inside <code>detail</code> (<code>instance-id</code>, <code>state</code>). Patterns can look at both.</p>
+
+  <h3>2. Buses, rules and targets: the routing model</h3>
+  <p>Per the docs, the flow is: a source (an AWS service, your application, or a SaaS provider) sends an event to a bus; EventBridge evaluates the event against each rule on that bus; for each rule that matches, the event goes to that rule's targets. One event can match several rules, and one rule can have up to five targets (which run in parallel). An event that matches no rule is simply not acted on.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 250" role="img" aria-label="Event sources send events to a bus; two rules each check a pattern; matching events go to targets">
+      <defs><marker id="ah12" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#C9C7C1"/></marker></defs>
+      <g font-family="Inter, sans-serif" font-size="11">
+        <rect x="10" y="30" width="110" height="38" rx="8" fill="#0E0E10" stroke="#C9C7C1"/><text x="65" y="53" text-anchor="middle" fill="#F2EFE9">AWS service</text>
+        <rect x="10" y="106" width="110" height="38" rx="8" fill="#0E0E10" stroke="#C9C7C1"/><text x="65" y="129" text-anchor="middle" fill="#F2EFE9">your app</text>
+        <rect x="10" y="182" width="110" height="38" rx="8" fill="#0E0E10" stroke="#C9C7C1"/><text x="65" y="205" text-anchor="middle" fill="#F2EFE9">SaaS partner</text>
+      </g>
+      <rect x="170" y="20" width="150" height="210" rx="12" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="245" y="42" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#C8453A">event bus</text>
+      <rect x="185" y="62" width="120" height="60" rx="8" fill="#131316" stroke="#6FCF97"/>
+      <text x="245" y="84" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#6FCF97">rule A</text>
+      <text x="245" y="102" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#C9C7C1">source = aws.ec2,</text>
+      <text x="245" y="114" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#C9C7C1">state = terminated</text>
+      <rect x="185" y="146" width="120" height="60" rx="8" fill="#131316" stroke="#6FCF97"/>
+      <text x="245" y="168" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#6FCF97">rule B</text>
+      <text x="245" y="186" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#C9C7C1">rate(5 minutes)</text>
+      <text x="245" y="198" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#C9C7C1">(schedule rule)</text>
+      <g font-family="Inter, sans-serif" font-size="11">
+        <rect x="400" y="25" width="130" height="38" rx="8" fill="#0E0E10" stroke="#6FCF97"/><text x="465" y="48" text-anchor="middle" fill="#F2EFE9">Lambda function</text>
+        <rect x="400" y="75" width="130" height="38" rx="8" fill="#0E0E10" stroke="#6FCF97"/><text x="465" y="98" text-anchor="middle" fill="#F2EFE9">SNS topic</text>
+        <rect x="400" y="145" width="130" height="38" rx="8" fill="#0E0E10" stroke="#6FCF97"/><text x="465" y="168" text-anchor="middle" fill="#F2EFE9">SQS queue</text>
+      </g>
+      <g stroke="#C9C7C1" stroke-width="1.3" marker-end="url(#ah12)">
+        <path d="M122 49 L168 80"/><path d="M122 125 L168 125"/><path d="M122 201 L168 175"/>
+        <path d="M307 85 L398 46"/><path d="M307 92 L398 94"/><path d="M307 176 L398 164"/>
+      </g>
+      <text x="570" y="100" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#7A7A80">up to 5</text>
+      <text x="570" y="113" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#7A7A80">targets</text>
+      <text x="570" y="126" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#7A7A80">per rule</text>
+    </svg>
+    <figcaption>Schematic: sources, bus, rules, targets. Simplified: scheduled rules, shown as rule B, are not triggered by incoming events. Target choices are examples.</figcaption>
+  </figure>
+
+  <p><strong>Which bus?</strong> Per the docs, the default bus in every account automatically receives events from AWS services. You can also create custom buses for your own applications' events, and receive events from SaaS partners. The current docs add a distinction I'll only name: a newer <em>Custom Event Bus</em> (subscriber-based, with event retention, replay and ordered delivery) versus the <em>Custom Event Bus - Classic</em> model of rules and targets that this digest describes. The docs say that for new applications you should start with the newer Custom Event Bus, and that Classic remains available. Treat everything below as the classic rule/target model.</p>
+
+  <h3>3. Event patterns: deciding what matches</h3>
+  <p>A pattern has the same shape as the event, but each field's value is a list of acceptable values. The docs' example selects EC2 termination events:</p>
+  <p><code>{ "source": ["aws.ec2"], "detail-type": ["EC2 Instance State-change Notification"], "detail": { "state": ["terminated"] } }</code></p>
+  <p>Matching rules to learn first:</p>
+  <ul>
+    <li>Fields you list must all match (AND). Several values in one field's list are alternatives (OR): <code>"PaymentType": ["Credit", "Debit"]</code>.</li>
+    <li>Fields you don't mention are ignored, so a short pattern matches many events.</li>
+    <li>Matching is exact on the values, and the docs warn this includes characters in ARNs (a colon and a slash aren't interchangeable).</li>
+  </ul>
+  <p>Content filtering operators from the docs' comparison table (all have an example there):</p>
+  <div class="card">
+    <p><code>{"prefix": "us-"}</code>: starts with. <code>{"suffix": ".png"}</code>: ends with.</p>
+    <p><code>{"anything-but": "initializing"}</code>: any value except that (also accepts lists, and prefix/suffix/wildcard forms).</p>
+    <p><code>{"numeric": [">", 0, "&lt;=", 5]}</code>: a numeric range. <code>{"exists": true}</code> or <code>false</code>: field present or absent.</p>
+    <p><code>{"equals-ignore-case": "alice"}</code>: case-insensitive. <code>{"cidr": "10.0.0.0/24"}</code>: IP address range.</p>
+    <p><code>{"wildcard": "dir/*.png"}</code>: wildcard match (event bus rules only, not pipes). <code>"$or": [ ... ]</code>: match if any of several field conditions holds.</p>
+  </div>
+  <p><em>Simplification:</em> I've left out arrays-in-events, null and empty-string matching, and numeric precision rules. The docs say numeric matching treats numbers as 64-bit floating point, so integers are matched exactly only within a bounded range. Also: comparison operators work on leaf fields (with the docs' exceptions for <code>$or</code> and <code>anything-but</code>).</p>
+  <p><strong>Test before you ship.</strong> The docs point to the EventBridge Sandbox for testing an event pattern against sample events before creating or updating a rule.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 200" role="img" aria-label="A pattern checklist is compared with two events; the terminated event matches and the running event does not">
+      <rect x="10" y="20" width="195" height="160" rx="10" fill="#131316" stroke="#C8453A"/>
+      <text x="107" y="42" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#C8453A">pattern</text>
+      <g font-family="JetBrains Mono, monospace" font-size="10.5" fill="#C9C7C1">
+        <text x="22" y="68">source: aws.ec2</text>
+        <text x="22" y="90">detail-type: EC2 Instance</text>
+        <text x="22" y="104">  State-change Notification</text>
+        <text x="22" y="126">detail.state: terminated</text>
+      </g>
+      <text x="107" y="160" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#7A7A80">all three must hold</text>
+      <rect x="260" y="20" width="170" height="75" rx="10" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="345" y="42" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#F2EFE9">event 1: terminated</text>
+      <text x="345" y="62" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#6FCF97">source ok, type ok, state ok</text>
+      <text x="345" y="80" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#6FCF97">MATCH</text>
+      <rect x="260" y="105" width="170" height="75" rx="10" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="345" y="127" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#F2EFE9">event 2: running</text>
+      <text x="345" y="147" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#C8453A">state differs</text>
+      <text x="345" y="165" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#C8453A">NO MATCH</text>
+      <text x="520" y="70" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">match: sent to</text>
+      <text x="520" y="86" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">the targets</text>
+      <text x="520" y="140" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#7A7A80">no match: not sent</text>
+      <text x="520" y="156" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#7A7A80">to these targets</text>
+    </svg>
+    <figcaption>Schematic: all pattern fields must hold for a match. Event contents derived from the docs' EC2 example.</figcaption>
+  </figure>
+
+  <h3>4. Targets, permissions and failure handling</h3>
+  <p>A rule can have up to five targets. The console target list in the docs is long: API destinations (HTTPS endpoints), other event buses (same or different account), and AWS services including Lambda (asynchronous), SNS, SQS, Step Functions (asynchronous), Kinesis, Firehose, CloudWatch log groups, ECS tasks, Systems Manager Run Command and Automation, EC2 stop/terminate/reboot API calls, and more.</p>
+  <ul>
+    <li><strong>Permissions.</strong> EventBridge needs permission to call the target. For many targets you supply an execution role (the trust policy lets <code>events.amazonaws.com</code> assume it). The put-targets reference says Lambda and SNS rely on resource-based policies instead; I'd verify the exact way to grant a Lambda function permission before building one.</li>
+    <li><strong>Shaping what the target receives.</strong> By default the whole event is passed. Options: part of the event (<code>InputPath</code>), a constant (<code>Input</code>), or an input transformer with a template. These are mutually exclusive.</li>
+    <li><strong>Retries.</strong> The retry policy in the put-targets reference allows <code>MaximumRetryAttempts</code> between 0 and 185 and <code>MaximumEventAgeInSeconds</code> between 60 and 86400. The console text gives the defaults as 24 hours and 185 retries.</li>
+    <li><strong>Dead-letter queue.</strong> You can attach an SQS queue to catch events that couldn't be delivered. The docs note SQS queues encrypted with an AWS owned key aren't supported for targets or DLQs.</li>
+    <li><strong>A new rule needs a moment.</strong> The docs warn that new or updated rules and targets might not take effect immediately.</li>
+  </ul>
+  <p><strong>The infinite-loop trap.</strong> The docs explicitly warn that a rule can trigger an action that triggers the same rule again. Their example: a rule fires when an S3 bucket's ACL changes, and the response changes the ACL back, which fires the rule again. Write rules narrowly (fire only on a bad state, not on every change) and consider an AWS Budgets alert for surprise charges.</p>
+
+  <h3>5. Scheduled rules (and why Scheduler is preferred)</h3>
+  <p>A scheduled rule fires at intervals instead of in response to an event. Per the docs, the console path calls this "Scheduled rule (legacy)", and they <strong>recommend EventBridge Scheduler instead</strong>, which supports one-time schedules, flexible delivery windows, retry limits and a wider set of targets. Still, scheduled rules are common in older setups, so you should be able to read them.</p>
+  <ul>
+    <li><strong>Rate expression:</strong> <code>rate(value unit)</code>, with a positive number and a unit of minute(s), hour(s) or day(s). Singular unit for 1, plural otherwise: <code>rate(1 hour)</code> and <code>rate(5 hours)</code> are valid; <code>rate(1 hours)</code> and <code>rate(5 hour)</code> are not.</li>
+    <li><strong>Cron expression:</strong> six fields, <code>cron(minutes hours day-of-month month day-of-week year)</code>. Example from the docs: <code>cron(0 18 ? * MON-FRI *)</code> means 6:00 pm every Monday through Friday (UTC). You can't give both day-of-month and day-of-week: one of them must be <code>?</code>.</li>
+    <li>All scheduled events use UTC+0. The minimum precision is one minute, and the docs warn there can be a delay of several seconds between trigger and target run.</li>
+    <li>Scheduled rules can only be created on the default event bus.</li>
+    <li>A rate expression starts counting from when you create the rule.</li>
+  </ul>
+  <p>CLI shapes from the docs: <code>aws events put-rule --schedule-expression "rate(5 minutes)" --name MyRule</code> and, for patterns, <code>aws events put-rule --name EC2InstanceStateChanges --event-pattern "{\"source\":[\"aws.ec2\"],\"detail-type\":[\"EC2 Instance State-change Notification\"]}"</code>. A rule needs an event pattern or a schedule (or both). Updating a rule replaces it: omitted arguments reset to null. Then attach targets with <code>aws events put-targets --rule NAME --targets "Id"="1","Arn"="&lt;target ARN&gt;"</code>.</p>
+
+  <h3>6. Pipes and Scheduler, in one paragraph</h3>
+  <p>Two siblings to know by name. <strong>Pipes</strong> are for point-to-point connections: one source (the docs' example is a DynamoDB stream) to one target, with filtering, enrichment and transformation along the way. They're often used together with buses, for example a pipe whose target is a bus. <strong>EventBridge Scheduler</strong> is the managed scheduler that replaces scheduled rules for new work. I haven't read their detail pages.</p>
+
+  <h2>Why it matters</h2>
+  <p>This is the glue that turns monitoring into automation. A CloudWatch alarm tells you something broke; an EventBridge rule can open an ops item, start a runbook or run a remediation function without a person. Scheduled rules (or Scheduler) replace the cron server you'd otherwise have to keep alive. And because patterns can be as loose or tight as you like, the main skill is writing them precisely: too loose and you invoke targets (and pay) for events you didn't want; too tight and you silently miss the one that mattered.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Event goes to a bus, rules check patterns, matches go to up to five targets per rule.</li>
+      <li>Pattern fields AND together; values in a list OR; unmentioned fields are ignored; matching is exact.</li>
+      <li>Rules can also run on a schedule (rate or cron, UTC, one-minute precision), but the docs recommend Scheduler for new work.</li>
+      <li>Targets need permission (execution role or resource policy) and can have retries and a dead-letter queue.</li>
+      <li>Watch for rules whose action re-triggers the same rule.</li>
+    </ul>
+  </div>
+
+  <h2>Recall questions</h2>
+  <ol>
+    <li>What are the three kinds of thing that can send events to a bus?</li>
+    <li>If a pattern lists <code>"state": ["stopped", "terminated"]</code>, which events match?</li>
+    <li>Why would <code>cron(0 8 1 * 1 *)</code> be rejected? Fix it.</li>
+    <li>What's the difference between an execution role and a resource-based policy on a target?</li>
+    <li>Describe a rule that could loop forever, and one change that fixes it.</li>
+  </ol>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Pattern on paper.</strong> Using the docs' EC2 event, write patterns that match (a) any EC2 state change, (b) only <code>stopped</code> or <code>terminated</code>, (c) anything except <code>pending</code>. <em>Done when:</em> you can explain for each why the docs' sample event does or doesn't match; test them in the EventBridge Sandbox if you can.</li>
+      <li><strong>Event to log group.</strong> Create a CloudWatch Logs group, then a rule on the default bus matching an event you can trigger cheaply, with the log group as the target (the docs list CloudWatch log groups as a target). <em>Done when:</em> an actual event appears as a log line you can find in Logs Insights.</li>
+      <li><strong>Schedule to Lambda.</strong> Create a tiny Lambda that logs "hello", then <code>put-rule</code> with <code>rate(5 minutes)</code> and <code>put-targets</code> to attach it (check how to grant EventBridge invoke permission on the function). <em>Done when:</em> you see three invocations in the function's log group, then you disable the rule so it stops.</li>
+      <li><strong>Read the cron table.</strong> Translate in words: <code>cron(0 10 * * ? *)</code>, <code>cron(0/15 * * * ? *)</code>, <code>cron(15 10 ? * 6L 2019-2022)</code>. <em>Done when:</em> your answers match the docs' meanings, including the UTC detail.</li>
+      <li><strong>Alarm to action.</strong> Make a rule whose event pattern matches CloudWatch alarm state changes (look up the event shape on the docs first and write the pattern from it), and send them to an SNS topic you subscribe to. Then flip an alarm with <code>set-alarm-state</code>. <em>Done when:</em> you receive the event JSON by email and can find the alarm name in it.</li>
+      <li><strong>Break it safely.</strong> Give a rule an unreachable target (such as a non-existent function ARN) with a dead-letter queue. <em>Done when:</em> you can describe what ends up in the DLQ and how long retries could run, per the docs' defaults.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Read the EventBridge best-practices pages for rules and patterns, the input transformation page, and the EventBridge Scheduler user guide. Next in this track: Synthetics canaries and RUM, which watch your application from the outside and the user's side.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the official documentation. Verify anything you plan to rely on (limits, CLI syntax, pricing, permissions, console steps) against the live pages below. AWS docs change over time; these pages were read in October 2026.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-what-is.html" target="_blank" rel="noopener">What is Amazon EventBridge?</a></li>
+    <li><a href="https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-bus.html" target="_blank" rel="noopener">Amazon EventBridge event bus (default and Classic)</a></li>
+    <li><a href="https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-rules.html" target="_blank" rel="noopener">Rules in Amazon EventBridge</a></li>
+    <li><a href="https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-patterns.html" target="_blank" rel="noopener">Amazon EventBridge event patterns</a></li>
+    <li><a href="https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-create-pattern-operators.html" target="_blank" rel="noopener">Comparison operators for use in event patterns</a></li>
+    <li><a href="https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-targets.html" target="_blank" rel="noopener">Event bus targets in Amazon EventBridge</a></li>
+    <li><a href="https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-create-rule-schedule.html" target="_blank" rel="noopener">Creating a scheduled rule (legacy)</a></li>
+    <li><a href="https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-scheduled-rule-pattern.html" target="_blank" rel="noopener">Schedule patterns: cron and rate expressions</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/events/put-rule.html" target="_blank" rel="noopener">AWS CLI reference: events put-rule</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/events/put-targets.html" target="_blank" rel="noopener">AWS CLI reference: events put-targets</a></li>
+  </ul>
+  <p class="src-note">Flagged: no pricing is quoted. I did not find an explicit docs statement of how CloudWatch Events relates to EventBridge; my "same service, newer name" reading is an inference from the old docs address redirecting to EventBridge's guide and from the CLI group still being <code>aws events</code>. I did not read the newer Custom Event Bus pages, Pipes, Scheduler, input-transformation or the CloudWatch alarm event format pages. The put-targets reference mentions the Lambda and SNS resource-based policy approach but does not show the command, so I didn't write one. The put-targets page gives inconsistent request size limits (10 per request in the description, 100 in the constraint), so I haven't quoted a figure. The pattern and diagram contents are my own illustrations built on the docs' examples; the micro-projects have not been run against a live account.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
