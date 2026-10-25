@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S3 Replication: CRR, SRR, Replication Time Control and Batch Replication</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+  pre { background: var(--panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 16px; }
+  pre code { background: none; padding: 0; font-size: 12.5px; line-height: 1.55; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS S3 &middot; CONCEPT 6 DIGEST</p>
+  <h1>S3 Replication: CRR, SRR, Replication Time Control and Batch Replication</h1>
+  <p class="lead">Replication is S3 copying your objects to another bucket for you, automatically and after the fact. It sounds simple, but the details (what gets copied, what doesn't, why deletes behave strangely, and what "existing objects" means) are where people get caught. This digest builds the model one piece at a time.</p>
+
+  <h2>In one line</h2>
+  <p>S3 Replication automatically and asynchronously copies new and updated objects from a source bucket to one or more destination buckets (in the same Region with SRR, or another Region with CRR), Replication Time Control adds a time-bound target and monitoring, and Batch Replication handles objects that live replication skips.</p>
+
+  <h2>The big idea</h2>
+  <p>S3 already stores each object across multiple Availability Zones inside a Region, so replication isn't about basic durability. The docs give other reasons: keep copies in a distant Region for compliance, put data nearer to users, aggregate logs into one bucket, keep production and test accounts in sync, keep copies under a different owner, or put replicas into a colder storage class.</p>
+  <p>Two ideas drive everything below. First, live replication is a <em>rule engine</em> attached to the source bucket: it only looks forward, copying objects written after the rule exists. Second, replication has many "by default" behaviours that surprise people (delete handling, replicas of replicas, archived objects). Each one has a switch or a workaround, which I'll point to.</p>
+  <p>Simplification label: I describe the S3 side. Replication also has an IAM permissions setup (a role S3 assumes), plus extras like replica modification sync, multi-destination rules and multi-Region access points that I only mention. No prices are quoted; the docs say inter-Region transfer charges vary by Region pair.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Replication</span>: automatic, asynchronous copying of objects between S3 buckets, which can belong to the same or different accounts.</li>
+    <li><span class="keyterm-term">Live replication</span>: replication of new and updated objects as they are written. Doesn't replicate objects that existed before the rule.</li>
+    <li><span class="keyterm-term">CRR (Cross-Region Replication)</span>: live replication to a bucket in a different AWS Region.</li>
+    <li><span class="keyterm-term">SRR (Same-Region Replication)</span>: live replication to a bucket in the same Region.</li>
+    <li><span class="keyterm-term">On-demand replication / Batch Replication</span>: a job you run to replicate existing objects, failed objects, or replicas.</li>
+    <li><span class="keyterm-term">Replication configuration</span>: the bucket-level document containing an IAM role and up to 1,000 rules.</li>
+    <li><span class="keyterm-term">Replication rule</span>: status, priority, optional filter, delete-marker setting, destination.</li>
+    <li><span class="keyterm-term">Replica</span>: the copy in the destination bucket.</li>
+    <li><span class="keyterm-term">Replication status</span>: a per-object label (for example <code>FAILED</code>, <code>COMPLETED</code>, <code>REPLICA</code>) used in tracking and Batch Replication filters.</li>
+    <li><span class="keyterm-term">S3 RTC (Replication Time Control)</span>: an add-on to a rule giving a 15-minute replication target backed by an SLA, plus metrics and events.</li>
+    <li><span class="keyterm-term">Owner override</span>: an option to make the destination bucket owner the owner of replicas.</li>
+    <li><span class="keyterm-term">Manifest</span>: the list of objects a Batch Replication job acts on.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>0. Grounding: the shape of a replication setup</h3>
+  <p>Requirements from the docs, in plain words:</p>
+  <ul>
+    <li>Both source and destination buckets must have <strong>versioning enabled</strong> (this is why last week's versioning digest comes first).</li>
+    <li>S3 needs permission to copy for you, via an <strong>IAM role</strong> named in the replication configuration. S3 can't replicate without it.</li>
+    <li>The relevant Regions must be enabled for the account(s) involved.</li>
+    <li>If the source bucket has Object Lock enabled, destination buckets must too.</li>
+    <li><strong>Cross-account:</strong> the destination bucket owner must grant the source owner permission to replicate via a bucket policy, and the destination can't be a Requester Pays bucket.</li>
+  </ul>
+  <p>Side effects of that versioning requirement: you can't disable versioning on the source bucket until you remove the replication configuration, and if you disable versioning on the destination, replication fails and objects get status <code>FAILED</code>.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 270" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="d1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#7A7A80"/></marker></defs>
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">LIVE REPLICATION: SRR vs CRR</text>
+      <rect x="20" y="50" width="170" height="130" rx="10" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="105" y="74" fill="#6FCF97" font-size="11" text-anchor="middle" font-weight="700">source bucket</text>
+      <text x="105" y="94" fill="#7A7A80" font-size="9" text-anchor="middle">versioning ON</text>
+      <text x="105" y="114" fill="#7A7A80" font-size="9" text-anchor="middle">replication rules</text>
+      <text x="105" y="134" fill="#7A7A80" font-size="9" text-anchor="middle">+ IAM role for S3</text>
+      <text x="105" y="160" fill="#C9C7C1" font-size="9.5" text-anchor="middle">Region A</text>
+      <rect x="360" y="40" width="240" height="68" rx="10" fill="#0E0E10" stroke="#F2EFE9"/>
+      <text x="480" y="62" fill="#F2EFE9" font-size="11" text-anchor="middle" font-weight="700">SRR: destination bucket</text>
+      <text x="480" y="80" fill="#7A7A80" font-size="9" text-anchor="middle">same Region (A), maybe another account</text>
+      <text x="480" y="96" fill="#7A7A80" font-size="9" text-anchor="middle">e.g. aggregate logs</text>
+      <rect x="360" y="124" width="240" height="68" rx="10" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="480" y="146" fill="#C8453A" font-size="11" text-anchor="middle" font-weight="700">CRR: destination bucket</text>
+      <text x="480" y="164" fill="#7A7A80" font-size="9" text-anchor="middle">a different Region (B)</text>
+      <text x="480" y="180" fill="#7A7A80" font-size="9" text-anchor="middle">e.g. compliance distance, latency</text>
+      <line x1="192" y1="90" x2="358" y2="76" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#d1)"/>
+      <line x1="192" y1="130" x2="358" y2="156" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#d1)"/>
+      <text x="310" y="232" fill="#7A7A80" font-size="10" text-anchor="middle">asynchronous: the replica appears after the original write completes</text>
+      <text x="310" y="252" fill="#7A7A80" font-size="10" text-anchor="middle">new and updated objects only (after the rule exists)</text>
+    </svg>
+    <figcaption>Fig 1. Same machinery, different destination Region.</figcaption>
+  </figure>
+
+  <h3>1. Live replication: rules and filters</h3>
+  <p>A replication configuration names an IAM role and one or more rules (up to 1,000 per source bucket, and the docs say that limit isn't adjustable). Each rule in the current (V2) format has:</p>
+  <ul>
+    <li><strong>Status:</strong> Enabled or Disabled.</li>
+    <li><strong>Priority:</strong> which rule wins if two rules with the same destination bucket overlap; higher number wins.</li>
+    <li><strong>Filter:</strong> optional; by key prefix, by tags, or both (combined with AND). An empty filter means all objects. Using a <code>Filter</code> means the rule also needs <code>Priority</code> and <code>DeleteMarkerReplication</code>.</li>
+    <li><strong>DeleteMarkerReplication:</strong> whether to copy delete markers.</li>
+    <li><strong>Destination:</strong> the destination bucket, and options such as storage class, owner override, RTC, KMS key.</li>
+  </ul>
+  <p>You can send objects to several destination buckets, in different Regions if you like, and by default replicas use the source object's storage class unless you specify one (so you can land directly in a Glacier class, or replicate as-is and let a lifecycle rule on the destination move them later).</p>
+  <p>A minimal CLI-style configuration, shaped from the docs' RTC example (placeholders in braces, RTC pieces trimmed):</p>
+<pre><code>{
+  "Role": "{IAM-role-ARN}",
+  "Rules": [{
+    "Status": "Enabled",
+    "Priority": 1,
+    "Filter": {"Prefix": "tax/"},
+    "DeleteMarkerReplication": {"Status": "Disabled"},
+    "Destination": {"Bucket": "arn:aws:s3:::{destination-bucket}"}
+  }]
+}</code></pre>
+  <p>Note the docs' caveat on tag filters: with live replication, an object is replicated under a tag-based rule only if it carries the matching tag <em>in the PutObject request itself</em>. Tagging it afterwards doesn't trigger replication (Batch Replication can pick those up).</p>
+
+  <h3>2. What is and isn't copied (the surprises)</h3>
+  <p><strong>Replicated by default</strong> (per the docs): objects created after the configuration was added; unencrypted objects and objects encrypted with SSE-S3 or SSE-C; metadata; tags; Object Lock retention information; and object ACL updates (unless ownership is changed). Objects encrypted with SSE-KMS aren't replicated unless you opt in with <code>SourceSelectionCriteria</code> and give a KMS key for the destination Region.</p>
+  <p><strong>Not replicated by default:</strong></p>
+  <ul>
+    <li><strong>Replicas of replicas.</strong> If A replicates to B and B replicates to C, objects in B that came from A don't flow on to C (Batch Replication can do it).</li>
+    <li><strong>Previously replicated objects.</strong> Changing the destination in a rule doesn't re-copy old objects.</li>
+    <li><strong>Objects in Glacier Flexible Retrieval, Glacier Deep Archive, and the Intelligent-Tiering Archive tiers.</strong> Restore them and copy first.</li>
+    <li><strong>Bucket-level configuration changes</strong> such as lifecycle or notification settings.</li>
+    <li><strong>Lifecycle actions.</strong> If lifecycle expires an object on the source, the resulting delete marker isn't replicated; configure the same lifecycle on both buckets if you want parity.</li>
+    <li><strong>Objects the bucket owner can't read</strong> (permission gaps with cross-account object owners).</li>
+  </ul>
+
+  <h3>3. Deletes: a deliberate asymmetry</h3>
+  <p>This is the part to read twice. With the current rule format (one with a <code>Filter</code>):</p>
+  <ul>
+    <li>A simple delete (no version ID) creates a delete marker on the source. By default <strong>that marker is not replicated</strong>. You can enable delete marker replication on non-tag-based rules.</li>
+    <li>A delete <em>with a version ID</em> permanently deletes that version on the source, but <strong>isn't replicated</strong>. The docs say this protects data from malicious deletions.</li>
+  </ul>
+  <p>The older (V1) format, which has no <code>Filter</code>, does replicate delete markers resulting from user actions (but not those created by lifecycle expiry). Also, by default, delete markers from a different source account aren't replicated.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">DELETES AND REPLICATION (current rule format, default settings)</text>
+      <rect x="20" y="44" width="280" height="170" rx="10" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="160" y="68" fill="#F2EFE9" font-size="11" font-weight="700" text-anchor="middle">simple DELETE on source</text>
+      <text x="160" y="96" fill="#C9C7C1" font-size="10" text-anchor="middle">source: delete marker added</text>
+      <text x="160" y="118" fill="#6FCF97" font-size="10" text-anchor="middle">destination: unchanged,</text>
+      <text x="160" y="134" fill="#6FCF97" font-size="10" text-anchor="middle">object still readable</text>
+      <text x="160" y="170" fill="#7A7A80" font-size="9" text-anchor="middle">turn on delete marker replication</text>
+      <text x="160" y="184" fill="#7A7A80" font-size="9" text-anchor="middle">if you want them to match</text>
+      <rect x="320" y="44" width="280" height="170" rx="10" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="460" y="68" fill="#F2EFE9" font-size="11" font-weight="700" text-anchor="middle">DELETE ...?versionId=X on source</text>
+      <text x="460" y="96" fill="#C9C7C1" font-size="10" text-anchor="middle">source: version X gone for good</text>
+      <text x="460" y="118" fill="#6FCF97" font-size="10" text-anchor="middle">destination: version X kept</text>
+      <text x="460" y="134" fill="#6FCF97" font-size="10" text-anchor="middle">(not replicated)</text>
+      <text x="460" y="170" fill="#7A7A80" font-size="9" text-anchor="middle">a rogue permanent delete on the source</text>
+      <text x="460" y="184" fill="#7A7A80" font-size="9" text-anchor="middle">doesn't wipe the replica</text>
+      <text x="310" y="238" fill="#7A7A80" font-size="10" text-anchor="middle">replication is not a mirror: it's closer to "copy forward"</text>
+    </svg>
+    <figcaption>Fig 2. Two kinds of delete, two different outcomes at the destination.</figcaption>
+  </figure>
+
+  <h3>4. Ownership and encryption on the way across</h3>
+  <ul>
+    <li><strong>Ownership.</strong> Replicas stay owned by the source object's owner unless you add owner override (<code>AccessControlTranslation</code> with owner <code>Destination</code>), which hands ownership to the destination bucket's account. The docs also note that with ACLs disabled (Bucket owner enforced) on the destination, replicas end up owned by the destination bucket owner.</li>
+    <li><strong>Encryption.</strong> SSE-KMS objects need an explicit opt-in plus a KMS key for the destination Region, and KMS request-rate quotas then apply to replication traffic too.</li>
+  </ul>
+
+  <h3>5. Replication Time Control (RTC)</h3>
+  <p>Plain live replication has no time guarantee. The docs' workload table says same-Region or cross-Region replication without RTC is not SLA-backed and gives "24-48 hours (not SLA backed)" as the contrast case, while RTC gives a predictable time. RTC is an option on a rule:</p>
+  <ul>
+    <li>The target: the docs say RTC replicates most objects in seconds and a high percentage within 15 minutes, backed by a service-level agreement. <em>Flag:</em> different docs pages state that percentage as 99.9 percent and as 99.99 percent. Check the live RTC page before relying on a number.</li>
+    <li>Enabling it turns on replication metrics (pending operations, pending bytes, maximum replication time, failed operations) published to CloudWatch, billed like CloudWatch custom metrics.</li>
+    <li>Event notifications <code>OperationMissedThreshold</code> and <code>OperationReplicatedAfterThreshold</code> tell you when an object misses the 15-minute threshold or replicates after it.</li>
+    <li>The only accepted value for the time and event threshold is 15 minutes.</li>
+    <li>The SLA doesn't apply when you exceed S3's request-rate guidelines or the default 1 Gbps replication transfer-rate quota (which you can ask to raise).</li>
+    <li>Batch Replication isn't covered by RTC.</li>
+  </ul>
+  <p>The CLI-shaped rule fragment from the docs:</p>
+<pre><code>"Destination": {
+  "Bucket": "arn:aws:s3:::{destination-bucket}",
+  "Metrics": {"Status": "Enabled", "EventThreshold": {"Minutes": 15}},
+  "ReplicationTime": {"Status": "Enabled", "Time": {"Minutes": 15}}
+}</code></pre>
+
+  <h3>6. Batch Replication: everything live replication skips</h3>
+  <p>Batch Replication is an on-demand job built on S3 Batch Operations. The docs list four uses:</p>
+  <ul>
+    <li>Replicate objects that existed before the rule.</li>
+    <li>Retry objects whose status is <code>FAILED</code>.</li>
+    <li>Replicate objects already replicated elsewhere to a newly added destination.</li>
+    <li>Replicate replicas (the A to B to C case).</li>
+  </ul>
+  <p>How it works: your source bucket must already have a replication configuration; the job needs a manifest (S3 can generate one from your rule's bucket, prefix and tags, stored in the source's Region, or you supply an S3 Inventory report or CSV, with version IDs for versioned buckets); and an IAM role. You can filter by <code>ObjectReplicationStatuses</code> (<code>NONE</code>, <code>FAILED</code>, <code>COMPLETED</code>, <code>REPLICA</code>) and by creation date. A completion report is available. Caveats from the docs: not supported for Glacier Flexible Retrieval or Deep Archive objects; a single job's manifest can hold up to 20 billion objects; it doesn't re-replicate objects deleted at the destination by version ID (use a Batch Copy in place instead); and the docs recommend disabling lifecycle rules while a job runs, because a delete marker may replicate before the versions it hides.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="d2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#7A7A80"/></marker></defs>
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">LIVE vs BATCH: A TIMELINE</text>
+      <line x1="30" y1="110" x2="590" y2="110" stroke="#7A7A80" stroke-width="2"/>
+      <rect x="40" y="80" width="170" height="30" rx="4" fill="#131316" stroke="#7A7A80"/>
+      <text x="125" y="99" fill="#C9C7C1" font-size="9.5" text-anchor="middle">objects written BEFORE the rule</text>
+      <line x1="220" y1="70" x2="220" y2="150" stroke="#6FCF97" stroke-dasharray="4 3"/>
+      <text x="220" y="64" fill="#6FCF97" font-size="9.5" text-anchor="middle">rule created</text>
+      <rect x="230" y="112" width="350" height="30" rx="4" fill="#131316" stroke="#6FCF97"/>
+      <text x="405" y="131" fill="#6FCF97" font-size="9.5" text-anchor="middle">objects written AFTER: live replication copies these</text>
+      <path d="M125,78 C125,40 520,40 520,150" fill="none" stroke="#C8453A" stroke-width="1.3" marker-end="url(#d2)"/>
+      <text x="320" y="46" fill="#C8453A" font-size="9.5" text-anchor="middle">Batch Replication job covers the earlier ones</text>
+      <text x="310" y="190" fill="#7A7A80" font-size="10" text-anchor="middle">also Batch: FAILED retries, new destinations, replicas of replicas</text>
+    </svg>
+    <figcaption>Fig 3. Live replication looks forward; Batch Replication looks back.</figcaption>
+  </figure>
+
+  <h3>7. Other behaviour worth knowing</h3>
+  <ul>
+    <li>Replication takes as long as creating the original did; large objects can take hours. Lifecycle on the destination honours the object's original creation time, not when the replica landed.</li>
+    <li>Multipart uploads replicate as multipart; unfinished uploads can linger on the destination, so the docs recommend an <code>AbortIncompleteMultipartUpload</code> lifecycle rule there.</li>
+    <li>Replicating or copying Intelligent-Tiering objects with Batch Replication counts as access (it tiers them up).</li>
+    <li>Data-transfer charges apply to CRR depending on Region pair; the docs say there are none for SRR. I don't quote rates.</li>
+    <li>Two-way replication (with replica modification sync) is the docs' pattern for keeping buckets in sync across Regions, for example before Multi-Region Access Point failover; I only mention it here.</li>
+  </ul>
+
+  <h2>Why it matters</h2>
+  <p>Teams often treat replication as "a backup" and then get surprised: a bad overwrite replicates, an old object never arrived, a lifecycle delete didn't propagate. Knowing it's an asynchronous, forward-looking copy with specific rules lets you use it for what it does well (compliance copies, latency, log aggregation, cross-account separation) and pair it with versioning and Object Lock where you need real protection. The next concepts, event notifications and multipart uploads, also interact with replication through failure events and incomplete uploads.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Live replication (CRR or SRR) is asynchronous and forward-looking; it needs versioning on both buckets and an IAM role S3 can assume.</li>
+      <li>By default it doesn't copy pre-existing objects, replicas of replicas, archived-class objects, lifecycle-driven deletes, or version-ID deletes.</li>
+      <li>Delete markers aren't replicated by default under the current rule format; permanent version deletes never are.</li>
+      <li>RTC adds a 15-minute SLA-backed target plus metrics and missed-threshold events; confirm the exact percentage on the live page.</li>
+      <li>Batch Replication is the on-demand tool for existing, failed, re-destination and replica objects, driven by a manifest.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <p style="font-size:14px;color:#7A7A80;margin-top:0">Projects 1 and 2 are offline. Projects 3 to 5 need two scratch buckets (ideally in two Regions) and an IAM role; the docs' replication walkthroughs give the exact role policy, which I haven't reproduced here. I haven't run these against a live account. Replication and data transfer can cost money; clean up afterwards.</p>
+    <ol>
+      <li><strong>Replication rule simulator (offline, ~1.5 hours).</strong> Given a list of rules (prefix, tags, priority, delete-marker flag) and an event (put with tags, simple delete, versioned delete), output whether each event replicates. <em>Done when</em> it matches Section 3's table, including "tagging after PutObject doesn't replicate".</li>
+      <li><strong>What-wasn't-copied checklist (offline, 30 min).</strong> From the docs' "isn't replicated" list, write a test case for each item and the workaround. <em>Done when</em> each row cites the docs section.</li>
+      <li><strong>Set up SRR.</strong> Create two versioned buckets in one Region, follow the docs' same-account walkthrough to create the role and a rule, upload a file, and check it with <code>aws s3api head-object</code> on both sides. <em>Done when</em> the source shows <code>ReplicationStatus</code> and the destination shows <code>REPLICA</code>.</li>
+      <li><strong>Prove the delete asymmetry.</strong> Using the setup from project 3 with delete marker replication disabled, run a simple delete on the source and compare the two buckets with <code>aws s3api list-object-versions</code>. <em>Done when</em> you see a marker on the source only.</li>
+      <li><strong>Backfill with Batch Replication.</strong> Upload a file <em>before</em> creating a second rule's replication, confirm it doesn't appear on the destination, then create a Batch Replication job (console is easiest) with <code>ObjectReplicationStatuses</code> = <code>NONE</code>. <em>Done when</em> the old object arrives and you've read the completion report.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Read "Replicating encrypted objects" and "Replicating metadata changes with replica modification sync" in the docs, then sketch how a two-region failover design would use them. Next in this track: presigned URLs, CORS and static website hosting.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication.html">Replicating objects within and across Regions</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-what-is-isnot-replicated.html">What does Amazon S3 replicate?</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-requirements.html">Requirements and considerations for replication</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-add-config.html">Replication configuration file elements</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-time-control.html">Meeting compliance requirements with S3 Replication Time Control</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-batch-replication-batch.html">Replicating existing objects with Batch Replication</a></li>
+  </ul>
+  <p class="src-note">This is a teaching draft, not a substitute for the AWS documentation. Verify anything you rely on against the live docs. Notes on uncertainty: docs read in October 2026; no prices quoted; the RTC percentage is stated as 99.9 percent on one page and 99.99 percent on others, so I left it unresolved; the CLI-shaped JSON is my assembly from the docs' RTC example and XML structure, not a tested command; I did not read the IAM role permission pages, the replication walkthroughs, replica modification sync or the delete-marker replication page in full, and the "24-48 hours" figure is from the docs' workload comparison table, not a guarantee.</p>
+
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
