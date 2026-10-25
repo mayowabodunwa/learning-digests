@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI Engineering, Ch.2 (Part 1 of 2): Understanding Foundation Models — Training Data, Architecture, and Scale</title>
+<title>AI Engineering, Ch.2 (Part 1): Understanding Foundation Models — Training Data, Architecture, and Scale</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -54,7 +54,7 @@
 <body>
 <div class="wrap">
 
-  <div class="eyebrow">AI · CH.2 DIGEST (PART 1 OF 2)</div>
+  <div class="eyebrow">AI · CH.2 DIGEST (PART 1)</div>
   <h1>Understanding Foundation Models: Training Data, Architecture, and Scale</h1>
   <p class="lead">What actually goes into a foundation model before it ever answers a prompt: the data it read, the transformer architecture that almost every current model runs on, and the size decisions that turn a compute budget into an actual model. Part 2 picks up with how a model gets aligned to be useful and safe to talk to.</p>
 
@@ -318,7 +318,7 @@
   <section>
     <h2>Sources &amp; verify</h2>
     <ul class="sources">
-      <li>Primary source: <i>AI Engineering</i> by Chip Huyen (O'Reilly), Chapter 2, "Understanding Foundation Models," covering the "Training Data" section (general-purpose data, Multilingual Models, Domain-Specific Models) and the "Modeling" section through "Model Architecture" and "Model Size" (scaling laws, inverse scaling, scaling extrapolation, scaling bottlenecks), pages 73–100. This is part 1 of 2 for this chapter; the chapter continues with Post-Training, Sampling, and The Probabilistic Nature of AI in part 2, pages 101–136.</li>
+      <li>Primary source: <i>AI Engineering</i> by Chip Huyen (O'Reilly), Chapter 2, "Understanding Foundation Models," covering the "Training Data" section (general-purpose data, Multilingual Models, Domain-Specific Models) and the "Modeling" section through "Model Architecture" and "Model Size" (scaling laws, inverse scaling, scaling extrapolation, scaling bottlenecks), pages 73–100. This is part 1 for this chapter; the chapter continues with Post-Training, Sampling, and The Probabilistic Nature of AI in part 2, pages 101–136.</li>
       <li>This digest is a teaching draft written from that source, not a replacement for it. Verify anything you plan to rely on (benchmark numbers, cost figures, parameter counts, dates) against the original chapter or a current primary source, since many figures here (compute costs, GPU pricing, electricity-share projections, dataset restriction percentages) were current as of when the chapter was written and are likely to have moved since.</li>
       <li>Flagged inconsistency in the source material itself, preserved rather than silently corrected: the chapter's own worked example computes roughly 236 days to train GPT-3-175B on 256 H100s at full capacity, but then uses 256 days in the immediately following dollar-cost calculation. Both numbers are reproduced here as the source states them rather than reconciled.</li>
       <li>Minor wording ambiguity flagged: the source's sentence about GELU being "used by GPT-2 and GPT-3, respectively" is oddly phrased next to two named activation functions (ReLU and GELU). This digest presents GELU as used by GPT-2 and GPT-3 per the plain reading, without resolving the ambiguity from outside knowledge.</li>

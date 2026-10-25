@@ -22,10 +22,18 @@ C = dict(bg="#0A0A0B", card="#0E0E10", line="rgba(242,239,233,0.10)",
 
 # Preferred display order for the tracks. Any book not listed here is appended
 # afterwards in alphabetical order, so a new track still shows up automatically.
+# AWS is split into one section per service area, matching TRACKER.md's four area
+# tables. A single global "Topic N" counter cannot be allocated by the area jobs that
+# run in parallel, and "S3 - Concept 2" tells a reader where a digest sits in a way
+# "Topic 7" never did. "AWS" stays listed for the older entries' sake.
 TRACK_ORDER = [
     "Designing Data-Intensive Applications",
     "AI Engineering",
     "High Performance MySQL",
+    "AWS S3",
+    "AWS EC2",
+    "AWS VPC",
+    "AWS CloudWatch",
     "AWS",
 ]
 

@@ -96,10 +96,15 @@ jobs:
           docs/digests.json using a 'ch' label that NEVER promises a part total: write 'Ch.2 (Part 2)' \
           and 'Ch.2 (Part 3, final)' for the one that completes the chapter, or plain 'Ch.2' when it \
           fits in one unit - never 'Part 1 of 2', since that total goes stale and the library then \
-          contradicts itself. Then render its carousel PNGs to build/carousels/<book>/<slug>/ (keep that \
+          contradicts itself. For AWS, set 'book' to the service area ('AWS S3', 'AWS EC2', \
+          'AWS VPC' or 'AWS CloudWatch') and 'ch' to 'Concept N' using that concept's number in \
+          its TRACKER.md area table - never a running 'Topic N' across all of AWS, since the areas \
+          are produced independently and a global counter cannot be allocated correctly. \
+          Then render its carousel PNGs to build/carousels/<book>/<slug>/ (keep that \
           unit's deck.json in the same folder, the lint step reads it) where <book> \
           is a clean folder name (DDIA, AI-Engineering, High-Performance-MySQL, AWS) so the zip is \
-          foldered per book. Do NOT write the email yourself; a later step builds a Gmail-safe one \
+          foldered per book. That folder name stays plain 'AWS' for every AWS area, even though the \
+          manifest 'book' field is the per-area name: one AWS folder in the zip, not four. Do NOT write the email yourself; a later step builds a Gmail-safe one \
           from docs/digests.json. Update the per-book tables in TRACKER.md, and \
           REPLACE the 'Current batch' checklist with the new unit list, all unchecked." \
             --permission-mode acceptEdits --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebFetch"

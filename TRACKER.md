@@ -11,7 +11,7 @@ through. Do not resume a parked chapter, and do not "finish" a book sequentially
 scope below replaces the old cover-to-cover plan.
 
 **Track A: books**
-1. *Designing Data-Intensive Applications*: **Ch.4, Ch.10, Ch.11** (in that order)
+1. *Designing Data-Intensive Applications*: **Ch.4, Ch.5, Ch.6, Ch.7, Ch.10, Ch.11** (in that order)
 2. *AI Engineering* (Chip Huyen): **Ch.5 onwards** (5, 6, 7, 8, 9, 10 in order)
 3. *High Performance MySQL, 4th ed.*: **Ch.6, Ch.7, Ch.8** (in that order)
 
@@ -20,6 +20,13 @@ scope below replaces the old cover-to-cover plan.
 concept from whichever area is next in the rotation (finish any in-progress concept
 first). These four areas are the standing scope; keep circling them until every concept
 listed is covered, then go deeper on the same services rather than moving to new ones.
+
+**How AWS digests are labelled.** Each area is its own track in the library: set the
+manifest `book` to `AWS S3`, `AWS EC2`, `AWS VPC` or `AWS CloudWatch`, and set `ch` to
+`Concept N`, where N is that concept's number in the area table below (so S3 row 4 is
+`Concept 4`). Do NOT use a single running `Topic N` across all of AWS: the areas are
+produced independently, so a global counter cannot be allocated correctly and ends up
+with four different digests all claiming the same number.
 
 **Parked, do not produce:** AI Engineering Ch.2 Part 3, High Performance MySQL Ch.3
 Part 2, DDIA Ch.3, and every chapter not named above. They stay published in the library
@@ -35,16 +42,19 @@ for reference, they are simply not continued.
 
 ## Track A: Designing Data-Intensive Applications
 
-Focus: Ch.4, Ch.10, Ch.11. Nothing else from this book.
+Focus: Ch.4, Ch.5, Ch.6, Ch.7, Ch.10, Ch.11, in that order. Nothing else from this book.
 
 | Ch | Title | Pages | Digested | Carousel | Notes |
 |---:|-------|-------|----------|----------|-------|
 | 4 | Encoding and Evolution | 133–166 | 2026-08-09 (Pt.1, pp.133–150); 2026-08-18 (Pt.2, final, pp.150–162) | 2026-08-09 (Pt.1); 2026-08-18 (Pt.2, final) | Done. Part 2 = Modes of Dataflow (databases, REST/RPC, message brokers, distributed actor frameworks) through the chapter's own Summary. Chapter 4 is fully covered; PDF pages 162–166 are references/Part II divider, not chapter content. |
+| 5 | Replication | | | | Added to scope 2026-10-25. Pin the exact page range from the PDF at the Source stage. |
+| 6 | Partitioning | | | | Added to scope 2026-10-25. Pin the exact page range from the PDF at the Source stage. |
+| 7 | Transactions | | | | Added to scope 2026-10-25. Pin the exact page range from the PDF at the Source stage. |
 | 10 | Batch Processing | 411–460 | 2026-09-07 (Pt.1, pp.411–419); 2026-10-11 (Pt.2, printed pp.397–403 / PDF 419–425) | 2026-09-07 (Pt.1); 2026-10-11 (Pt.2) | In progress. Part 1 = chapter framing (services vs. batch vs. stream systems) plus "Batch Processing with Unix Tools" in full (log analysis pipeline, sort vs. in-memory aggregation, the Unix Philosophy: uniform interface, separation of logic/wiring, transparency/experimentation). Stops at the boundary before "MapReduce and Distributed Filesystems". Part 2 = HDFS and shared-nothing storage, the four MapReduce steps (mapper/reducer), distributed execution (partitioning, shuffle) and workflows; stops before "Reduce-Side Joins and Grouping" (mid printed p.403). **Next DDIA unit:** Ch.10 Part 3, reduce-side joins and grouping, map-side joins, and the output of batch workflows. |
 | 11 | Stream Processing | 461–510 | | | |
 
 *Already published (do not redo):* Ch.1; Ch.2 Parts 1 and 2.
-*Parked:* Ch.3, 5, 6, 7, 8, 9, 12.
+*Parked:* Ch.3, 8, 9, 12.
 
 ## Track A: AI Engineering (Chip Huyen)
 

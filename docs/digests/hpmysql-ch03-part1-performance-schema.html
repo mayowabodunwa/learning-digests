@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>High Performance MySQL — Ch.3: Performance Schema (Part 1 of 2)</title>
+<title>High Performance MySQL — Ch.3: Performance Schema (Part 1)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -95,7 +95,7 @@
 <body>
 <div class="wrap">
 
-  <p class="eyebrow">SQL · CH.3 DIGEST · PART 1 OF 2</p>
+  <p class="eyebrow">SQL · CH.3 DIGEST · PART 1</p>
   <h1>Performance Schema: Instruments, Consumers, and Getting It Configured</h1>
   <p class="lead">Ch.2 taught you to watch the outside of MySQL, the SLIs and SLOs customers feel. This chapter goes inside the server itself, and Part 1 covers the two ideas everything else is built on, plus how you actually turn the thing on.</p>
 
@@ -333,7 +333,7 @@
 
   <section>
     <h2 class="kicker">Sources &amp; verify</h2>
-    <p class="small">Grounded in <em>High Performance MySQL, 4th Edition</em>, Chapter 3: "Performance Schema" (contributed by Sveta Smirnova), covering pp. 63–74 of the chapter's full pp. 63–96 (PDF page numbers of the reviewed file; the book's own printed pages for this portion are 41–52). This is Part 1 of 2: it stops at the end of the chapter's "Configuration" section, right before "Using Performance Schema" begins; Part 2 will cover the remaining pages. This digest is a teaching draft, not a substitute for the book or the official MySQL Reference Manual: verify anything you plan to rely on operationally, especially exact table/column names, default values, and version-specific behavior, against a current, live MySQL instance and the current manual before using it in production. Specific things worth double-checking against your own MySQL version: the claim that MySQL Community 8.0.25 ships 110 performance_schema tables (the source's own number, tied to that exact version); the default-enabled instrumentation categories for 5.7 versus 8.0 (global/thread/statement/transaction by default since 5.7, with metadata lock and memory instrumentation added by default since 8.0); the exact count of "15 possible consumers"; and the default history sizes (10 per thread / 10,000 globally) and default text/digest length caps (1,024 bytes), all of which the source itself says can shift between versions.</p>
+    <p class="small">Grounded in <em>High Performance MySQL, 4th Edition</em>, Chapter 3: "Performance Schema" (contributed by Sveta Smirnova), covering pp. 63–74 of the chapter's full pp. 63–96 (PDF page numbers of the reviewed file; the book's own printed pages for this portion are 41–52). This is Part 1: it stops at the end of the chapter's "Configuration" section, right before "Using Performance Schema" begins; Part 2 will cover the remaining pages. This digest is a teaching draft, not a substitute for the book or the official MySQL Reference Manual: verify anything you plan to rely on operationally, especially exact table/column names, default values, and version-specific behavior, against a current, live MySQL instance and the current manual before using it in production. Specific things worth double-checking against your own MySQL version: the claim that MySQL Community 8.0.25 ships 110 performance_schema tables (the source's own number, tied to that exact version); the default-enabled instrumentation categories for 5.7 versus 8.0 (global/thread/statement/transaction by default since 5.7, with metadata lock and memory instrumentation added by default since 8.0); the exact count of "15 possible consumers"; and the default history sizes (10 per thread / 10,000 globally) and default text/digest length caps (1,024 bytes), all of which the source itself says can shift between versions.</p>
   </section>
 
   <div class="footer">

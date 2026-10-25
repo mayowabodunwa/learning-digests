@@ -22,8 +22,8 @@
   },
   {
     "slug": "aws-01-core-networking",
-    "book": "AWS",
-    "ch": "Topic 1",
+    "book": "AWS VPC",
+    "ch": "Concept 1",
     "title": "Core Networking: VPCs, Subnets, Route Tables & NAT",
     "date": "2026-07-20"
   },
@@ -50,8 +50,8 @@
   },
   {
     "slug": "aws-02-transit-gateway",
-    "book": "AWS",
-    "ch": "Topic 2",
+    "book": "AWS VPC",
+    "ch": "Concept 2",
     "title": "Transit Gateway & Multi-VPC Connectivity",
     "date": "2026-07-27"
   },
@@ -78,8 +78,8 @@
   },
   {
     "slug": "aws-03-ec2-instances-amis",
-    "book": "AWS",
-    "ch": "Topic 3 (Part 1)",
+    "book": "AWS EC2",
+    "ch": "Concept 1 (Part 1)",
     "title": "EC2 Instances & AMIs",
     "date": "2026-07-30"
   },
@@ -106,8 +106,8 @@
   },
   {
     "slug": "aws-03-part2-auto-scaling-load-balancing",
-    "book": "AWS",
-    "ch": "Topic 3 (Part 2, final)",
+    "book": "AWS EC2",
+    "ch": "Concept 1 (Part 2, final)",
     "title": "Auto Scaling Groups & Elastic Load Balancing",
     "date": "2026-08-09"
   },
@@ -134,8 +134,8 @@
   },
   {
     "slug": "aws-04-security-groups-nacls",
-    "book": "AWS",
-    "ch": "Topic 4",
+    "book": "AWS VPC",
+    "ch": "Concept 3",
     "title": "Security Groups and Network ACLs in Depth",
     "date": "2026-08-18"
   },
@@ -162,8 +162,8 @@
   },
   {
     "slug": "aws-05-cloudwatch-metrics",
-    "book": "AWS",
-    "ch": "Topic 5",
+    "book": "AWS CloudWatch",
+    "ch": "Concept 1",
     "title": "CloudWatch Metrics: Namespaces, Dimensions, Resolution & Custom Metrics",
     "date": "2026-09-07"
   },
@@ -190,36 +190,36 @@
   },
   {
     "slug": "aws-06-s3-buckets-objects-keys",
-    "book": "AWS",
-    "ch": "Topic 6",
+    "book": "AWS S3",
+    "ch": "Concept 1",
     "title": "S3 Buckets, Objects, Keys: The Flat Namespace, Durability & Consistency",
     "date": "2026-10-11"
   },
   {
     "slug": "aws-07-cloudwatch-alarms",
-    "book": "AWS",
-    "ch": "Topic 7",
+    "book": "AWS CloudWatch",
+    "ch": "Concept 2",
     "title": "CloudWatch Alarms: Static, Anomaly Detection, Composite and Alarm Actions",
     "date": "2026-10-25"
   },
   {
     "slug": "aws-07-ec2-purchasing-options",
-    "book": "AWS",
-    "ch": "Topic 7",
+    "book": "AWS EC2",
+    "ch": "Concept 2",
     "title": "EC2 Purchasing Options: On-Demand, Savings Plans, Reserved Instances, Spot and Friends",
     "date": "2026-10-25"
   },
   {
     "slug": "aws-07-s3-storage-classes-lifecycle",
-    "book": "AWS",
-    "ch": "Topic 7",
+    "book": "AWS S3",
+    "ch": "Concept 2",
     "title": "S3 Storage Classes & Lifecycle Policies: Standard to Glacier, Intelligent-Tiering, and Automatic Transitions",
     "date": "2026-10-25"
   },
   {
     "slug": "aws-07-vpc-endpoints-privatelink",
-    "book": "AWS",
-    "ch": "Topic 7",
+    "book": "AWS VPC",
+    "ch": "Concept 4",
     "title": "VPC Endpoints: Gateway vs. Interface, and PrivateLink",
     "date": "2026-10-25"
   },
