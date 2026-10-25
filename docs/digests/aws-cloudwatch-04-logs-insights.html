@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: CloudWatch Logs Insights: The Query Language for Searching and Analysing Logs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS CLOUDWATCH &middot; CONCEPT 4 DIGEST</p>
+  <h1>CloudWatch Logs Insights: The Query Language for Searching and Analysing Logs</h1>
+  <p class="lead">Once logs are in CloudWatch, the real skill is asking them questions. Logs Insights is the query tool for that. This digest teaches you its query language from scratch: how a query is a pipeline of small commands, which fields every log event gets for free, and how to go from "something's wrong" to a count, a ranking or a chart.</p>
+
+  <h2>In one line</h2>
+  <p>A Logs Insights query is a short pipeline, written as commands joined by the pipe character, that picks log events, filters them, optionally pulls fields out of text, and then lists, sorts or aggregates the result.</p>
+
+  <h2>The big idea</h2>
+  <p>In the last digest we stored logs and used filters to watch them as they arrive. A metric filter can only answer a question you thought of in advance. Logs Insights is for the question you think of afterwards: "which API path produced the most 500s in the last hour?" You choose one or more log groups, choose a time range, and write a query. CloudWatch scans the matching events and returns rows, or a chart if you aggregate.</p>
+  <p>The language is deliberately small. You build a query by chaining commands, each one taking the output of the previous one. If you've used a Unix shell pipe, the shape will feel familiar. The commands you'll use in nearly every query are <code>fields</code>, <code>filter</code>, <code>parse</code>, <code>stats</code>, <code>sort</code> and <code>limit</code>. Learn those six and you can answer most day-to-day questions.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Logs Insights</span>: the interactive query feature of CloudWatch Logs. It supports three query languages: its own purpose-built Logs Insights QL, OpenSearch PPL, and OpenSearch SQL. This digest is about Logs Insights QL.</li>
+    <li><span class="keyterm-term">Command</span>: one step of a query, such as <code>filter</code> or <code>stats</code>.</li>
+    <li><span class="keyterm-term">Pipe (<code>|</code>)</span>: the separator between commands. Output of the left side feeds the right side.</li>
+    <li><span class="keyterm-term">System field</span>: a field Insights creates automatically, starting with <code>@</code>. For Standard-class groups there are five main ones: <code>@message</code>, <code>@timestamp</code>, <code>@ingestionTime</code>, <code>@logStream</code> and <code>@log</code>.</li>
+    <li><span class="keyterm-term">Discovered field</span>: a field Insights finds for you. For JSON logs and some AWS log types (Lambda, VPC flow logs, Route 53, CloudTrail) each key becomes a field you can use directly.</li>
+    <li><span class="keyterm-term">Aggregation</span>: turning many events into one number or one row per group, for example count, average, or a percentile.</li>
+    <li><span class="keyterm-term"><code>bin()</code></span>: groups a time field into buckets, such as 5 minutes, so you can get a value over time.</li>
+    <li><span class="keyterm-term">Glob / regex (in <code>parse</code>)</span>: two ways to describe the shape of text you want to cut a piece out of: simple <code>*</code> placeholders, or regular expressions.</li>
+    <li><span class="keyterm-term">Field index</span>: an optional setting that lets queries skip events that don't contain an indexed field, reducing how much data is scanned.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>Grounding: what happens when you run a query</h3>
+  <p>You pick log groups and a time range, then press run. CloudWatch scans the log events in that range, runs your commands over them in order, and shows results. The docs say queries incur charges based on the amount of uncompressed log data scanned (I'm not quoting any prices), and they list best practices that all follow from that: select only the log groups you need, use the narrowest time range you can, cancel queries before closing the console page (otherwise they keep running), and be careful with dashboard widgets that re-run a query on every refresh.</p>
+  <p>Some limits worth knowing, all from the docs: queries time out after 60 minutes if they haven't completed, and results are available for 7 days. Insights can't see log events with timestamps older than the creation time of the log group. The overview page says you are limited to 100 concurrent Logs Insights QL queries per account, while the <code>start-query</code> CLI page words the same limit as per Region. I'd treat the number as "about a hundred at once" and check the current quota page if it matters.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 200" role="img" aria-label="A query pipeline: log groups and time range feed fields, filter, parse, stats, sort and limit commands, producing rows or a chart">
+      <defs><marker id="ah5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#C9C7C1"/></marker></defs>
+      <rect x="10" y="70" width="100" height="60" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="60" y="97" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#F2EFE9">log groups</text>
+      <text x="60" y="115" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#7A7A80">+ time range</text>
+      <g font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle">
+        <rect x="140" y="75" width="64" height="50" rx="8" fill="#131316" stroke="#6FCF97"/><text x="172" y="104" fill="#6FCF97">fields</text>
+        <rect x="224" y="75" width="64" height="50" rx="8" fill="#131316" stroke="#6FCF97"/><text x="256" y="104" fill="#6FCF97">filter</text>
+        <rect x="308" y="75" width="64" height="50" rx="8" fill="#131316" stroke="#6FCF97"/><text x="340" y="104" fill="#6FCF97">parse</text>
+        <rect x="392" y="75" width="64" height="50" rx="8" fill="#131316" stroke="#C8453A"/><text x="424" y="104" fill="#C8453A">stats</text>
+        <rect x="476" y="75" width="64" height="50" rx="8" fill="#131316" stroke="#6FCF97"/><text x="508" y="104" fill="#6FCF97">sort</text>
+        <rect x="560" y="75" width="50" height="50" rx="8" fill="#131316" stroke="#6FCF97"/><text x="585" y="104" fill="#6FCF97">limit</text>
+      </g>
+      <g stroke="#C9C7C1" stroke-width="1.3" marker-end="url(#ah5)">
+        <path d="M112 100 L138 100"/><path d="M206 100 L222 100"/><path d="M290 100 L306 100"/><path d="M374 100 L390 100"/><path d="M458 100 L474 100"/><path d="M542 100 L558 100"/>
+      </g>
+      <text x="300" y="40" text-anchor="middle" font-family="Inter, sans-serif" font-size="11.5" fill="#F2EFE9">each | hands its output to the next command</text>
+      <text x="300" y="165" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#7A7A80">not every query uses every command; this is one common shape</text>
+    </svg>
+    <figcaption>Schematic: a query is a pipeline. Red marks the aggregating step that turns many events into a few rows.</figcaption>
+  </figure>
+
+  <h3>1. The free fields: what every event already has</h3>
+  <p>For logs in a Standard-class group, the docs say Insights generates system fields, all beginning with <code>@</code>:</p>
+  <ul>
+    <li><code>@message</code>: the raw, unparsed text of the event.</li>
+    <li><code>@timestamp</code>: the event's own timestamp.</li>
+    <li><code>@ingestionTime</code>: when CloudWatch Logs received the event.</li>
+    <li><code>@logStream</code>: the name of the stream the event is in.</li>
+    <li><code>@log</code>: an identifier of the form <code>account-id:log-group-name</code>, handy when a single query spans several groups.</li>
+  </ul>
+  <p><strong>JSON logs become fields.</strong> If your application writes JSON per line, Insights discovers the keys and you reference them by name, using dot notation for nesting: <code>userIdentity.type</code>. Arrays are flattened with numeric positions, as in <code>requestParameters.instancesSet.items.0.instanceId</code>. The docs state a maximum of 200 log event fields extracted from a JSON log; beyond that you use <code>parse</code> on the raw message. This is the strongest argument for logging in JSON from day one.</p>
+  <p><strong>Some AWS logs come pre-labelled.</strong> The docs list discovered fields for VPC flow logs (<code>srcAddr</code>, <code>dstAddr</code>, <code>bytes</code>, <code>action</code> and more), Route 53 logs, and Lambda logs (<code>@duration</code>, <code>@maxMemoryUsed</code>, <code>@requestId</code>, <code>@type</code>). That is why a flow log query can say <code>stats sum(bytes) by srcAddr</code> with no setup.</p>
+  <p><em>Caveat:</em> for Lambda, the docs say automatic JSON discovery covers only the first embedded JSON fragment in each log event. And field discovery is supported only for Standard-class log groups.</p>
+
+  <h3>2. The six everyday commands</h3>
+  <div class="card">
+    <p><code>fields</code>: choose which fields to show, and create computed ones. Example from the docs: <code>fields @timestamp, @message</code>.</p>
+    <p><code>filter</code> (alias <code>where</code>): keep only events matching a condition. Comparison operators are <code>=</code>, <code>!=</code>, <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code>; boolean operators are <code>and</code>, <code>or</code>, <code>not</code>. Use <code>like</code> and <code>not like</code> for substrings, <code>in [..]</code> for set membership, and <code>ispresent(field)</code> to test that a field exists.</p>
+    <p><code>parse</code>: pull a piece of text out of a field into a new field, with <code>*</code> placeholders or a regular expression.</p>
+    <p><code>stats</code>: aggregate. Functions include <code>count</code>, <code>countDistinct</code>, <code>sum</code>, <code>avg</code>, <code>min</code>, <code>max</code>, <code>pct</code> (percentile), <code>stddev</code>, <code>values</code>, plus <code>earliest</code> and <code>latest</code>. Add <code>by</code> to group.</p>
+    <p><code>sort</code>: order rows, <code>asc</code> or <code>desc</code>.</p>
+    <p><code>limit</code>: cap how many rows come back. With sort it gives "top 20" or "latest 20".</p>
+  </div>
+  <p>The docs also list many more commands (<code>display</code>, <code>dedup</code>, <code>pattern</code>, <code>diff</code>, <code>unnest</code>, <code>join</code>, <code>lookup</code>, <code>anomaly</code> and others). I'm leaving those for you to explore after the six above feel natural. Comments in a query start with <code>#</code>.</p>
+
+  <h3>3. Worked queries, read like sentences</h3>
+  <p>These first three come from the docs' sample queries page. I describe each in plain words.</p>
+  <ul>
+    <li><code>fields @timestamp, @message | sort @timestamp desc | limit 25</code>: show time and text, newest first, only 25. This is the "what just happened?" query.</li>
+    <li><code>filter @message like /Exception/ | stats count(*) as exceptionCount by bin(1h) | sort exceptionCount desc</code>: keep only events containing "Exception", count them in one-hour buckets, and show the worst hours first.</li>
+    <li><code>fields @message | filter @message not like /Exception/</code>: everything that is <em>not</em> an exception.</li>
+  </ul>
+  <p>A Lambda-flavoured one, also from the docs: <code>filter @type = "REPORT" and @duration &gt; 1000 | sort @timestamp desc | dedup @requestId | limit 20</code> finds invocations slower than 1000 ms (the docs note <code>@duration</code> is in milliseconds), removes duplicates caused by retries, and shows the 20 most recent.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 230" role="img" aria-label="Six sample events shrinking through a filter step then a stats step into two summary rows">
+      <defs><marker id="ah6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#C9C7C1"/></marker></defs>
+      <text x="20" y="22" font-family="JetBrains Mono, monospace" font-size="11" fill="#7A7A80">6 events in range</text>
+      <g font-family="JetBrains Mono, monospace" font-size="10.5">
+        <rect x="20" y="30" width="150" height="22" rx="4" fill="#131316" stroke="#7A7A80"/><text x="28" y="45" fill="#C9C7C1">/cart 200 40ms</text>
+        <rect x="20" y="58" width="150" height="22" rx="4" fill="#131316" stroke="#C8453A"/><text x="28" y="73" fill="#C8453A">/pay 500 910ms</text>
+        <rect x="20" y="86" width="150" height="22" rx="4" fill="#131316" stroke="#7A7A80"/><text x="28" y="101" fill="#C9C7C1">/cart 200 55ms</text>
+        <rect x="20" y="114" width="150" height="22" rx="4" fill="#131316" stroke="#C8453A"/><text x="28" y="129" fill="#C8453A">/pay 500 880ms</text>
+        <rect x="20" y="142" width="150" height="22" rx="4" fill="#131316" stroke="#7A7A80"/><text x="28" y="157" fill="#C9C7C1">/home 200 30ms</text>
+        <rect x="20" y="170" width="150" height="22" rx="4" fill="#131316" stroke="#C8453A"/><text x="28" y="185" fill="#C8453A">/cart 500 700ms</text>
+      </g>
+      <path d="M175 110 L235 110" stroke="#C9C7C1" stroke-width="1.5" marker-end="url(#ah6)"/>
+      <text x="205" y="98" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#F2EFE9">filter status=500</text>
+      <g font-family="JetBrains Mono, monospace" font-size="10.5">
+        <text x="245" y="22" fill="#7A7A80">3 left</text>
+        <rect x="245" y="58" width="130" height="22" rx="4" fill="#131316" stroke="#C8453A"/><text x="251" y="73" fill="#C8453A">/pay 910ms</text>
+        <rect x="245" y="86" width="130" height="22" rx="4" fill="#131316" stroke="#C8453A"/><text x="251" y="101" fill="#C8453A">/pay 880ms</text>
+        <rect x="245" y="114" width="130" height="22" rx="4" fill="#131316" stroke="#C8453A"/><text x="251" y="129" fill="#C8453A">/cart 700ms</text>
+      </g>
+      <path d="M380 110 L440 110" stroke="#C9C7C1" stroke-width="1.5" marker-end="url(#ah6)"/>
+      <text x="410" y="98" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#F2EFE9">stats count(*) by path</text>
+      <g font-family="JetBrains Mono, monospace" font-size="10.5">
+        <text x="450" y="22" fill="#7A7A80">2 rows</text>
+        <rect x="450" y="72" width="150" height="26" rx="4" fill="#0E0E10" stroke="#6FCF97"/><text x="458" y="89" fill="#6FCF97">/pay   count 2</text>
+        <rect x="450" y="104" width="150" height="26" rx="4" fill="#0E0E10" stroke="#6FCF97"/><text x="458" y="121" fill="#6FCF97">/cart  count 1</text>
+      </g>
+      <text x="310" y="218" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#7A7A80">my own invented events, shown to illustrate the idea of shrinking at each step</text>
+    </svg>
+    <figcaption>Schematic: filter drops rows, stats collapses the survivors into one row per group.</figcaption>
+  </figure>
+
+  <h3>4. Cutting fields out of plain text with parse</h3>
+  <p>If a log line isn't JSON, Insights has only <code>@message</code> to offer. <code>parse</code> turns slices of it into fields. The docs' glob example:</p>
+  <p><code>parse @message "user=*, method:*, latency := *" as @user, @method, @latency | stats avg(@latency) by @method, @user</code></p>
+  <p>Read it as: wherever the message has that shape, capture the three starred parts into three fields, then average the latency per method and user. The docs show an equivalent version with a regular expression using named capture groups. Glob is easier to read, regex is more flexible. If a line doesn't fit the shape, I'd expect it simply not to yield those fields, but the pages I read don't spell that out, so try it on a sample.</p>
+
+  <h3>5. Aggregating over time and drawing charts</h3>
+  <p><code>stats</code> with an aggregation function can produce charts. Per the docs, a query that aggregates and groups by <code>bin()</code> can show as a line chart, stacked area, bar or pie chart, while an aggregation grouped by a field (without <code>bin</code>) can show as a bar chart, limited to 100 bars. Supported <code>bin</code> units include <code>ms</code>, <code>s</code>, <code>m</code>, <code>h</code>, <code>d</code>, <code>w</code>, <code>mo</code>, <code>q</code> and <code>y</code>, so <code>bin(5m)</code> is five-minute buckets.</p>
+  <p>Two rules from the docs that trip people up. First, <code>sort</code> and <code>limit</code> must come after the last <code>stats</code>. Second, after a <code>stats</code>, you can only refer to fields that the stats command produced: the original <code>@message</code> is gone. A query can have up to 10 <code>stats</code> commands, a quota the docs say can't be changed.</p>
+  <p><em>Simplification:</em> <code>pct(@duration, 95)</code> returns the value that 95 percent of the samples fall below. That's the percentile idea from the metrics digest, now computed over raw log events instead of pre-aggregated metrics.</p>
+
+  <h3>6. Keeping queries cheap and fast</h3>
+  <ul>
+    <li><strong>Narrow the inputs.</strong> Fewer log groups and a tighter time range means less data scanned, which is what you're charged on.</li>
+    <li><strong>Field indexes.</strong> If you've created a field index (for example on <code>requestId</code>), queries using <code>filter requestId = value</code> or <code>filter requestId IN [...]</code> try to skip events without that field. The docs say <code>like</code> filters don't use indexes and always scan all events in the selected groups.</li>
+    <li><strong>Cap the output.</strong> <code>limit</code> keeps results manageable. The docs say <code>limit any</code> can stop scanning early once enough results are found.</li>
+    <li><strong>Log classes.</strong> Standard supports every Logs Insights QL command; Infrequent Access supports all except <code>pattern</code>, <code>diff</code> and <code>unmask</code>.</li>
+  </ul>
+
+  <h3>7. Running queries from the CLI</h3>
+  <p>The console is the easy path, but queries can be run programmatically. <code>aws logs start-query</code> starts a query and returns a <code>queryId</code>; you then fetch results with <code>get-query-results</code> (I did not open that command's own reference page, so check its syntax). Required options for start-query are <code>--start-time</code> and <code>--end-time</code> in epoch <strong>seconds</strong> (not milliseconds, unlike <code>put-log-events</code> from the previous digest) and <code>--query-string</code>. You specify log groups via <code>--log-group-name</code>, <code>--log-group-names</code> or <code>--log-group-identifiers</code> (up to 50), or with a <code>SOURCE</code> command inside the query. <code>--limit</code> can be 1 to 100,000 for Logs Insights QL.</p>
+
+  <h2>Why it matters</h2>
+  <p>During an incident, speed of asking questions is the difference between a ten-minute and a two-hour investigation. Logs Insights also closes the loop with the rest of this track: you can add a query to a dashboard (next concept), and queries are how you decide <em>which</em> pattern deserves a metric filter and alarm.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>A query is commands joined by <code>|</code>. The everyday six: fields, filter, parse, stats, sort, limit.</li>
+      <li>Every Standard-class event gets <code>@message</code>, <code>@timestamp</code>, <code>@ingestionTime</code>, <code>@logStream</code>, <code>@log</code>; JSON keys become fields too.</li>
+      <li>Charges follow data scanned, so use few log groups and a narrow time range.</li>
+      <li><code>stats ... by bin(5m)</code> gives a value over time; sort and limit go after the last stats.</li>
+      <li>Queries time out at 60 minutes and results are kept 7 days, per the docs.</li>
+    </ul>
+  </div>
+
+  <h2>Recall questions</h2>
+  <ol>
+    <li>Which system field would you use to see which log stream an event came from? Which to tell groups apart in a multi-group query?</li>
+    <li>What is the difference between <code>filter</code> and <code>stats</code> in terms of what happens to the number of rows?</li>
+    <li>Why can't you reference <code>@message</code> after a <code>stats</code> command?</li>
+    <li>Why might a JSON-structured log be easier to query than a free-text one?</li>
+    <li>Which two habits most directly keep a query cheap?</li>
+  </ol>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Seed a practice log group.</strong> Reuse the group from the previous digest or create a new one, and push 20 or so JSON events (fields such as <code>path</code>, <code>status</code>, <code>latencyMs</code>) with <code>aws logs put-log-events</code>, varying them on purpose. <em>Done when:</em> the events appear in the console and the JSON keys show up as discovered fields in Logs Insights.</li>
+      <li><strong>Write the "latest 25" query.</strong> Run the docs' <code>fields @timestamp, @message | sort @timestamp desc | limit 25</code>. Then change <code>limit</code> to 5 and sort ascending. <em>Done when:</em> you can predict the first row before you run each variant.</li>
+      <li><strong>Rank by count.</strong> Write <code>stats count(*) as hits by path | sort hits desc</code> against your data, then add <code>filter status &gt;= 500</code> before it. <em>Done when:</em> your answer matches a count you did by hand from the events you wrote.</li>
+      <li><strong>Over time.</strong> Spread events across several minutes, then run <code>stats avg(latencyMs), max(latencyMs) by bin(1m)</code> and look at the Visualization tab. <em>Done when:</em> you've viewed a line chart and can explain what each point represents.</li>
+      <li><strong>Parse plain text.</strong> Push a few non-JSON lines in the shape <code>user=ana, method:GET, latency := 120</code> and use the docs' glob <code>parse</code> pattern. <em>Done when:</em> <code>stats avg(@latency) by @method</code> gives the right averages, and you've tried a line in the wrong shape to see what happens.</li>
+      <li><strong>Same query from the CLI.</strong> Run <code>aws logs start-query</code> with start and end in epoch seconds, then fetch results with <code>aws logs get-query-results --query-id ...</code> (check that command's reference first). <em>Done when:</em> you get the same rows as in the console.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Read the docs pages for <code>dedup</code>, <code>display</code> and the <code>pattern</code> command (which clusters log lines into recurring shapes), then the sample queries page, which has ready-made examples for VPC flow logs, CloudTrail, API Gateway and NAT gateways. Those tie back to the VPC track. Next in this track: dashboards and cross-account / cross-Region observability.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the official documentation. Verify anything you plan to rely on (limits, CLI syntax, pricing, console steps) against the live pages below. AWS docs change over time; these pages were read in October 2026.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/AnalyzingLogData.html" target="_blank" rel="noopener">Analyzing log data with CloudWatch Logs Insights</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax.html" target="_blank" rel="noopener">CloudWatch Logs Insights language query syntax (command list)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_AnalyzeLogData-discoverable-fields.html" target="_blank" rel="noopener">Supported logs and discovered fields</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax-Filter.html" target="_blank" rel="noopener">filter command</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax-Stats.html" target="_blank" rel="noopener">stats command (functions, bin, limits)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax-examples.html" target="_blank" rel="noopener">Sample queries (including parse examples)</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/logs/start-query.html" target="_blank" rel="noopener">AWS CLI reference: logs start-query</a></li>
+  </ul>
+  <p class="src-note">Flagged: no pricing figures are quoted. The concurrent-query quota is stated per account on the overview page and per Region on the start-query page, so I haven't committed to which. I did not open the individual reference pages for <code>fields</code>, <code>parse</code>, <code>sort</code>, <code>limit</code> or <code>dedup</code>; their behaviour here comes from the command overview and the sample queries page. The behaviour of <code>parse</code> on non-matching lines is not stated in the pages I read. The <code>get-query-results</code> command is named in the start-query page but I did not read its reference. The SVG diagrams and their sample events are my own illustrations, and the micro-projects have not been run against a live account.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
