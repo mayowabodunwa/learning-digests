@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: EC2 Security Groups and Key Pairs from the Instance's Point of View</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS EC2 &middot; CONCEPT 9 DIGEST</p>
+  <h1>Security Groups and Key Pairs from the Instance's Point of View</h1>
+  <p class="lead">When you can't connect to an instance, nine times out of ten (my words, not a measured number) the cause is a security group rule or a key problem. This digest looks at both from the instance's side: what traffic is allowed to reach it, how the firewall remembers conversations, and how a key pair gets you in. The VPC-level view of security groups was covered in an earlier digest; this one stays with the instance.</p>
+
+  <h2>In one line</h2>
+  <p>A security group is a stateful, allow-only virtual firewall attached to an instance's network interface, and a key pair is a public/private key set where EC2 puts the public half on the instance and you keep the private half to prove who you are.</p>
+
+  <h2>The big idea</h2>
+  <p>Think of an instance as a house. The security group is the front-door policy: a list of who may knock, on which door (port), using which language (protocol). Nothing on the list means nobody gets in. The key pair is the physical key for the one door (SSH) that you chose to open for administrators: the house holds the lock (public key), you hold the key (private key).</p>
+  <p>The part that surprised me: because the firewall is <em>stateful</em>, it remembers conversations. If your instance starts a conversation, the reply is let back in automatically. That's why you don't have to write rules for return traffic, and also why deleting a rule doesn't always cut an existing connection immediately.</p>
+  <p>No prices here: the docs say there is no additional charge for using security groups. Key pairs are a feature of EC2 with a per-Region quota the docs state.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Security group</span>: a virtual firewall controlling inbound and outbound traffic for the resources it's associated with.</li>
+    <li><span class="keyterm-term">Inbound / outbound rule</span>: ingress (traffic to the instance) and egress (traffic from it).</li>
+    <li><span class="keyterm-term">Stateful</span>: response traffic to an allowed request is allowed back automatically.</li>
+    <li><span class="keyterm-term">CIDR block</span>: a way to write an IP range, such as 203.0.113.0/24. A single IPv4 address is written with /32.</li>
+    <li><span class="keyterm-term">Security group referencing</span>: using another security group as the source or destination of a rule.</li>
+    <li><span class="keyterm-term">Connection tracking</span>: how the security group remembers a connection's state.</li>
+    <li><span class="keyterm-term">Network interface (ENI)</span>: the virtual network card; security groups are attached to these.</li>
+    <li><span class="keyterm-term">Key pair</span>: a public key and a private key used to prove your identity to an instance.</li>
+    <li><span class="keyterm-term">SSH</span>: Secure Shell, the usual way to open a command line on a Linux instance, on port 22.</li>
+    <li><span class="keyterm-term">RDP</span>: Remote Desktop Protocol, the Windows equivalent, on port 3389.</li>
+    <li><span class="keyterm-term">PEM / PPK</span>: file formats for the private key (OpenSSH uses PEM, PuTTY uses PPK).</li>
+    <li><span class="keyterm-term">authorized_keys</span>: the file on a Linux instance that lists which public keys may log in.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>0. Grounding: where the firewall sits</h3>
+  <p>The docs say a security group acts as a virtual firewall for your instances. Per the EC2 page, security groups are associated with <strong>network interfaces</strong>: adding or removing a group on an instance changes the groups on its primary network interface, and you can set secondary interfaces separately. That's what "instance level" means, as opposed to a subnet-level control like a network ACL.</p>
+  <p>Associations are many-to-many: an instance can have several security groups and a group can serve many instances. If you don't choose one at launch, EC2 uses the VPC's default security group. You can change groups after launch while the instance is running or stopped. Rule changes apply automatically to every associated instance.</p>
+
+  <h3>1. The rules</h3>
+  <ul>
+    <li><strong>Allow rules only.</strong> You can specify allow rules, not deny rules.</li>
+    <li><strong>New group, no inbound rules:</strong> no inbound traffic is allowed until you add some. It starts with one outbound rule allowing all outbound traffic (you can remove it; with no outbound rules, no outbound traffic is allowed).</li>
+    <li><strong>Several groups combine:</strong> the rules from every attached group are aggregated into a single set, and traffic is allowed if that combined set allows it. For beginners: it's a union, so adding a group can only make the instance more reachable.</li>
+    <li><strong>Rule parts:</strong> protocol (commonly TCP = 6, UDP = 17, ICMP = 1), port or range (like 22 or 7000-8000), ICMP type and code, and a source (inbound) or destination (outbound): a single IP (/32 for IPv4, /128 for IPv6), a CIDR range, a managed prefix list ID, or a security group ID. Optionally a description up to 255 characters.</li>
+    <li><strong>Counting:</strong> a rule with a CIDR or a security group counts as one rule toward the per-group limit, while a prefix list counts as its size (customer-managed) or weight (AWS-managed). The docs say quotas exist (rules per group, groups per interface); look them up on the VPC quotas page for current numbers.</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 620 270" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="ar12" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#C9C7C1"/></marker></defs>
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">TWO SECURITY GROUPS, ONE COMBINED RULE SET</text>
+      <rect x="20" y="40" width="190" height="90" rx="8" fill="#0E0E10" stroke="#6FCF97"/><text x="115" y="60" fill="#6FCF97" font-size="11" text-anchor="middle" font-weight="700">sg-web</text>
+      <text x="35" y="82" fill="#C9C7C1" font-size="10">in: TCP 443 from 0.0.0.0/0</text><text x="35" y="100" fill="#C9C7C1" font-size="10">out: all (default)</text>
+      <rect x="20" y="145" width="190" height="90" rx="8" fill="#0E0E10" stroke="#6FCF97"/><text x="115" y="165" fill="#6FCF97" font-size="11" text-anchor="middle" font-weight="700">sg-admin</text>
+      <text x="35" y="187" fill="#C9C7C1" font-size="10">in: TCP 22 from 203.0.113.7/32</text><text x="35" y="205" fill="#7A7A80" font-size="10">(no outbound rules listed)</text>
+      <path d="M210 85 L290 125" stroke="#C9C7C1" marker-end="url(#ar12)"/><path d="M210 190 L290 150" stroke="#C9C7C1" marker-end="url(#ar12)"/>
+      <rect x="290" y="95" width="130" height="80" rx="8" fill="#131316" stroke="#7A7A80"/><text x="355" y="120" fill="#F2EFE9" font-size="11" text-anchor="middle">instance</text><text x="355" y="138" fill="#7A7A80" font-size="9.5" text-anchor="middle">primary network</text><text x="355" y="152" fill="#7A7A80" font-size="9.5" text-anchor="middle">interface</text>
+      <rect x="450" y="60" width="150" height="150" rx="8" fill="#0E0E10" stroke="#C8453A"/><text x="525" y="82" fill="#C8453A" font-size="11" text-anchor="middle" font-weight="700">EFFECTIVE</text>
+      <g font-size="9.5" fill="#C9C7C1"><text x="462" y="106">in: 443 from anywhere</text><text x="462" y="124">in: 22 from one IP</text><text x="462" y="142">out: all (from sg-web)</text><text x="462" y="170" fill="#7A7A80">union of all rules,</text><text x="462" y="184" fill="#7A7A80">never a "deny"</text></g>
+      <path d="M420 135 L450 135" stroke="#C9C7C1" marker-end="url(#ar12)"/>
+    </svg>
+    <figcaption>Original schematic: multiple groups aggregate into one allow-list.</figcaption>
+  </figure>
+
+  <h3>2. Referencing a group instead of an IP</h3>
+  <p>A rule can name another security group as its source. Then the rule applies to all instances associated with that group, communicating via their private IPs. The docs' classic pattern: load balancer group allows HTTP/HTTPS from the internet; web server group allows HTTP/HTTPS only from the load balancer's group; database group allows database traffic only from the web server group. As instances come and go, you never edit an IP list. Details: no rules from the referenced group are copied into the referencing one; referencing across VPCs works over a peering connection (and inbound over a transit gateway) per the docs' conditions; a rule referencing a deleted group or removed peering becomes <em>stale</em>. One limitation to know: if traffic between two instances is routed through a middlebox appliance, referencing the other instance's group won't permit the flow; use the instance's private IP or its subnet's CIDR.</p>
+
+  <h3>3. Stateful in practice: connection tracking</h3>
+  <p>Security groups track connection state, so replies to allowed traffic go through regardless of rules in the other direction. Consequences from the docs:</p>
+  <ul>
+    <li><strong>Existing connections can survive a rule change.</strong> If you change a rule, tracked connections aren't interrupted immediately; packets continue to be allowed until the connection times out. To cut traffic immediately, the docs point to network ACLs (stateless).</li>
+    <li><strong>Some flows aren't tracked.</strong> If a rule allows all traffic (0.0.0.0/0 or ::/0) for a TCP/UDP flow <em>and</em> a rule in the other direction allows all response traffic on any port, that flow isn't tracked, and removing the rule drops the connection at once. The docs' example: an open outbound rule plus an inbound rule for SSH from anywhere means existing SSH sessions are dropped immediately if you remove that inbound rule, while a narrower SSH rule (tracked) leaves the current session alive.</li>
+    <li><strong>Non-TCP/UDP/ICMP protocols</strong> track only IP and protocol number; return traffic of the same type within 600 seconds is accepted.</li>
+    <li><strong>Idle timeouts</strong> (Nitro-based instances; configurable per network interface): TCP established defaults to 432,000 seconds, or 350 seconds on Nitro v6 instance types (min 60, max 432,000); UDP 30 seconds (30 to 60); UDP stream 180 (60 to 180). Long-lived connections on Nitro v6 may need keep-alives, which the docs suggest sending at intervals under 5 minutes.</li>
+    <li>There's a per-instance maximum of tracked connections; when reached, packets are dropped. The metrics <code>conntrack_allowance_available</code> and <code>conntrack_allowance_exceeded</code> show this.</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 620 220" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="ar13" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#C9C7C1"/></marker></defs>
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">STATEFUL: REPLIES RIDE ON THE REQUEST</text>
+      <rect x="30" y="50" width="100" height="100" rx="8" fill="#131316" stroke="#7A7A80"/><text x="80" y="105" fill="#C9C7C1" font-size="11" text-anchor="middle">your laptop</text>
+      <rect x="470" y="50" width="130" height="100" rx="8" fill="#131316" stroke="#6FCF97"/><text x="535" y="85" fill="#6FCF97" font-size="11" text-anchor="middle">instance</text><text x="535" y="103" fill="#7A7A80" font-size="9.5" text-anchor="middle">inbound: allow</text><text x="535" y="117" fill="#7A7A80" font-size="9.5" text-anchor="middle">TCP 22 from you</text>
+      <path d="M130 80 L470 80" stroke="#6FCF97" marker-end="url(#ar13)"/><text x="300" y="72" fill="#6FCF97" font-size="10" text-anchor="middle">SSH request: matches inbound rule</text>
+      <path d="M470 120 L130 120" stroke="#6FCF97" marker-end="url(#ar13)" stroke-dasharray="4 3"/><text x="300" y="140" fill="#6FCF97" font-size="10" text-anchor="middle">reply: allowed even with no matching outbound rule</text>
+      <text x="310" y="190" fill="#7A7A80" font-size="10" text-anchor="middle">tracked state is why an existing session can outlive a deleted rule (until it times out)</text>
+    </svg>
+    <figcaption>Original sketch of tracked replies.</figcaption>
+  </figure>
+
+  <h3>4. What security groups do not filter</h3>
+  <p>Per the VPC page, security groups do not filter traffic to and from the Amazon DNS service, DHCP, instance metadata (the 169.254.169.254 endpoint from the previous digest), ECS task metadata endpoints, Windows license activation, the Amazon Time Sync Service, and reserved addresses used by the default VPC router. So a "block everything" security group still leaves the instance able to talk to its metadata service. To filter DNS queries use Route 53 Resolver DNS Firewall.</p>
+  <p>The docs' best practices: authorize specific IAM principals to change security groups; use as few groups as practical, grouped by function; for ports 22 and 3389 allow only specific address ranges (0.0.0.0/0 and ::/0 let anyone on the internet try); don't open large port ranges; and consider network ACLs as an extra layer. The EC2 console's "My IP" option fills in your current public IPv4 address.</p>
+
+  <h3>5. Key pairs: how the lock and key work</h3>
+  <p>A key pair is a public key and a private key. EC2 stores the public key and puts it on the instance; you keep the private key. For Linux, at first boot the public key you chose at launch is placed in <code>~/.ssh/authorized_keys</code>; to SSH in you present the matching private key. For Windows, the private key is used to <em>decrypt the administrator password</em> you then use to connect.</p>
+  <ul>
+    <li>Supported: 2048-bit SSH-2 RSA keys (Linux and Windows) and ED25519 keys (Linux only); DSA is not accepted. Imports also allow 1024 and 4096-bit RSA per the docs' requirements list.</li>
+    <li>Create in EC2 and the private key is shown <strong>once</strong> ("the only chance for you to save the private key file"). EC2 doesn't keep a copy, so a lost private key can't be recovered, though the docs describe workarounds. Anyone holding the private key can connect to instances that use that pair.</li>
+    <li>Formats: <code>pem</code> for OpenSSH, <code>ppk</code> for PuTTY. On macOS/Linux set permissions with <code>chmod 400 &lt;name&gt;.pem</code> or SSH refuses the key.</li>
+    <li>Up to 5,000 key pairs per Region (docs; can request an increase). Names up to 255 ASCII characters.</li>
+    <li>You can instead generate keys yourself (for example with <code>ssh-keygen</code>) and import only the public key.</li>
+    <li>CloudFormation-created key pairs store the private key in Systems Manager Parameter Store as <code>/ec2/keypair/&lt;key_pair_id&gt;</code> (nice link to that earlier digest).</li>
+    <li>The docs mention an alternative to key pairs: Session Manager, which needs no inbound port or key.</li>
+  </ul>
+  <p><strong>Why a key pair alone isn't enough:</strong> to SSH you need <em>both</em> the right key and a security group rule that lets your IP reach port 22 (plus a route and a public address if you're coming from the internet). A "connection timed out" usually points at the network path or firewall; "permission denied" usually points at keys or the user name. That mapping is my rule of thumb, not an official diagnostic.</p>
+
+  <h2>Why it matters</h2>
+  <p>This is the day-to-day security of EC2. Opening SSH to the world and losing private keys are both classic mistakes, and the stateful behaviour explains confusing moments such as "I removed the rule but my session still works". Referencing groups instead of IPs is how layered architectures (load balancer, web, database) stay maintainable, and it ties back to the target groups and Auto Scaling digests.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Security groups attach to network interfaces, allow rules only, evaluated as a union across attached groups; a new group allows nothing in and everything out.</li>
+      <li>Stateful: replies are allowed automatically, and tracked connections can outlive a deleted rule until they time out (untracked "allow all" flows are cut immediately).</li>
+      <li>Reference a group instead of an IP for tier-to-tier rules; restrict ports 22 and 3389 to specific ranges.</li>
+      <li>Security groups don't filter DNS, DHCP, the metadata service, or Time Sync traffic.</li>
+      <li>Key pair: public key on the instance, private key with you, shown once, never recoverable from AWS; ED25519 is Linux only.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <p style="font-size:14px;color:var(--muted);">Projects 1 to 3 need no AWS account. Projects 4 and 5 create a key pair and a security group, and a small instance for 5 (may cost money; delete everything afterwards). I did not run any AWS command here. The <code>authorize-security-group-ingress</code> and <code>create-key-pair</code> options were checked against the CLI reference pages. The <code>--query KeyMaterial</code> redirection is built from the documented output field, not a page example. Note that the docs' revoke examples on the "change security groups" page look swapped (ingress/egress) and I did not use them.</p>
+    <ol>
+      <li><strong>Rule evaluator (no AWS).</strong> Model security groups as lists of (direction, protocol, port range, source CIDR). Write <code>allowed(packet, groups)</code> that unions all groups. <em>Done when:</em> an instance with two groups allows traffic that either group allows, and denies everything when there are no matching rules.</li>
+      <li><strong>Connection tracker (no AWS).</strong> Extend the evaluator with a tracked-connections table: allow replies to allowed requests, expire entries after an idle timeout, and treat "allow-all both ways" flows as untracked. <em>Done when:</em> removing a narrow rule keeps a live connection until timeout, while removing an allow-all rule cuts it immediately, matching the docs' SSH example.</li>
+      <li><strong>CIDR quiz (no AWS).</strong> Write a function that checks whether an IP falls in a CIDR block (use your language's standard library). Test /32, /24 and 0.0.0.0/0. <em>Done when:</em> you can explain why 0.0.0.0/0 on port 22 is a warning sign in the docs.</li>
+      <li><strong>Create a key pair.</strong> Run <code>aws ec2 create-key-pair --key-name lab-key --key-type ed25519 --query KeyMaterial --output text &gt; lab-key.pem</code> then <code>chmod 400 lab-key.pem</code>. <em>Done when:</em> the file exists, you can say why it can't be downloaded again, and you have deleted the key pair in the console afterwards.</li>
+      <li><strong>Two-group instance (small cost).</strong> Create <code>sg-admin</code> with <code>aws ec2 authorize-security-group-ingress --group-id &lt;id&gt; --protocol tcp --port 22 --cidr &lt;your-IP&gt;/32</code> and a second group allowing TCP 80 from anywhere. Launch an instance with both, SSH in using your key, and then remove the SSH rule while connected. <em>Done when:</em> you've observed what happens to the existing session and to a new connection attempt, and can explain it with connection tracking. Terminate the instance and delete the groups.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Next: network ACLs versus security groups (see the VPC digest on this), prefix lists, associating a security group with multiple VPCs, sharing security groups through AWS Organizations, EC2 Instance Connect, replacing a lost key pair, verifying key fingerprints, and monitoring conntrack metrics with the ENA network performance metrics.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the official docs. Security details and quotas change; verify against the live pages before relying on them. Source accessed on 2026-10-25.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-security-groups.html" target="_blank" rel="noopener">Amazon EC2 security groups for your EC2 instances</a> and <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/changing-security-group.html" target="_blank" rel="noopener">Change the security groups for your instance</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html" target="_blank" rel="noopener">Control traffic to your AWS resources using security groups</a> and <a href="https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules.html" target="_blank" rel="noopener">Security group rules</a></li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/security-group-connection-tracking.html" target="_blank" rel="noopener">Amazon EC2 security group connection tracking</a></li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html" target="_blank" rel="noopener">Amazon EC2 key pairs and instances</a> and <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html" target="_blank" rel="noopener">Create a key pair</a></li>
+    <li>AWS CLI reference: <a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/authorize-security-group-ingress.html" target="_blank" rel="noopener">authorize-security-group-ingress</a> and <a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/create-key-pair.html" target="_blank" rel="noopener">create-key-pair</a></li>
+  </ul>
+  <p class="src-note">Flagged: (1) The "timed out vs. permission denied" troubleshooting mapping is my own rule of thumb, not from the docs. (2) Not fetched: the default security group page, the Amazon VPC quotas numbers, security group rules for different use cases, replacing a lost key pair. (3) Idle timeout defaults are as of the page read (the 350 second default applies only to Nitro v6 types per the docs). (4) The "My IP" console option is described on the docs page. (5) No prices quoted; no commands run against a live account.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
