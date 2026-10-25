@@ -290,7 +290,7 @@ aws configure set default.s3.use_accelerate_endpoint true</code></pre>
   <p>The performance guidelines page pulls this together: measure first; scale connections horizontally; use byte-range fetches; retry slow requests (aggressive timeouts and retries help latency consistency, since a retry is likely to take a different path); keep compute and storage in the same Region; use Transfer Acceleration for distance; and use current SDKs. The docs also state request-rate guidance of at least 3,500 PUT/COPY/POST/DELETE or 5,500 GET/HEAD requests per second per prefix in a bucket, with no limit on the number of prefixes. S3 may return HTTP 503 (Slow Down) while it scales to a new sustained rate, which you can monitor with CloudWatch request metrics.</p>
 
   <h2>Why it matters</h2>
-  <p>Backups, video, datasets and ML artifacts are all big-object workloads, and these tools are what keep them from being slow or flaky. The multipart cleanup rule is also one of the most commonly forgotten cost controls in S3; it belongs in every bucket's lifecycle config. And knowing ranges exist is the basis of how analytics tools read just the footer of a large file instead of the whole thing.</p>
+  <p>Backups, video, datasets and ML artifacts are all big-object workloads, and these tools are what keep them from being slow or flaky. The multipart cleanup rule is an easy cost control to forget, and the docs recommend it; consider it for any bucket that takes large uploads. Ranges also let a reader fetch only the slice of a large object it needs, rather than the whole thing.</p>
 
   <div class="box">
     <h2>Remember this</h2>
