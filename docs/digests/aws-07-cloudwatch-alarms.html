@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: CloudWatch Alarms: Static, Anomaly Detection, Composite and Alarm Actions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS &middot; TOPIC 7 DIGEST</p>
+  <h1>CloudWatch Alarms: Static, Anomaly Detection, Composite and Alarm Actions</h1>
+  <p class="lead">A metric on a graph only helps if someone is looking at it. An alarm is how you get CloudWatch to look for you, decide "that's bad", and do something about it. This digest covers how an alarm decides, the three flavours you'll meet (static, anomaly detection, composite), and what an alarm can actually do when it fires.</p>
+
+  <h2>In one line</h2>
+  <p>A CloudWatch alarm watches one metric (or a formula over metrics, or other alarms), compares recent data points against a rule, lives in one of three states, and runs actions only when that state changes.</p>
+
+  <h2>The big idea</h2>
+  <p>In the last CloudWatch digest we saw that a metric is a named stream of numbers. Alarms sit on top of that stream. You pick a metric, say how long each data point should cover, say what counts as "too high" (or too low), and say how many bad data points in a row you'll tolerate. CloudWatch then evaluates that rule over and over and keeps the alarm in one of three states: fine, bad, or "I can't tell".</p>
+  <p>Once you understand that loop, the rest is variations on it. A <strong>static alarm</strong> uses a threshold number you pick. An <strong>anomaly detection alarm</strong> lets CloudWatch learn what "normal" looks like and flags values outside a band. A <strong>composite alarm</strong> ignores metrics entirely and combines the states of other alarms with AND/OR/NOT logic so your phone buzzes once instead of fifteen times. And the <strong>actions</strong> (notify, scale, reboot, open a ticket) hang off state changes.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Alarm</span> &mdash; a CloudWatch object that watches something and moves between states based on a rule. The docs describe several kinds: metric alarms, composite alarms, and also PromQL alarms and log alarms (we only touch those in passing here).</li>
+    <li><span class="keyterm-term">Metric alarm</span> &mdash; watches a single metric, or the result of a metric math expression, against a threshold over a number of time periods.</li>
+    <li><span class="keyterm-term">Threshold</span> &mdash; the number your data point is compared with, using a comparison operator such as <code>GreaterThanThreshold</code>.</li>
+    <li><span class="keyterm-term">Alarm state</span> &mdash; one of <code>OK</code> (within the threshold), <code>ALARM</code> (outside it), or <code>INSUFFICIENT_DATA</code> (just started, metric unavailable, or not enough data to decide).</li>
+    <li><span class="keyterm-term">Period</span> &mdash; how many seconds of data are rolled into each single data point the alarm looks at.</li>
+    <li><span class="keyterm-term">Evaluation Periods (N)</span> &mdash; how many of the most recent data points the alarm looks at.</li>
+    <li><span class="keyterm-term">Datapoints to Alarm (M)</span> &mdash; how many of those N must be breaching to trigger <code>ALARM</code>. They don't have to be consecutive.</li>
+    <li><span class="keyterm-term">Breaching</span> &mdash; a data point that violates the threshold. A data point is either breaching, not breaching, or missing.</li>
+    <li><span class="keyterm-term">Treat missing data</span> &mdash; the setting that says how absent data points count: <code>missing</code>, <code>notBreaching</code>, <code>breaching</code>, or <code>ignore</code>.</li>
+    <li><span class="keyterm-term">Anomaly detection</span> &mdash; CloudWatch builds a model of a metric's expected values (a "band") from past data, and an alarm can fire when the metric leaves that band.</li>
+    <li><span class="keyterm-term">Composite alarm</span> &mdash; an alarm whose state comes from a rule expression over the states of other alarms, not from a metric.</li>
+    <li><span class="keyterm-term">Alarm action</span> &mdash; something CloudWatch does on a state transition: send to an SNS topic, invoke Lambda, run an EC2 action, trigger a scaling policy, create an OpsItem or incident, and so on.</li>
+    <li><span class="keyterm-term">SNS topic</span> &mdash; an Amazon Simple Notification Service channel. Subscribers (people or applications) receive whatever is published to it.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>Grounding: what an alarm is for</h3>
+  <p>Imagine you run a web service and care about CPU on one server. Without an alarm, you'd have to open a graph and stare at it. With an alarm, you say: "if average CPU is above 70 percent, tell me". CloudWatch does the staring. The AWS docs point out you can use alarms to notify people or to make changes automatically, for example to watch EC2 CPU and decide whether to launch more instances, or stop under-used ones.</p>
+  <p>An alarm is not the metric. It is a separate object that <em>reads</em> a metric. That matters for one detail from the docs: you can create an alarm for a custom metric before that metric exists, but for the alarm to be valid you must give the full identity (namespace, metric name, <em>and every dimension</em>). That is exactly the identity rule from the metrics digest.</p>
+
+  <h3>1. The three states and the evaluation loop</h3>
+  <p>A metric alarm is always in one of three states:</p>
+  <ul>
+    <li><code>OK</code>: the metric or expression is within the threshold.</li>
+    <li><code>ALARM</code>: it is outside the threshold.</li>
+    <li><code>INSUFFICIENT_DATA</code>: the alarm has just started, the metric isn't available, or there isn't enough data to decide.</li>
+  </ul>
+  <p>Beginner point to hold onto: <code>INSUFFICIENT_DATA</code> is not "broken", and it is not "fine". It means CloudWatch can't tell. The docs give a gentle example: an EBS volume that isn't attached to an instance may not send metric data, so an alarm on it can drift to <code>INSUFFICIENT_DATA</code>, which may just mean the resource is idle.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 210" role="img" aria-label="Three alarm states with transitions">
+      <defs><marker id="ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#C9C7C1"/></marker></defs>
+      <rect x="20" y="70" width="150" height="70" rx="10" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="95" y="102" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="16" fill="#6FCF97">OK</text>
+      <text x="95" y="124" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#C9C7C1">within threshold</text>
+      <rect x="450" y="70" width="150" height="70" rx="10" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="525" y="102" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="16" fill="#C8453A">ALARM</text>
+      <text x="525" y="124" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#C9C7C1">outside threshold</text>
+      <rect x="235" y="150" width="150" height="50" rx="10" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="310" y="171" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#C9C7C1">INSUFFICIENT_DATA</text>
+      <text x="310" y="188" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#7A7A80">can't tell yet</text>
+      <path d="M172 90 L448 90" stroke="#C9C7C1" stroke-width="1.5" marker-end="url(#ah1)"/>
+      <path d="M448 120 L172 120" stroke="#C9C7C1" stroke-width="1.5" marker-end="url(#ah1)"/>
+      <text x="310" y="82" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">M of N points breaching</text>
+      <text x="310" y="137" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">data back within threshold</text>
+      <path d="M200 142 L240 165" stroke="#7A7A80" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#ah1)"/>
+      <path d="M420 165 L470 142" stroke="#7A7A80" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#ah1)"/>
+      <text x="310" y="22" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#F2EFE9">actions run on the TRANSITION, not while you sit in a state</text>
+    </svg>
+    <figcaption>Schematic: the three states. Dashed arrows show that missing data can push an alarm toward INSUFFICIENT_DATA (depending on your missing-data setting).</figcaption>
+  </figure>
+
+  <p><strong>How often does it evaluate?</strong> Per the docs, for a period of one minute or longer an alarm is evaluated every minute, over a sliding window of <em>Period &times; Evaluation Periods</em>. Their example: with a 5-minute period and 1 evaluation period, at the end of minute 5 the alarm uses minutes 1 to 5, and at the end of minute 6 it uses minutes 2 to 6. Periods of 10, 20 or 30 seconds (high-resolution alarms, used on high-resolution metrics) are evaluated every 10 seconds, and carry a higher charge. If periods &times; length exceeds one day, the alarm is evaluated once per hour instead.</p>
+  <p><em>Simplification:</em> "evaluated every minute" describes the default sliding-window behaviour. The docs also describe an optional wall-clock-aligned evaluation window, which behaves differently; I'm not covering it here.</p>
+
+  <h3>2. Static threshold alarms: Period, N and M</h3>
+  <p>A static alarm is the classic one: you choose the number. Three settings control when it flips to <code>ALARM</code>:</p>
+  <ul>
+    <li><strong>Period</strong>: seconds of data rolled into each data point.</li>
+    <li><strong>Evaluation Periods (N)</strong>: how many recent data points to look at.</li>
+    <li><strong>Datapoints to Alarm (M)</strong>: how many of those must be breaching.</li>
+  </ul>
+  <p>If M equals N, you've made a "N in a row" style alarm. If M is smaller than N, you've made an <strong>M out of N</strong> alarm: the breaching points need not be consecutive, only inside the last N. The docs' examples: 4 out of 5 points with a 1-minute period has an evaluation interval of 5 minutes; 3 out of 3 with a 10-minute period has an interval of 30 minutes.</p>
+  <p><strong>Why bother with M of N?</strong> A single CPU spike for one minute is usually noise. Asking for 3 out of 3 (or 3 out of 5) bad points trades a little speed for far fewer false alarms. That trade-off is a judgement call, not a rule: a payments outage might deserve a faster, twitchier alarm than a nightly batch job.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 230" role="img" aria-label="Strip of data points evaluated as 3 out of 5">
+      <text x="310" y="20" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#F2EFE9">Threshold = 70.  Alarm: 3 out of 5 data points breaching (N=5, M=3)</text>
+      <line x1="40" y1="150" x2="580" y2="150" stroke="#7A7A80" stroke-dasharray="5 4"/>
+      <text x="44" y="144" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#7A7A80">threshold</text>
+      <g font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle">
+        <rect x="70" y="170" width="60" height="30" fill="#6FCF97" opacity="0.8"/><text x="100" y="215" fill="#C9C7C1">55</text>
+        <rect x="150" y="60" width="60" height="140" fill="#C8453A" opacity="0.9"/><text x="180" y="215" fill="#C9C7C1">92</text>
+        <rect x="230" y="165" width="60" height="35" fill="#6FCF97" opacity="0.8"/><text x="260" y="215" fill="#C9C7C1">58</text>
+        <rect x="310" y="85" width="60" height="115" fill="#C8453A" opacity="0.9"/><text x="340" y="215" fill="#C9C7C1">81</text>
+        <rect x="390" y="95" width="60" height="105" fill="#C8453A" opacity="0.9"/><text x="420" y="215" fill="#C9C7C1">77</text>
+      </g>
+      <text x="520" y="110" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#C8453A">3 of 5 breach</text>
+      <text x="520" y="128" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#C8453A">&rarr; ALARM</text>
+      <text x="520" y="170" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#7A7A80">not consecutive,</text>
+      <text x="520" y="186" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#7A7A80">and that's fine</text>
+    </svg>
+    <figcaption>Schematic (made-up numbers): five recent data points, three of them above 70. With M=3, N=5 the alarm goes to ALARM even though the breaches aren't back to back.</figcaption>
+  </figure>
+
+  <p>A few more static-alarm settings worth knowing, all from the <code>put-metric-alarm</code> reference: the <strong>comparison operator</strong> is one of <code>GreaterThanOrEqualToThreshold</code>, <code>GreaterThanThreshold</code>, <code>LessThanThreshold</code> or <code>LessThanOrEqualToThreshold</code>; the <strong>statistic</strong> can be <code>SampleCount</code>, <code>Average</code>, <code>Sum</code>, <code>Minimum</code> or <code>Maximum</code> (percentiles go through <code>--extended-statistic</code>); and the <strong>period</strong> is 10, 20, 30 or a multiple of 60. There is a ceiling on how far back an alarm can look: the maximum evaluation period (period &times; evaluation periods) is seven days for alarms with a period of at least one hour, and one day for shorter periods.</p>
+
+  <h3>3. Missing data: the setting that causes the most confusion</h3>
+  <p>Real metrics have gaps. A server reboots, a connection drops, or the metric is only published when something happens. CloudWatch lets you choose what a gap means, per alarm. The four options and the documented default:</p>
+  <div class="card">
+    <ul>
+      <li><code>missing</code> <strong>(the default)</strong>: if <em>all</em> data points in the evaluation range are missing, the alarm goes to <code>INSUFFICIENT_DATA</code>.</li>
+      <li><code>notBreaching</code>: gaps count as "good".</li>
+      <li><code>breaching</code>: gaps count as "bad".</li>
+      <li><code>ignore</code>: the alarm keeps whatever state it already has.</li>
+    </ul>
+  </div>
+  <p>Which one is right depends on what silence means for that metric. The docs give two contrasting examples. For a rollback alarm on a metric that normally reports continuously, treating missing data as <code>breaching</code> can make sense, since silence may signal trouble. For something like DynamoDB's <code>ThrottledRequests</code>, which only produces data points when errors occur, silence is good news, so <code>notBreaching</code> fits.</p>
+
+  <p><strong>How the fill-in works (a simplification, with the caveat below).</strong> When evaluating, CloudWatch actually fetches <em>more</em> data points than N, called the evaluation range, in case recent ones are missing. If there are still at least N real points in that range, it uses the most recent real ones and your missing-data setting is not needed at all. Only when there are fewer than N real points does it fill the gaps using your setting, and it uses fill-ins "as few times as possible". Some rows from the docs' table (N=3, M=3; <code>0</code> = fine, <code>X</code> = breaching, <code>-</code> = missing, newest on the right):</p>
+  <div class="card">
+    <ul>
+      <li><code>- - - - -</code> (all missing): <code>missing</code> &rarr; INSUFFICIENT_DATA; <code>ignore</code> &rarr; keep current state; <code>breaching</code> &rarr; ALARM; <code>notBreaching</code> &rarr; OK.</li>
+      <li><code>0 X X - X</code>: ALARM under all four settings, because three real points are available and breaching, so the setting is ignored.</li>
+      <li><code>- - X - -</code>: <code>missing</code> &rarr; ALARM, <code>breaching</code> &rarr; ALARM, <code>notBreaching</code> &rarr; OK, <code>ignore</code> &rarr; keep current state (the docs' "premature alarm state" special case).</li>
+    </ul>
+  </div>
+  <p><em>Caveat:</em> the real logic includes an "avoid premature transitions" rule and differs for wall-clock windows. The docs spell it out; treat my summary as a mental model, and re-read their tables before you rely on an edge case.</p>
+  <p><strong>One safety note straight from the docs:</strong> alarms on EC2 metrics can briefly enter <code>INSUFFICIENT_DATA</code> if metric reporting is interrupted, even when the instance is healthy. For EC2 alarms that stop, terminate, reboot or recover an instance, AWS recommends treating missing data as <code>missing</code> and triggering only on <code>ALARM</code>. Otherwise a reporting hiccup could reboot a healthy server.</p>
+
+  <h3>4. Anomaly detection alarms: no number, a learned band</h3>
+  <p>Picking a static threshold is easy for "disk is 95 percent full", and awkward for something like request count that is naturally low at 3 a.m. and high at lunch. Anomaly detection handles that. You enable it on a metric and CloudWatch applies statistical and machine learning algorithms to the metric's past data to build a model of <em>expected</em> values. According to the docs the model accounts for trends and for hourly, daily and weekly patterns, it trains on up to two weeks of data (you can enable it with less), and it keeps adjusting over time.</p>
+  <p>The model is specific to a <strong>metric and a statistic</strong>: enable it with <code>Average</code> and the model is for <code>Average</code>. You choose an <strong>anomaly detection threshold</strong>, a number (it doesn't need to be whole) that sets the band's thickness. Higher means a thicker band that tolerates more wobble; lower means a thinner band that fires on smaller deviations.</p>
+  <p>The alarm's condition is not a number but a position relative to the band: <em>greater than the upper bound</em>, <em>lower than the lower bound</em>, or <em>outside the band in either direction</em>. In the CLI these are the operators <code>GreaterThanUpperThreshold</code>, <code>LessThanLowerThreshold</code> and <code>LessThanLowerOrGreaterThanUpperThreshold</code> (documented as anomaly detection only).</p>
+
+  <figure>
+    <svg viewBox="0 0 620 220" role="img" aria-label="Metric line with a gray expected band and one excursion above it">
+      <rect x="40" y="40" width="540" height="150" fill="#0E0E10" stroke="rgba(242,239,233,0.10)"/>
+      <path d="M40 130 C100 70 140 70 180 110 C220 150 260 150 300 110 C340 70 380 70 420 110 C460 150 500 150 540 110 L580 90 L580 130 C540 170 500 190 420 150 C380 130 340 110 300 150 C260 190 220 190 180 150 C140 110 100 110 40 170 Z" fill="#7A7A80" opacity="0.35"/>
+      <polyline fill="none" stroke="#F2EFE9" stroke-width="2" points="40,150 100,95 140,92 180,130 220,168 260,166 300,130 340,95 380,60 400,58 420,110 460,168 500,170 540,130 580,112"/>
+      <circle cx="380" cy="60" r="5" fill="#C8453A"/><circle cx="400" cy="58" r="5" fill="#C8453A"/>
+      <text x="390" y="40" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#C8453A">above the band &rarr; ALARM</text>
+      <text x="60" y="206" font-family="JetBrains Mono, monospace" font-size="11" fill="#7A7A80">gray = expected band (made-up shape); white = actual metric</text>
+    </svg>
+    <figcaption>Schematic: a metric that rises and falls on a rhythm. The band follows the rhythm, so only the excursion on the right counts as an anomaly.</figcaption>
+  </figure>
+
+  <p><strong>Practical details from the docs:</strong></p>
+  <ul>
+    <li>For a brand-new model it can take up to 3 hours for the real band to appear in the graph, and up to two weeks for the model to train so the band becomes more accurate. If a model already exists, up to 15 minutes. Until then the band shown is an approximation.</li>
+    <li>The alarm's period must be one minute or longer.</li>
+    <li>You can exclude time ranges (outages, deployments, holidays) from training. The docs call this critical for unusual events. You can also set a time zone for Daylight Saving sensitivity.</li>
+    <li>Anomaly detection models for alarms incur charges. The docs advise deleting the alarm first and the model second, because evaluating an anomaly alarm re-creates a missing detector on your behalf.</li>
+    <li>Anomaly detection also works on metric math expressions, and works on both AWS-vended and custom metrics. For cross-account alarms the <code>ANOMALY_DETECTION_BAND</code> function is not supported.</li>
+  </ul>
+  <p>The documented CLI route is two steps: first <code>put-anomaly-detector</code> with a <code>--single-metric-anomaly-detector</code> JSON (namespace, metric name, dimensions, <code>Stat</code>), then <code>put-metric-alarm</code> with <code>--threshold-metric-id</code> pointing at an expression such as <code>ANOMALY_DETECTION_BAND(m1, 2)</code>, where the <code>2</code> is that band-thickness number.</p>
+  <p><em>Simplification:</em> "machine learning builds a model of normal" is the docs' framing. I'm not describing the internals because the docs don't, and a model can still raise false alarms or miss things; the console even has an "Improve this alarm" feedback flow for exactly that.</p>
+
+  <h3>5. Composite alarms: one alarm built from alarms</h3>
+  <p>If five separate alarms all fire during one incident, five notifications is noise. A <strong>composite alarm</strong> watches the <em>states</em> of other alarms (metric alarms or other composite alarms) and applies a rule. It doesn't look at metrics directly. Reference an alarm with one of three state functions, and combine them:</p>
+  <ul>
+    <li><code>ALARM("name")</code>, <code>OK("name")</code>, <code>INSUFFICIENT_DATA("name")</code>: each is TRUE when that alarm is in that state. You can use the name or the ARN.</li>
+    <li>Operators <code>AND</code>, <code>OR</code>, <code>NOT</code>, parentheses for grouping, and the <code>AT_LEAST(M, STATE_CONDITION, (alarm1, alarm2, ...))</code> function (M can be a number or a percentage like 50%).</li>
+  </ul>
+  <p>Examples from the docs: <code>ALARM(CPUUtilizationTooHigh) AND ALARM(DiskReadOpsTooHigh)</code> (both at once), and <code>ALARM(CPUUtilizationTooHigh) AND NOT ALARM(DeploymentInProgress)</code>, which quiets a CPU alarm during a deployment window (where <code>DeploymentInProgress</code> is an alarm you maintain for that purpose).</p>
+
+  <figure>
+    <svg viewBox="0 0 620 230" role="img" aria-label="Three child alarms feeding a composite alarm that sends one notification">
+      <defs><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#C9C7C1"/></marker></defs>
+      <rect x="20" y="20" width="170" height="44" rx="8" fill="#0E0E10" stroke="#C8453A"/><text x="105" y="40" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#F2EFE9">CpuHigh</text><text x="105" y="56" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#C8453A">ALARM</text>
+      <rect x="20" y="92" width="170" height="44" rx="8" fill="#0E0E10" stroke="#C8453A"/><text x="105" y="112" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#F2EFE9">LatencyHigh</text><text x="105" y="128" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#C8453A">ALARM</text>
+      <rect x="20" y="164" width="170" height="44" rx="8" fill="#0E0E10" stroke="#6FCF97"/><text x="105" y="184" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#F2EFE9">DeployInProgress</text><text x="105" y="200" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#6FCF97">OK</text>
+      <path d="M192 42 L300 100" stroke="#C9C7C1" marker-end="url(#ah2)"/><path d="M192 114 L300 114" stroke="#C9C7C1" marker-end="url(#ah2)"/><path d="M192 186 L300 128" stroke="#C9C7C1" marker-end="url(#ah2)"/>
+      <rect x="302" y="82" width="170" height="64" rx="10" fill="#131316" stroke="#F2EFE9"/>
+      <text x="387" y="106" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#F2EFE9">(CpuHigh OR LatencyHigh)</text>
+      <text x="387" y="124" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#F2EFE9">AND NOT DeployInProgress</text>
+      <path d="M474 114 L530 114" stroke="#C9C7C1" marker-end="url(#ah2)"/>
+      <rect x="532" y="94" width="76" height="40" rx="8" fill="#0E0E10" stroke="#7A7A80"/><text x="570" y="118" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#C9C7C1">1 page</text>
+    </svg>
+    <figcaption>Schematic: three child alarms feed one rule; only the composite has an action, so the team gets one notification (the rule here is my own illustration).</figcaption>
+  </figure>
+
+  <p><strong>Limits and rules to know</strong> (from the docs and the <code>put-composite-alarm</code> reference):</p>
+  <ul>
+    <li>Rule length 1 to 10,240 characters; up to 100 child alarms and up to 500 elements in a rule. One alarm can be referenced by up to 150 composite alarms.</li>
+    <li>Child alarms must be in the same account and Region as the composite, with an exception for a cross-account observability monitoring account. The alarm docs also say creating cross-account composite alarms isn't supported in general, so check the current docs for your setup.</li>
+    <li>Composite alarms can notify SNS, invoke Lambda, create OpsItems and create Incident Manager incidents. They <strong>cannot</strong> run EC2 or Auto Scaling actions.</li>
+    <li>Don't make two composites depend on each other. The docs warn this stops both from being evaluated and blocks deletion; the escape hatch is changing one rule to <code>FALSE</code>.</li>
+    <li><strong>Actions suppressor:</strong> an optional setting (<code>--actions-suppressor</code>, plus a wait period and an extension period, both required with it) that holds back the composite's actions while a named alarm is in <code>ALARM</code>. The CLI reference shows the options but gives no worked example, and doesn't state limits for the two periods, so treat the details as something to confirm in the live docs.</li>
+  </ul>
+
+  <h3>6. Alarm actions: what happens when the state changes</h3>
+  <p>An alarm can run actions on a transition into <code>OK</code>, <code>ALARM</code> or <code>INSUFFICIENT_DATA</code>. In the CLI these are <code>--ok-actions</code>, <code>--alarm-actions</code> and <code>--insufficient-data-actions</code>, each accepting up to 5 actions. Supported actions, per the docs:</p>
+  <ul>
+    <li><strong>SNS notification</strong>: tell one or more subscribers (people or applications).</li>
+    <li><strong>Lambda</strong>: invoke a function, which the docs call the easiest route to custom automation.</li>
+    <li><strong>EC2 actions</strong> (alarms on EC2 metrics): stop, terminate, reboot or recover an instance.</li>
+    <li><strong>Auto Scaling</strong>: trigger a scaling policy on an EC2 Auto Scaling group or an Application Auto Scaling target.</li>
+    <li><strong>Systems Manager</strong>: create an OpsItem or an Incident Manager incident, only when the alarm goes into <code>ALARM</code>.</li>
+    <li>Start a CloudWatch investigation, also on <code>ALARM</code>.</li>
+  </ul>
+  <p>Alarms also emit events to Amazon EventBridge on state changes, which lets you wire up further reactions. (EventBridge gets its own digest later in this track.)</p>
+  <p><strong>The rule that trips people up:</strong> except for Auto Scaling actions, actions happen only on state transitions and are <em>not</em> repeated while the alarm stays in the state, even for hours or days. Auto Scaling actions are the exception: the alarm keeps invoking them once per minute while it remains in that state. So an alarm sitting in <code>ALARM</code> isn't re-paging you; it paged you once, when it changed.</p>
+  <p>For Auto Scaling, how the alarm comes to exist depends on the policy type: for simple and step scaling you create a metric alarm and attach it; for target tracking the Auto Scaling service creates and manages the high and low alarms for you, and the docs say not to edit or delete them.</p>
+  <p><strong>Honest caveats from the docs:</strong> CloudWatch doesn't test or validate the actions you specify, nor detect SNS or Auto Scaling errors from invoking non-existent actions, so make sure the topic or policy really exists. And for temporary silence, the docs describe <em>alarm mute rules</em> (scheduled windows that mute actions automatically) as different from <code>DisableAlarmActions</code>, which stays off until you call <code>EnableAlarmActions</code>.</p>
+
+  <h3>7. Useful day-to-day operations</h3>
+  <ul>
+    <li><code>describe-alarms</code> lists alarms, including by state; <code>describe-alarm-history</code> shows past transitions (history is kept 30 days).</li>
+    <li><code>set-alarm-state</code> forces an alarm into a state to test your actions. The docs note this change is temporary and lasts only until the next alarm evaluation.</li>
+    <li><code>put-metric-alarm</code> creates or updates; if an alarm with the same name exists it is overwritten.</li>
+  </ul>
+
+  <h2>Why it matters</h2>
+  <p>Every other monitoring habit you build (autoscaling on load, paging on-call, auto-recovering a stuck instance) hangs off alarm behaviour. Most "my alarm is flapping" or "my alarm never fires" stories come down to three things from this digest: M and N, the missing-data setting, and the fact that actions fire on transitions. Composite alarms are how teams keep alert volume humane once there are dozens of metrics.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>An alarm is a state machine (OK, ALARM, INSUFFICIENT_DATA) driven by Period, N, and M; "M out of N" points need not be consecutive.</li>
+      <li>Missing data is a setting, not a bug. Choose it by asking what silence means for that metric (default is <code>missing</code>).</li>
+      <li>Anomaly detection swaps your fixed number for a learned expected band; a bigger threshold number means a thicker band, and it takes time to train.</li>
+      <li>Composite alarms combine alarm states with AND/OR/NOT/AT_LEAST to cut noise, but can't run EC2 or Auto Scaling actions.</li>
+      <li>Actions run on state changes, except Auto Scaling, which repeats once a minute while the alarm stays in state.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <p style="font-size:14px;color:#7A7A80;margin-bottom:10px">Use a throwaway test account or sandbox. I haven't run these myself against a live account; commands are taken from the CLI reference pages linked below, so check them before use. Alarms and anomaly detection models can cost money, so delete everything afterwards.</p>
+    <ol>
+      <li><strong>Make a static alarm and force it to fire.</strong> Create an SNS topic and subscribe your email, then run <code>aws cloudwatch put-metric-alarm</code> on a custom metric you publish (reuse your namespace from the metrics digest) with a threshold of your choice, <code>--alarm-actions</code> pointing at the topic. Then run <code>aws cloudwatch set-alarm-state --alarm-name ... --state-value ALARM --state-reason "test"</code>. <em>Done when:</em> you get the email, and you can explain why the alarm slid back on its own at the next evaluation.</li>
+      <li><strong>Prove M out of N.</strong> Create an alarm with <code>--evaluation-periods 5 --datapoints-to-alarm 3</code> and publish values by hand with <code>put-metric-data</code>, one per period, mixing breaching and normal values. <em>Done when:</em> you've seen it go to ALARM with three non-consecutive breaches and can sketch which 5 points it was looking at.</li>
+      <li><strong>Compare the four missing-data settings.</strong> Create four otherwise-identical alarms on a metric you stop publishing, one per <code>--treat-missing-data</code> value, and wait. <em>Done when:</em> you've recorded each alarm's resulting state and matched it against the docs' table.</li>
+      <li><strong>Create an anomaly detection alarm.</strong> Follow the two-step CLI sequence from the docs (<code>put-anomaly-detector</code>, then <code>put-metric-alarm</code> with <code>ANOMALY_DETECTION_BAND(m1, 2)</code>) on a metric that already has history. <em>Done when:</em> the alarm exists, you can see the band in the console (allowing for the training delay), and you've changed the band number and noted what happens to the band's width. Then delete the alarm first, the model second.</li>
+      <li><strong>Silence a noisy pair with a composite.</strong> Create two metric alarms with no actions, then <code>put-composite-alarm</code> with <code>--alarm-rule "ALARM(A) AND ALARM(B)"</code> and an SNS action. Use <code>set-alarm-state</code> on each child. <em>Done when:</em> you get no email with only one child in ALARM and exactly one email when both are.</li>
+      <li><strong>Watch "actions only on transitions".</strong> Leave an alarm sitting in ALARM state with an SNS action and read <code>describe-alarm-history</code>. <em>Done when:</em> you can point to one state-change entry and explain why you were not notified again while it stayed there.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Read the docs page on percentile-based alarms with low sample counts, and the page on alarm evaluation windows, which covers the wall-clock alignment I skipped. The next natural step in this track is CloudWatch Logs, where metric filters turn log lines into the metrics these alarms watch.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the official documentation. Verify anything you plan to rely on (limits, CLI syntax, pricing, console steps) against the live pages below. AWS docs change over time; these pages were read in October 2026.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/AlarmThatSendsEmail.html" target="_blank" rel="noopener">Using Amazon CloudWatch alarms (alarm types, common features, evaluation period quotas)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/alarm-evaluation.html" target="_blank" rel="noopener">Alarm evaluation (states, Period / Evaluation Periods / Datapoints to Alarm, high-resolution alarms)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/alarms-and-missing-data.html" target="_blank" rel="noopener">Configuring how CloudWatch alarms treat missing data</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Anomaly_Detection.html" target="_blank" rel="noopener">Using CloudWatch anomaly detection</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Create_Anomaly_Detection_Alarm.html" target="_blank" rel="noopener">Create a CloudWatch alarm based on anomaly detection (including the CLI steps)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Create_Composite_Alarm_How_To.html" target="_blank" rel="noopener">Composite alarms (rule syntax, limits, example expressions)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Create_Composite_Alarm.html" target="_blank" rel="noopener">Create a composite alarm</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/alarm-actions.html" target="_blank" rel="noopener">Alarm actions</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/cloudwatch/put-metric-alarm.html" target="_blank" rel="noopener">AWS CLI reference: cloudwatch put-metric-alarm</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/cloudwatch/put-composite-alarm.html" target="_blank" rel="noopener">AWS CLI reference: cloudwatch put-composite-alarm</a></li>
+  </ul>
+  <p class="src-note">Flagged: no pricing figures are stated here (the docs say high-resolution alarms and anomaly detection alarms cost extra but the fetched pages give no dollar amounts). The actions-suppressor period limits and a worked suppressor example were not on the pages I read. The alarm docs also describe PromQL alarms, log alarms, Metrics Insights multi-series alarms, alarm tags and mute rules, which are only mentioned in passing. The SVG numbers and the example rule in the composite diagram are my own illustrations, and the micro-projects have not been run against a live account.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
