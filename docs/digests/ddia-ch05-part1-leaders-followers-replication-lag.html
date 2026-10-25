@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DDIA: Ch.5 Leaders, Followers, and Replication Lag (Part 1)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+  pre { background:#0A0A0B; border:1px solid var(--hairline); border-radius:8px; padding:14px 16px; overflow-x:auto; font-family:"JetBrains Mono",monospace; font-size:11.5px; line-height:1.5; color:var(--body); margin:10px 0 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">SYSTEMS &middot; CH.5 DIGEST (PART 1)</p>
+  <h1>Replication: Leaders, Followers, and Replication Lag</h1>
+  <p class="lead">Replication means keeping copies of the same data on several machines. Copying data once is easy. The hard part is that data keeps changing, and the copies must keep up. This first part covers the most common design, where one machine takes the writes and others copy it (leader-based replication), what goes wrong when a leader dies, how the copying is actually implemented, and the odd things users see when a copy lags behind. It stops right before multi-leader replication.</p>
+
+  <h2>In one line</h2>
+  <p>In leader-based replication, one replica accepts writes and streams its changes to followers; the interesting questions are how long the leader waits for followers, what happens when nodes fail, and what stale reads do to your users.</p>
+
+  <h2>The big idea</h2>
+  <p>You replicate for three reasons: to keep data close to users (lower latency), to keep working when some machines fail (availability), and to spread read queries over more machines (read throughput). If the data never changed, you would copy it once and be done. All the difficulty is in handling <em>changes</em>. The chapter covers three families of algorithms (single-leader, multi-leader, leaderless), and this part is the first. The big trade-off is already visible here: if the leader waits for followers before saying "done", you get safer data but a more fragile system; if it doesn't wait, you get speed and availability but followers can show old data for a while.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Replica</span>: any node that stores a copy of the database.</li>
+    <li><span class="keyterm-term">Leader (primary, master)</span>: the replica designated to accept writes. The older "master" and "slave" terms appear in the source for the leader and follower.</li>
+    <li><span class="keyterm-term">Follower (read replica, secondary, hot standby)</span>: a replica that applies the leader's changes and, from a client's view, serves reads only.</li>
+    <li><span class="keyterm-term">Replication log / change stream</span>: the sequence of data changes the leader sends to followers, applied in the same order.</li>
+    <li><span class="keyterm-term">Synchronous / asynchronous replication</span>: the leader waits for a follower's confirmation before reporting success (sync) or sends the change and carries on (async).</li>
+    <li><span class="keyterm-term">Semi-synchronous</span>: one follower is synchronous and the rest asynchronous.</li>
+    <li><span class="keyterm-term">Durable</span>: a confirmed write survives failures.</li>
+    <li><span class="keyterm-term">Catch-up recovery</span>: a returning follower asks the leader for the changes it missed.</li>
+    <li><span class="keyterm-term">Failover</span>: promoting a follower to leader after the leader fails, and redirecting everyone.</li>
+    <li><span class="keyterm-term">Split brain</span>: two nodes both believing they are the leader.</li>
+    <li><span class="keyterm-term">Statement-based / WAL shipping / logical (row-based) / trigger-based replication</span>: four ways of implementing the replication log, covered below.</li>
+    <li><span class="keyterm-term">Change data capture</span>: streaming a database's changes to external systems (the source defers detail to Chapter 11).</li>
+    <li><span class="keyterm-term">Replication lag</span>: the delay between a write on the leader and its appearance on a follower.</li>
+    <li><span class="keyterm-term">Eventual consistency</span>: if writes stop and you wait, followers will eventually match the leader; there is no stated bound on how long.</li>
+    <li><span class="keyterm-term">Read-after-write (read-your-writes) consistency</span>: you always see your own submitted updates when you reload.</li>
+    <li><span class="keyterm-term">Monotonic reads</span>: you won't see data go backward in time across successive reads.</li>
+    <li><span class="keyterm-term">Consistent prefix reads</span>: if writes happened in some order, readers see them in that order.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>Grounding first. Imagine one database server. If it dies, your app is down; if reads outgrow it, you are stuck. Replication fixes both by keeping copies elsewhere. This chapter assumes the dataset is small enough that each machine holds a <em>full</em> copy (splitting data across machines, partitioning, is Chapter 6). The question this part answers: with several copies, how do all the writes reach all the copies, in a way that stays correct?</p>
+
+  <h3>Leader-based replication</h3>
+  <p>The most common answer: designate one replica the <strong>leader</strong>. Clients send all writes to it; it saves them locally and also sends each change to every follower as part of a replication log. Each follower applies the changes in the <em>same order</em> the leader processed them. Reads can go to the leader or any follower, but followers are read-only for clients.</p>
+  <p>The source lists it as a built-in feature in PostgreSQL (since version 9.0), MySQL, Oracle Data Guard and SQL Server's AlwaysOn Availability Groups, and in nonrelational systems such as MongoDB, RethinkDB and Espresso. It also appears outside databases, in message brokers like Kafka and RabbitMQ's highly available queues. (Those are the 2017 statements of the book.)</p>
+
+  <figure>
+    <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">LEADER-BASED REPLICATION</text>
+      <rect x="20" y="80" width="90" height="40" rx="6" fill="#0E0E10" stroke="#C9C7C1"/><text x="65" y="105" fill="#F2EFE9" font-size="10" text-anchor="middle">client</text>
+      <rect x="230" y="70" width="110" height="60" rx="6" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="285" y="96" fill="#C8453A" font-size="11" text-anchor="middle" font-weight="700">LEADER</text><text x="285" y="114" fill="#7A7A80" font-size="9" text-anchor="middle">takes the writes</text>
+      <line x1="110" y1="95" x2="230" y2="95" stroke="#C8453A"/><text x="170" y="88" fill="#C8453A" font-size="9" text-anchor="middle">write</text>
+      <rect x="470" y="40" width="130" height="44" rx="6" fill="#0E0E10" stroke="#C9C7C1"/><text x="535" y="66" fill="#F2EFE9" font-size="10" text-anchor="middle">follower 1</text>
+      <rect x="470" y="116" width="130" height="44" rx="6" fill="#0E0E10" stroke="#C9C7C1"/><text x="535" y="142" fill="#F2EFE9" font-size="10" text-anchor="middle">follower 2</text>
+      <line x1="340" y1="85" x2="470" y2="62" stroke="#6FCF97"/><line x1="340" y1="115" x2="470" y2="138" stroke="#6FCF97"/>
+      <text x="410" y="100" fill="#6FCF97" font-size="9" text-anchor="middle">replication log, same order</text>
+      <rect x="20" y="160" width="90" height="40" rx="6" fill="#0E0E10" stroke="#C9C7C1"/><text x="65" y="185" fill="#F2EFE9" font-size="10" text-anchor="middle">client</text>
+      <line x1="110" y1="180" x2="470" y2="150" stroke="#7A7A80" stroke-dasharray="4 3"/><text x="300" y="196" fill="#7A7A80" font-size="9" text-anchor="middle">reads can go to any replica</text>
+    </svg>
+    <figcaption>Fig 1. Writes go to one place; changes flow outward; reads can go anywhere. (My own sketch.)</figcaption>
+  </figure>
+
+  <h3>Synchronous versus asynchronous</h3>
+  <p>Say a user updates a profile photo. The leader gets the write and forwards it to the followers. When does it tell the user "success"? With a <strong>synchronous</strong> follower, the leader waits for that follower to confirm receipt before reporting success (and before making the write visible to other clients). With an <strong>asynchronous</strong> follower, the leader sends the message and doesn't wait.</p>
+  <p>Replication is usually quick (the source says most databases apply changes to followers in under a second) but there is no guarantee. A follower recovering from a failure, a system near capacity, or network problems can leave it minutes behind.</p>
+  <ul>
+    <li><strong>Sync advantage:</strong> the follower is guaranteed to have an up-to-date copy, so if the leader suddenly dies the data is still there.</li>
+    <li><strong>Sync disadvantage:</strong> if that follower doesn't respond (crash, network fault), the write cannot be processed and the leader must block writes until it returns.</li>
+  </ul>
+  <p>So making <em>all</em> followers synchronous is impractical; one outage would stall everything. In practice, enabling synchronous replication usually means one synchronous follower and the rest asynchronous, with an asynchronous one promoted to synchronous if the sync one becomes slow or unavailable. That keeps an up-to-date copy on at least two nodes, and is sometimes called <strong>semi-synchronous</strong>.</p>
+  <p>Often the setup is fully asynchronous. Then if the leader fails unrecoverably, writes not yet replicated are lost, so a write is not guaranteed durable even though the client was told it succeeded. The upside is that the leader keeps accepting writes even if every follower is behind. Despite weakening durability, async is widely used, especially with many or geographically spread followers. The source also mentions chain replication, a synchronous variant used in some systems (it names Microsoft Azure Storage), as one line of research into replication that doesn't lose data; I only mention it, the chapter doesn't go further.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">ONE SYNC FOLLOWER, ONE ASYNC FOLLOWER</text>
+      <g font-size="10" fill="#F2EFE9" text-anchor="middle">
+        <text x="60" y="50">client</text><text x="220" y="50">leader</text><text x="400" y="50">follower 1 (sync)</text><text x="560" y="50">follower 2 (async)</text>
+      </g>
+      <g stroke="#3a3a40"><line x1="60" y1="58" x2="60" y2="230"/><line x1="220" y1="58" x2="220" y2="230"/><line x1="400" y1="58" x2="400" y2="230"/><line x1="560" y1="58" x2="560" y2="230"/></g>
+      <line x1="60" y1="80" x2="220" y2="92" stroke="#C8453A" stroke-width="2"/><text x="140" y="78" fill="#C8453A" font-size="9" text-anchor="middle">write</text>
+      <line x1="220" y1="100" x2="400" y2="112" stroke="#6FCF97" stroke-width="2"/>
+      <line x1="220" y1="100" x2="560" y2="124" stroke="#6FCF97" stroke-width="2" stroke-dasharray="5 4"/>
+      <line x1="400" y1="120" x2="220" y2="140" stroke="#6FCF97" stroke-width="2"/><text x="310" y="124" fill="#6FCF97" font-size="9" text-anchor="middle">ack</text>
+      <line x1="220" y1="150" x2="60" y2="170" stroke="#C8453A" stroke-width="2"/><text x="140" y="172" fill="#C8453A" font-size="9" text-anchor="middle">success</text>
+      <line x1="560" y1="190" x2="560" y2="190" stroke="#7A7A80"/><circle cx="560" cy="200" r="4" fill="#7A7A80"/><text x="540" y="218" fill="#7A7A80" font-size="9" text-anchor="end">applies it later; nobody waited</text>
+      <text x="320" y="244" fill="#7A7A80" font-size="9" text-anchor="middle">time flows downward</text>
+    </svg>
+    <figcaption>Fig 2. The client hears "success" after the sync follower acks, but not after the async one. (My own sketch.)</figcaption>
+  </figure>
+
+  <h3>Setting up a new follower</h3>
+  <p>You need new followers to add capacity or replace failed ones. Just copying the data files won't do: writes keep arriving, so a plain file copy sees different parts of the database at different moments and may make no sense. Locking the database for writes would hurt availability. The usual approach (details differ by database, and the source says some are automated and some are arcane manual workflows):</p>
+  <ol>
+    <li>Take a consistent snapshot of the leader at one point in time, ideally without locking everything. Most databases can do this since backups need it; sometimes a third-party tool is needed (the source mentions innobackupex for MySQL).</li>
+    <li>Copy the snapshot to the new node.</li>
+    <li>The follower connects to the leader and requests every change since the snapshot. That requires the snapshot to be tied to an exact position in the replication log (PostgreSQL calls it the log sequence number; MySQL, binlog coordinates).</li>
+    <li>When it has worked through that backlog it has <em>caught up</em> and continues streaming.</li>
+  </ol>
+
+  <h3>Handling node outages</h3>
+  <p>Nodes go down by accident and also for planned maintenance such as a kernel patch reboot. The goal is to keep the whole system running and make each outage's impact small.</p>
+  <p><strong>Follower failure: catch-up recovery.</strong> Each follower keeps a local log of changes received. After a crash or a brief network break, it knows the last transaction it processed, asks the leader for everything after that, applies it, and carries on.</p>
+  <p><strong>Leader failure: failover.</strong> Harder. A follower must be promoted, clients must send writes to the new leader, and the other followers must follow the new one. It can be manual (an administrator acts) or automatic. Automatic failover typically has three steps:</p>
+  <ol>
+    <li><strong>Detect the failure.</strong> There's no foolproof way to tell what went wrong, so most systems use a timeout: if a node doesn't respond for some period (the source's example is 30 seconds), assume it's dead.</li>
+    <li><strong>Choose a new leader.</strong> By election among the remaining replicas or by a previously chosen controller node. The best candidate is usually the replica with the most up-to-date data, to minimize loss. Getting nodes to agree is a consensus problem (Chapter 9).</li>
+    <li><strong>Reconfigure.</strong> Clients write to the new leader. If the old leader returns and still thinks it is the leader, the system must make it step down and become a follower.</li>
+  </ol>
+  <p>Things that go wrong, per the source:</p>
+  <ul>
+    <li>With async replication, the new leader may lack some of the old leader's writes. The most common handling is to discard the old leader's unreplicated writes, possibly breaking durability expectations.</li>
+    <li>Discarding writes is especially dangerous when other systems depend on the database. The source recounts a GitHub incident where an out-of-date MySQL follower became leader, reused autoincrement primary keys the old leader had already handed out, and since those keys were also used in a Redis store, some private data was shown to the wrong users.</li>
+    <li><strong>Split brain:</strong> two nodes believe they're leader. If both accept writes without conflict resolution, data is likely lost or corrupted. Some systems shut one node down when they detect two leaders, but a badly designed mechanism can shut down both.</li>
+    <li><strong>Timeout choice:</strong> too long means slow recovery; too short means unnecessary failovers, for example from a load spike or network glitch, which can make an already struggling system worse.</li>
+  </ul>
+  <p>There are no easy solutions, and the source notes that some operations teams prefer manual failover even when automatic is available.</p>
+
+  <h3>How the replication log is implemented</h3>
+  <p><strong>Statement-based.</strong> The leader logs each write statement (INSERT, UPDATE, DELETE) and followers execute it as if from a client. Simple, but breaks in several ways: nondeterministic functions like <code>NOW()</code> or <code>RAND()</code> give different values per replica; statements depending on existing data or autoincrement columns must run in the exact same order everywhere; statements with side effects (triggers, stored procedures) may differ. Workarounds exist (the leader can replace nondeterministic calls with fixed values) but edge cases abound, so other methods are generally preferred. MySQL used it before version 5.1 and by default now switches to row-based if a statement is nondeterministic; VoltDB uses it and requires deterministic transactions.</p>
+  <p><strong>Write-ahead log (WAL) shipping.</strong> Storage engines already append every write to a log (the main storage for log-structured engines, a crash-recovery log for B-trees). Send that same log to followers and they build identical data structures. PostgreSQL and Oracle use it. The drawback: the log is low level (which bytes changed in which disk blocks), tying replication to the storage engine. Often that means leader and followers must run the same software version, so a zero-downtime upgrade (upgrade followers, then fail over) isn't possible and upgrades need downtime.</p>
+  <p><strong>Logical (row-based) log.</strong> A separate log format, decoupled from storage internals. For each row it records: new values for an insert; enough to identify the row for a delete (usually the primary key, otherwise all old column values); for an update, the row's identity and new values. A multi-row transaction produces several records followed by a commit record. MySQL's binlog in row-based mode works like this. Because it's decoupled, it's easier to keep backward compatible (leader and follower can run different versions or even different storage engines) and easier for external programs to parse, which enables <strong>change data capture</strong> into a data warehouse or custom indexes and caches (Chapter 11).</p>
+  <p><strong>Trigger-based.</strong> The others live inside the database. If you need to replicate only a subset, replicate between different kinds of database, or apply conflict-resolution logic, you can move replication into the application layer. Tools like Oracle GoldenGate read the database log; alternatively, triggers run custom code on a data change and can record it in a table for an external process to pick up (the source cites Databus for Oracle and Bucardo for Postgres). It has greater overhead and more bugs than built-in replication, but flexibility.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 180" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">WHAT TRAVELS DOWN THE LOG: SAME CHANGE, FOUR SHAPES</text>
+      <g font-size="9.5" text-anchor="middle">
+        <rect x="14" y="36" width="148" height="110" rx="6" fill="#0E0E10" stroke="#C9C7C1"/><text x="88" y="56" fill="#F2EFE9" font-weight="700">statement</text><text x="88" y="78" fill="#C9C7C1">UPDATE ... SET</text><text x="88" y="92" fill="#C9C7C1">t = NOW()</text><text x="88" y="120" fill="#C8453A">NOW() may differ</text>
+        <rect x="174" y="36" width="148" height="110" rx="6" fill="#0E0E10" stroke="#C9C7C1"/><text x="248" y="56" fill="#F2EFE9" font-weight="700">WAL (physical)</text><text x="248" y="78" fill="#C9C7C1">block 812,</text><text x="248" y="92" fill="#C9C7C1">bytes 40-47 = ...</text><text x="248" y="120" fill="#C8453A">ties to storage engine</text>
+        <rect x="334" y="36" width="148" height="110" rx="6" fill="#0E0E10" stroke="#C9C7C1"/><text x="408" y="56" fill="#F2EFE9" font-weight="700">logical (row)</text><text x="408" y="78" fill="#C9C7C1">row id=7:</text><text x="408" y="92" fill="#C9C7C1">t = 10:41:03</text><text x="408" y="120" fill="#6FCF97">engine-independent</text>
+        <rect x="494" y="36" width="132" height="110" rx="6" fill="#0E0E10" stroke="#C9C7C1"/><text x="560" y="56" fill="#F2EFE9" font-weight="700">trigger</text><text x="560" y="78" fill="#C9C7C1">your code logs</text><text x="560" y="92" fill="#C9C7C1">the change</text><text x="560" y="120" fill="#6FCF97">flexible, heavier</text>
+      </g>
+      <text x="320" y="168" fill="#7A7A80" font-size="9" text-anchor="middle">illustrative contents, written by me</text>
+    </svg>
+    <figcaption>Fig 3. The log can describe a change at very different levels. (My own sketch.)</figcaption>
+  </figure>
+
+  <h3>Problems with replication lag</h3>
+  <p>Fault tolerance is only one reason to replicate; scalability and latency are others. Writes go through the leader but reads can go anywhere, which suits workloads with mostly reads and few writes (a common web pattern): add followers and spread reads over them. The source says this read-scaling architecture realistically works only with asynchronous replication, since a synchronous setup across many followers would be down whenever any one of them was, and the more nodes the likelier that is.</p>
+  <p>The catch: an async follower may be behind, so the same query on leader and follower at the same time can give different answers. That's temporary; stop writing and wait, and followers catch up. This is <strong>eventual consistency</strong>. The word "eventually" is deliberately vague: there's no limit to how far a replica can fall behind. Normally lag is a fraction of a second, but near capacity or with network trouble it can reach seconds or minutes. (The source notes eventual consistency isn't only a NoSQL thing; asynchronous followers in relational databases behave the same way.) Three anomalies follow.</p>
+
+  <h3>1. Reading your own writes</h3>
+  <p>A user posts a comment (sent to the leader), then the page reloads and reads from a follower that hasn't received it yet. To the user their data looks lost. The guarantee that fixes it is <strong>read-after-write</strong> consistency: users always see their own updates after reload. It makes no promise about other users' updates. Techniques the source lists:</p>
+  <ul>
+    <li>Read from the leader anything the user might have modified, and from followers otherwise. A simple rule when only the owner can edit something: always read the user's own profile from the leader, others' from followers.</li>
+    <li>If most things are editable that defeats read scaling, so use other criteria: for example, read from the leader for one minute after the user's last update, or block queries on followers more than a minute behind.</li>
+    <li>The client remembers the timestamp of its latest write, and the system ensures the serving replica has caught up to at least that point, or sends the read elsewhere, or waits. The timestamp can be a logical one such as a log sequence number, or the system clock (making clock synchronization critical).</li>
+    <li>With replicas in several datacenters, requests needing the leader must be routed to the datacenter that has it.</li>
+  </ul>
+  <p>Using several devices adds <strong>cross-device read-after-write</strong>: write on the phone, read on the laptop. Timestamp-remembering then needs centralized metadata, and different devices may be routed to different datacenters (home broadband versus cellular), so you may need to route all of a user's devices to the same place.</p>
+
+  <h3>2. Monotonic reads</h3>
+  <p>A user refreshes and each request lands on a random replica: the first reads from a fresh follower and sees a new comment, the second from a lagging follower and the comment vanishes. Time appears to go backward. <strong>Monotonic reads</strong> guarantees that if one user makes several reads in sequence, they won't read older data after having read newer. It's weaker than strong consistency but stronger than eventual consistency. One way: each user always reads from the same replica (chosen, say, by a hash of the user ID), though if that replica fails the user must be rerouted.</p>
+
+  <h3>3. Consistent prefix reads</h3>
+  <p>If writes with a causal order (a question, then its answer) are replicated at different speeds, an observer might see the answer before the question. <strong>Consistent prefix reads</strong> guarantees that if writes happen in a certain order, readers see them in that order. It's a particular problem in partitioned databases (Chapter 6), where partitions operate independently and there's no global write ordering. One fix is to write causally related data to the same partition, which isn't always efficient; other algorithms track causal dependencies explicitly (the source points to a later section on the happens-before relationship).</p>
+
+  <figure>
+    <svg viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">THREE LAG ANOMALIES, THREE GUARANTEES</text>
+      <g font-size="9.5" text-anchor="middle">
+        <rect x="14" y="34" width="196" height="150" rx="8" fill="#0E0E10" stroke="#C8453A"/><text x="112" y="54" fill="#C8453A" font-weight="700">my write vanished</text>
+        <text x="112" y="80" fill="#C9C7C1">write -> leader</text><text x="112" y="96" fill="#C9C7C1">read -> stale follower</text><text x="112" y="130" fill="#6FCF97" font-weight="700">needs: read-after-write</text><text x="112" y="146" fill="#7A7A80">(own updates only)</text>
+        <rect x="222" y="34" width="196" height="150" rx="8" fill="#0E0E10" stroke="#C8453A"/><text x="320" y="54" fill="#C8453A" font-weight="700">time went backward</text>
+        <text x="320" y="80" fill="#C9C7C1">read 1: fresh replica</text><text x="320" y="96" fill="#C9C7C1">read 2: lagging replica</text><text x="320" y="130" fill="#6FCF97" font-weight="700">needs: monotonic reads</text><text x="320" y="146" fill="#7A7A80">(same replica per user)</text>
+        <rect x="430" y="34" width="196" height="150" rx="8" fill="#0E0E10" stroke="#C8453A"/><text x="528" y="54" fill="#C8453A" font-weight="700">answer before question</text>
+        <text x="528" y="80" fill="#C9C7C1">partitions lag unevenly</text><text x="528" y="96" fill="#C9C7C1">causal order is lost</text><text x="528" y="130" fill="#6FCF97" font-weight="700">needs: consistent prefix</text><text x="528" y="146" fill="#7A7A80">(same order for readers)</text>
+      </g>
+      <text x="320" y="208" fill="#7A7A80" font-size="9" text-anchor="middle">my summary of the three examples</text>
+    </svg>
+    <figcaption>Fig 4. Each anomaly has a name and a matching guarantee. (My own sketch.)</figcaption>
+  </figure>
+
+  <h3>Solutions for replication lag</h3>
+  <p>With an eventually consistent system, ask what your app does if lag grows to minutes or hours. If "no problem", fine. If users would suffer, design for a stronger guarantee. The source's warning: pretending replication is synchronous when it is async "is a recipe for problems down the line". Handling these in application code (like leader reads) is complex and easy to get wrong. Ideally the database does the right thing, which is why <strong>transactions</strong> exist. Many distributed databases dropped them, arguing they cost too much performance and availability and that eventual consistency is inevitable at scale; the source calls that partly true but overly simplistic and promises a more nuanced view in later chapters (7 and 9).</p>
+
+  <h2>Why it matters</h2>
+  <p>Almost every production database you'll touch replicates. Knowing the sync/async trade-off tells you what "committed" actually means in your system; knowing failover's pitfalls explains why teams distrust automatic failover; and the three lag anomalies are the bugs users report as "my comment disappeared". It also sets up the next part, where more than one node accepts writes.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>In leader-based replication one replica takes writes and followers apply its log in order; reads can be served by followers.</li>
+      <li>Synchronous replication protects data but can stall writes; asynchronous keeps writing but can lose unreplicated writes if the leader is lost. A common compromise is one sync follower and the rest async.</li>
+      <li>Failover has three steps (detect, elect, reconfigure) and many hazards: lost writes, split brain, bad timeouts.</li>
+      <li>The log can be statement-based, WAL, logical, or trigger-based; logical logs decouple replication from the storage engine.</li>
+      <li>Lag causes stale reads; three named guarantees (read-after-write, monotonic reads, consistent prefix) address specific anomalies.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Toy leader and follower.</strong> Model a leader with an append-only log and a follower that applies entries in order. Done when you can pause the follower, write three keys, and show a stale read, then resume and show convergence.</li>
+      <li><strong>Read-your-writes.</strong> Have writes return a log position, and make reads carry that position: if the chosen follower has applied less, fall back to the leader. Done when a read right after a write never returns stale data for that client.</li>
+      <li><strong>Bootstrap a follower.</strong> Snapshot the leader's data with its log position, keep writing on the leader, then start a new follower from the snapshot and replay. Done when the new follower equals the leader.</li>
+      <li><strong>Break statement replication.</strong> Using SQLite or plain Python, replay a statement that stores the current time or a random number on two "replicas" and compare. Then replay row values instead. Done when you can explain the difference.</li>
+      <li><strong>Monotonic reads.</strong> Simulate three followers at different lag and a client that picks a random one each time; count the backward-in-time events. Then pin each user to one follower by hashing the user ID. Done when the count drops to zero (and then kill the pinned follower and decide what the client should do).</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Reread the failover bullet list and ask which items go away if replication is fully synchronous, and what you pay for that.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, written to help you build a mental model quickly. It is not a substitute for the source; verify anything you plan to rely on against the original before using it for real.</p>
+  <ul class="src-list">
+    <li>Martin Kleppmann, <em>Designing Data-Intensive Applications</em> (O'Reilly, 2017), Chapter 5, "Replication": the chapter opener, "Leaders and Followers" (synchronous vs asynchronous, setting up new followers, handling node outages, implementation of replication logs), "Problems with Replication Lag" and "Solutions for Replication Lag": printed pages 151 to 167 (PDF pages 173 to 189 of the supplied file). It stops right before "Multi-Leader Replication".</li>
+  </ul>
+  <p class="src-note">Flagged for accuracy: (1) Which products support which replication mode (PostgreSQL, MySQL, Oracle, SQL Server, MongoDB, Kafka, and so on) are the book's 2017 statements and may have changed. (2) The 30-second timeout, the "less than a second" lag and the one-minute rules are the book's examples, not recommended settings. (3) The GitHub incident is summarized from the book's account; I did not look up the original write-up. (4) The Python in the micro-projects is my own; I ran a small version of the leader/follower, read-your-writes and snapshot-bootstrap ideas and they behaved as described. (5) Diagrams are original with invented values. (6) Nothing outside the supplied chapter was consulted.</p>
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
