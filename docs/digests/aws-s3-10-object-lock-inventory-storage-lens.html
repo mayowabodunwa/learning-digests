@@ -238,7 +238,7 @@
   </ul>
   <p>What happens on delete attempts: a permanent delete (with a version ID) of a locked version returns 403 Access Denied; a simple delete returns 200 and adds a delete marker. Lifecycle rules keep working normally on locked objects but cannot delete a locked version. Lock settings persist across storage class transitions.</p>
 
-  <h3>4. Setting it up (CLI shapes from the docs)</h3>
+  <h3>3. Setting it up (CLI shapes from the docs)</h3>
 <pre><code># create a bucket with Object Lock enabled
 aws s3api create-bucket --bucket {bucket} --object-lock-enabled-for-bucket
 
@@ -271,7 +271,7 @@ aws s3api put-object-legal-hold --bucket {bucket} --key {key} --legal-hold="Stat
     <figcaption>Fig 2. A lock protects one version's data; the key can still move on around it.</figcaption>
   </figure>
 
-  <h3>5. S3 Inventory</h3>
+  <h3>4. S3 Inventory</h3>
   <p>Inventory is a scheduled alternative to calling the synchronous List APIs over and over. It writes flat files listing objects and metadata for a bucket (or a prefix) on a <strong>daily or weekly</strong> schedule, in <strong>CSV, ORC or Parquet</strong>, to a destination bucket. The docs say it doesn't use List API calls and doesn't affect your bucket's request rate; weekly reports run every Sunday (UTC), and the first report can take up to 48 hours.</p>
   <ul>
     <li><strong>Destination bucket:</strong> must be in the same Region as the source, can be the same bucket or in another account, and needs a bucket policy letting S3 write (the console adds it for you; with the CLI or SDK you add it yourself).</li>
@@ -283,7 +283,7 @@ aws s3api put-object-legal-hold --bucket {bucket} --key {key} --legal-hold="Stat
   </ul>
   <p>Compared with Storage Lens: Inventory is row-per-object detail you analyse yourself; Storage Lens is rolled-up metrics.</p>
 
-  <h3>6. S3 Storage Lens</h3>
+  <h3>5. S3 Storage Lens</h3>
   <p>Storage Lens is a cloud-storage analytics feature giving organization-wide visibility into usage and activity, with contextual recommendations. Concepts from the docs:</p>
   <ul>
     <li><strong>Dashboards:</strong> an interactive dashboard with drill-down by organization, account, Region, storage class, bucket, prefix or Storage Lens group. The preconfigured <strong>default-account-dashboard</strong> covers your whole account, updates daily, and feeds the Account snapshot on the console Buckets page. You can't change its scope or delete it, though you can upgrade or disable it. You can create other dashboards scoped by Region, bucket or account (up to 50 per home Region).</li>
