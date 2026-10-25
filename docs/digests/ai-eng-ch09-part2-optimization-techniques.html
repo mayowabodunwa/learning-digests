@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Engineering: Inference Optimization (Part 2): Model-Level and Service-Level Techniques</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+  pre { background: #0A0A0B; border: 1px solid var(--hairline); border-radius: 8px; padding: 12px 14px; overflow-x: auto; margin: 10px 0; }
+  pre code { background: none; padding: 0; font-size: 12px; line-height: 1.55; display: block; white-space: pre; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AI &middot; CH.9 DIGEST (PART 2, FINAL)</p>
+  <h1>Inference Optimization: Model-Level and Service-Level Techniques</h1>
+  <p class="lead">Part 1 told you how to measure inference and where it gets stuck. This part is the toolbox. At the model level: compression (quantization, distillation, pruning), beating the one-token-at-a-time decoding bottleneck (speculative decoding, inference with reference, parallel decoding), making attention cheaper (the KV cache and the ways to shrink it), and kernels and compilers. At the service level: batching, separating prefill from decode, prompt caching and parallelism strategies. The chapter's Summary closes it, and it also closes the book's list of model-adaptation techniques.</p>
+
+  <h2>In one line</h2>
+  <p>Inference gets faster and cheaper by shrinking the model, dodging the sequential-decoding and attention bottlenecks, writing code that suits the hardware, and scheduling requests and chips more cleverly, and the model-level changes can alter quality while the service-level ones shouldn't.</p>
+
+  <h2>The big idea</h2>
+  <p>There are three places to optimize: the model (crafting better arrows, in the chapter's archery analogy), the hardware (training a better archer) and the service (refining the whole shooting process). The chapter covers the first and third. A key distinction to hold on to: model-level techniques often change the model and therefore can change its behavior, whereas service-level techniques generally leave the model as it is and shouldn't change output quality. The chapter shows evidence that quality can drift: the same Llama models scored slightly differently on benchmarks when served by different providers, plausibly because of different optimization choices. In production you usually combine techniques from several levels. And most application developers who use a model API will never implement these; they're worth understanding so you can evaluate the efficiency of the services you buy.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Model compression</span>: techniques that shrink a model (quantization, distillation, pruning).</li>
+    <li><span class="keyterm-term">Pruning</span>: removing nodes, or zeroing the least useful parameters, to make a model smaller or sparser.</li>
+    <li><span class="keyterm-term">Speculative decoding</span>: a fast draft model proposes tokens and the target model verifies them in parallel.</li>
+    <li><span class="keyterm-term">Draft model / target model</span>: the cheap proposer and the model whose output you actually want.</li>
+    <li><span class="keyterm-term">Inference with reference</span>: drafting tokens by copying spans from the input instead of using a model.</li>
+    <li><span class="keyterm-term">Parallel decoding</span>: generating several future tokens at once, then verifying them (Lookahead decoding, Medusa).</li>
+    <li><span class="keyterm-term">KV cache</span>: stored key and value vectors for earlier tokens, reused so they're not recomputed at each step.</li>
+    <li><span class="keyterm-term">Multi-query, grouped-query and cross-layer attention</span>: designs that share key-value vectors to shrink the KV cache.</li>
+    <li><span class="keyterm-term">Local windowed attention</span>: attending only to a nearby window of tokens.</li>
+    <li><span class="keyterm-term">PagedAttention</span>: vLLM's way of managing the KV cache in non-contiguous blocks.</li>
+    <li><span class="keyterm-term">Kernel</span>: code optimized for a particular hardware accelerator.</li>
+    <li><span class="keyterm-term">Operator fusion</span>: combining several operations into one pass to avoid repeated memory access.</li>
+    <li><span class="keyterm-term">Compiler / lowering</span>: a tool that converts model code into a form the hardware can run, ideally using specialized kernels.</li>
+    <li><span class="keyterm-term">Static, dynamic, continuous batching</span>: three ways of grouping requests, explained below.</li>
+    <li><span class="keyterm-term">Prompt cache (context cache, prefix cache)</span>: stored processing of repeated prompt segments.</li>
+    <li><span class="keyterm-term">Replica, tensor and pipeline parallelism</span>: copying the model; splitting operations across devices; splitting the model into stages.</li>
+    <li><span class="keyterm-term">Context and sequence parallelism</span>: splitting a long input, or the operators applied to it, across devices.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>Grounding: why LLM inference is expensive</h3>
+  <p>The chapter names three traits of transformer-based autoregressive models that make inference resource-hungry: <strong>model size</strong> (billions of weights to hold and move), <strong>autoregressive decoding</strong> (one token at a time) and the <strong>attention mechanism</strong> (each new token must relate to all earlier ones). The model-level techniques below map onto these three. Note also that the cost is lopsided: across model APIs, the chapter says an output token costs roughly two to four times an input token, and an Anyscale experiment found one output token affects latency about as much as 100 input tokens.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 210" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">THREE COSTS, THREE FAMILIES OF FIXES</text>
+      <rect x="20" y="40" width="180" height="100" rx="10" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="110" y="64" fill="#F2EFE9" font-size="11" font-weight="700" text-anchor="middle">MODEL SIZE</text>
+      <text x="110" y="88" fill="#C9C7C1" font-size="9.5" text-anchor="middle">quantization</text><text x="110" y="103" fill="#C9C7C1" font-size="9.5" text-anchor="middle">distillation</text><text x="110" y="118" fill="#C9C7C1" font-size="9.5" text-anchor="middle">pruning</text>
+      <rect x="220" y="40" width="180" height="100" rx="10" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="310" y="64" fill="#F2EFE9" font-size="11" font-weight="700" text-anchor="middle">SEQUENTIAL DECODE</text>
+      <text x="310" y="88" fill="#C9C7C1" font-size="9.5" text-anchor="middle">speculative decoding</text><text x="310" y="103" fill="#C9C7C1" font-size="9.5" text-anchor="middle">inference with reference</text><text x="310" y="118" fill="#C9C7C1" font-size="9.5" text-anchor="middle">parallel decoding</text>
+      <rect x="420" y="40" width="180" height="100" rx="10" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="510" y="64" fill="#F2EFE9" font-size="11" font-weight="700" text-anchor="middle">ATTENTION</text>
+      <text x="510" y="88" fill="#C9C7C1" font-size="9.5" text-anchor="middle">redesign attention</text><text x="510" y="103" fill="#C9C7C1" font-size="9.5" text-anchor="middle">manage the KV cache</text><text x="510" y="118" fill="#C9C7C1" font-size="9.5" text-anchor="middle">optimized kernels</text>
+      <text x="310" y="175" fill="#C9C7C1" font-size="9.5" text-anchor="middle">Service-level fixes (batching, caching, parallelism) sit on top and keep the model intact.</text>
+      <text x="310" y="195" fill="#7A7A80" font-size="9" text-anchor="middle">My grouping of the chapter's model-level techniques.</text>
+    </svg>
+    <figcaption>A map of the model-level section</figcaption>
+  </figure>
+
+  <h3>Model compression</h3>
+  <p>You already met quantization (Chapter 7: fewer bits per value) and distillation (Chapter 8: a small student imitates a large teacher). The new one is <strong>pruning</strong>, which comes in two senses: remove entire nodes (changing the architecture and shrinking the parameter count), or find the least useful parameters and set them to zero. The second makes the model sparse: the parameter count stays the same, but fewer are non-zero, which saves storage and can speed computation. Pruned models can be used as is or finetuned to recover lost quality. Research results look encouraging (the chapter cites a result that non-zero parameters in certain networks could be cut by over 90% with no loss in accuracy), but in practice pruning is less common: it demands understanding of the model's architecture, often gives a smaller boost than the alternatives, and sparse models only help on hardware that can exploit sparsity. By far the most popular approach is <strong>weight-only quantization</strong> (easy, works out of the box, very effective), with distillation also common. The chapter points out we're near quantization's limit, since you can't go below 1 bit per value.</p>
+
+  <h3>The autoregressive decoding bottleneck</h3>
+  <p>Generating one token at a time means a 100-token answer at 100 ms per token takes 10 seconds, and, as Part 1 explained, each step loads the whole model's weights from memory while using little of the chip's arithmetic. The techniques here are described as still evolving.</p>
+
+  <h3>Speculative decoding</h3>
+  <p>The idea: use a small, fast <strong>draft model</strong> to guess the next several tokens, and let the big <strong>target model</strong> check the guesses all at once. Steps, given tokens so far:</p>
+  <ol>
+    <li>The draft model proposes K tokens.</li>
+    <li>The target model verifies those K tokens in parallel.</li>
+    <li>It accepts the longest prefix (left to right) that it agrees with, say j tokens.</li>
+    <li>It then generates one extra token itself, and the loop repeats from the new position.</li>
+  </ol>
+  <p>If none are accepted you get one target-made token per loop; if all K are accepted you get K + 1 tokens in one loop. Why doesn't this just add overhead? The chapter gives three insights: verifying in parallel is cheaper than generating sequentially (it turns decode's profile into prefill's); some tokens are easy to predict, so a weaker model can get them right and have a high acceptance rate; and since decoding is bandwidth-bound, there are idle FLOPs available "for free" for verification. A side-effect: if your MFU is already maxed out, speculative decoding makes less sense.</p>
+  <p>Practical notes from the chapter: acceptance rates depend on the domain (higher for structured text like code); larger K means fewer verification calls but lower acceptance; the draft model can have any architecture but ideally shares the target's vocabulary and tokenizer; you can train a custom draft or reuse a weaker existing model. A reported example: DeepMind trained a 4B draft model for Chinchilla-70B that produced tokens about eight times faster (1.8 versus 14.1 ms per token) and cut overall latency by more than half without changing response quality. It's relatively easy to implement (the chapter says about 50 lines in PyTorch) and is available in popular inference frameworks (vLLM, TensorRT-LLM, llama.cpp).</p>
+
+  <figure>
+    <svg viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">SPECULATIVE DECODING, K = 4 (TOY)</text>
+      <text x="20" y="62" fill="#C9C7C1" font-size="10">Draft model proposes:</text>
+      <g font-size="10" text-anchor="middle">
+        <rect x="190" y="44" width="70" height="26" rx="5" fill="#131316" stroke="#6FCF97"/><text x="225" y="62" fill="#6FCF97">the</text>
+        <rect x="270" y="44" width="70" height="26" rx="5" fill="#131316" stroke="#6FCF97"/><text x="305" y="62" fill="#6FCF97">cat</text>
+        <rect x="350" y="44" width="70" height="26" rx="5" fill="#131316" stroke="#6FCF97"/><text x="385" y="62" fill="#6FCF97">sat</text>
+        <rect x="430" y="44" width="70" height="26" rx="5" fill="#131316" stroke="#C8453A"/><text x="465" y="62" fill="#C8453A">under</text>
+      </g>
+      <text x="20" y="122" fill="#C9C7C1" font-size="10">Target checks all 4</text>
+      <text x="20" y="136" fill="#C9C7C1" font-size="10">in one parallel pass:</text>
+      <g font-size="10" text-anchor="middle">
+        <text x="225" y="128" fill="#6FCF97">accept</text><text x="305" y="128" fill="#6FCF97">accept</text><text x="385" y="128" fill="#6FCF97">accept</text><text x="465" y="128" fill="#C8453A">reject</text>
+      </g>
+      <text x="20" y="196" fill="#C9C7C1" font-size="10">Result this round:</text>
+      <g font-size="10" text-anchor="middle">
+        <rect x="190" y="178" width="70" height="26" rx="5" fill="#0E0E10" stroke="#6FCF97"/><text x="225" y="196" fill="#F2EFE9">the</text>
+        <rect x="270" y="178" width="70" height="26" rx="5" fill="#0E0E10" stroke="#6FCF97"/><text x="305" y="196" fill="#F2EFE9">cat</text>
+        <rect x="350" y="178" width="70" height="26" rx="5" fill="#0E0E10" stroke="#6FCF97"/><text x="385" y="196" fill="#F2EFE9">sat</text>
+        <rect x="430" y="178" width="70" height="26" rx="5" fill="#0E0E10" stroke="#F2EFE9"/><text x="465" y="196" fill="#F2EFE9">on</text>
+      </g>
+      <text x="510" y="196" fill="#7A7A80" font-size="9">(target's own token)</text>
+      <text x="310" y="232" fill="#7A7A80" font-size="9" text-anchor="middle">4 tokens from one expensive target pass instead of 4 sequential ones. Invented words for illustration.</text>
+    </svg>
+    <figcaption>Guess cheaply, verify in parallel, keep the agreeing prefix</figcaption>
+  </figure>
+
+  <h3>Inference with reference and parallel decoding</h3>
+  <p><strong>Inference with reference</strong> is like speculative decoding but the draft tokens come from the input itself. If you ask a question about an attached document, the answer may quote it; if you ask for a bug fix, most of the code is unchanged. Instead of generating the repeated text token by token, copy the matching span from the context and verify it. No extra model is needed, but it only helps when outputs overlap heavily with the context (retrieval, coding, multi-turn chat); one paper reports roughly 2x speedup in such cases.</p>
+  <p><strong>Parallel decoding</strong> tries to break the sequential dependency altogether: predict several future tokens at once, even before knowing the earlier ones. That can work because the preceding text often constrains the next few tokens (after "the cat sits", the word after the next is likely "the" whatever the preposition). Lookahead decoding generates the parallel tokens from the same decoder and verifies using the Jacobi method (generate K tokens, check consistency, regenerate only the failures, repeat). Medusa adds extra decoding heads, small trained layers where head k predicts the token k positions ahead, while the original model stays frozen, and it uses tree-based attention to pick the best combination of candidates. NVIDIA reported up to 1.9x faster Llama 3.1 token generation with Medusa on certain hardware. The chapter's honest note: parallel decoding is unintuitive and some techniques are hard to implement.</p>
+
+  <h3>Attention and the KV cache</h3>
+  <p>To generate each token, the model needs the key and value vectors of all earlier tokens. Rather than recompute them every step, it stores them in a <strong>KV cache</strong> and only computes the new token's vectors. The cache is used in inference only, not training, because in training all tokens are known in advance and can be processed at once.</p>
+  <p>The catch: the cache grows linearly with sequence length and also with batch size, and can be huge. The chapter cites an estimate that for a 500B+ model with batch size 512 and context 2,048, the KV cache is about 3 TB, three times the weights. Unoptimized size is:</p>
+  <p style="text-align:center"><code>2 x B x S x L x H x M</code></p>
+  <p>where B is batch size, S sequence length, L number of layers, H model dimension and M bytes per value. For Llama 2 13B (40 layers, dimension 5,120), batch 32, sequence 2,048 and 2 bytes: 2 x 32 x 2,048 x 40 x 5,120 x 2, which I computed at about 53.7 GB (the chapter rounds to 54 GB). The attention <em>computation</em> also grows with length: the chapter's text says it grows "exponentially" but its footnote gives the correct picture of quadratic growth, O(n squared), which is how I'd describe it. This is one reason long context is hard.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">KV CACHE: REUSE, DON'T RECOMPUTE</text>
+      <text x="20" y="60" fill="#C9C7C1" font-size="10">Step t:</text>
+      <g font-size="9" text-anchor="middle">
+        <rect x="110" y="42" width="60" height="26" rx="4" fill="#131316" stroke="#7A7A80"/><text x="140" y="59" fill="#C9C7C1">K,V tok1</text>
+        <rect x="176" y="42" width="60" height="26" rx="4" fill="#131316" stroke="#7A7A80"/><text x="206" y="59" fill="#C9C7C1">K,V tok2</text>
+        <rect x="242" y="42" width="60" height="26" rx="4" fill="#131316" stroke="#7A7A80"/><text x="272" y="59" fill="#C9C7C1">K,V tok3</text>
+      </g>
+      <text x="320" y="59" fill="#7A7A80" font-size="9">cached</text>
+      <text x="20" y="130" fill="#C9C7C1" font-size="10">Step t+1:</text>
+      <g font-size="9" text-anchor="middle">
+        <rect x="110" y="112" width="60" height="26" rx="4" fill="#131316" stroke="#7A7A80"/><text x="140" y="129" fill="#C9C7C1">K,V tok1</text>
+        <rect x="176" y="112" width="60" height="26" rx="4" fill="#131316" stroke="#7A7A80"/><text x="206" y="129" fill="#C9C7C1">K,V tok2</text>
+        <rect x="242" y="112" width="60" height="26" rx="4" fill="#131316" stroke="#7A7A80"/><text x="272" y="129" fill="#C9C7C1">K,V tok3</text>
+        <rect x="308" y="112" width="60" height="26" rx="4" fill="#0E0E10" stroke="#6FCF97"/><text x="338" y="129" fill="#6FCF97">K,V tok4</text>
+      </g>
+      <text x="380" y="129" fill="#6FCF97" font-size="9">only this is newly computed</text>
+      <text x="310" y="190" fill="#C9C7C1" font-size="9.5" text-anchor="middle">Saves compute, but the cache itself eats memory: it grows with sequence length and batch size.</text>
+      <text x="310" y="212" fill="#7A7A80" font-size="9" text-anchor="middle">Sketch of the idea; real caches hold vectors per layer and per attention head.</text>
+    </svg>
+    <figcaption>What the KV cache stores and why it gets big</figcaption>
+  </figure>
+
+  <p>Three families of fixes, as the chapter groups them:</p>
+  <ul>
+    <li><strong>Redesign attention.</strong> Because this changes the architecture, it can only be done during training or finetuning. <em>Local windowed attention</em> attends only to a fixed window of nearby tokens (a 1,000-token window on a 10,000-token average cuts the cache by 10x), and can be interleaved with global attention. <em>Cross-layer attention</em> shares key-value vectors across adjacent layers. <em>Multi-query attention</em> shares them across all query heads, and <em>grouped-query attention</em> is the middle ground: groups of heads share a set. The chapter reports that Character.AI, whose average conversation history is 180 messages, combined multi-query attention, interleaved local and global attention, and cross-layer attention to cut KV cache by over 20x, so that memory stopped being the bottleneck for big batches.</li>
+    <li><strong>Manage the cache better.</strong> vLLM popularized PagedAttention, which divides the cache into non-contiguous blocks to reduce fragmentation and allow flexible sharing. Others: KV cache quantization, adaptive compression and selective caching.</li>
+    <li><strong>Write faster attention kernels.</strong> See next.</li>
+  </ul>
+
+  <h3>Kernels and compilers</h3>
+  <p>A <strong>kernel</strong> is code optimized for a specific accelerator, typically for a heavy routine (matrix multiplication, attention, convolution) that runs repeatedly in parallel. Writing one requires knowing the chip's memory hierarchy and is done in lower-level languages such as CUDA (NVIDIA), Triton (OpenAI) or ROCm (AMD). It used to be a niche craft done by chip makers and framework teams, but more AI engineers are learning it. The best-known attention kernel is <strong>FlashAttention</strong>, which fuses several common operations to run faster; it was first built for the A100 and later versions for the H100, which illustrates that kernels must be redone for new hardware.</p>
+  <p>Four common techniques inside kernels:</p>
+  <ul>
+    <li><strong>Vectorization:</strong> process multiple contiguous elements at once rather than one at a time.</li>
+    <li><strong>Parallelization:</strong> split an array into independent chunks processed on different cores.</li>
+    <li><strong>Loop tiling:</strong> reorder data access to fit the hardware's memory and cache (a pattern good on a CPU may be poor on a GPU).</li>
+    <li><strong>Operator fusion:</strong> merge multiple operations into one pass so data isn't read and written repeatedly. This needs the most knowledge of the model's operators.</li>
+  </ul>
+  <p>A <strong>compiler</strong> bridges the model and the hardware: a model script is a series of operations that must be converted ("lowered") into something the hardware can run, replacing operations with specialized kernels where possible. Compilers can be standalone (Apache TVM, MLIR) or built into frameworks (torch.compile, XLA/OpenXLA, TensorRT's compiler). The chapter shows a case study from the PyTorch team on Llama-7B on an A100 80GB: compile with torch.compile, quantize weights to INT8, then INT4, then add speculative decoding, with throughput rising at each step. It notes it's unclear how each step affected output quality.</p>
+
+  <h3>Service-level optimization: batching</h3>
+  <p>Service-level techniques manage resources for dynamic workloads and generally leave the model, and its quality, untouched. The simplest cost-cutter is <strong>batching</strong>: process requests that arrive together as a group. The chapter's analogy is cars versus a bus: a bus moves more people but can lengthen each journey, and if done smartly the latency impact can be small.</p>
+  <ul>
+    <li><strong>Static batching:</strong> wait for a fixed number of requests. Like a bus that leaves only when full; the first request waits for the last, however late.</li>
+    <li><strong>Dynamic batching:</strong> set a maximum wait. With batch size four and a 100 ms window, process when four requests are in or 100 ms has passed, whichever comes first. Latency stays controlled; batches may be partly empty, wasting compute.</li>
+    <li><strong>Continuous (in-flight) batching:</strong> for LLMs, requests in one batch may need very different numbers of tokens. In naive batching, a 10-token reply waits for a 1,000-token one. Continuous batching returns each response as soon as it finishes and slots a new request into the freed place, like a bus that picks up a new passenger as soon as one gets off. It's from the Orca paper.</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 620 270" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">STATIC vs. CONTINUOUS BATCHING (TOY TIMELINE)</text>
+      <text x="20" y="48" fill="#C8453A" font-size="10" font-weight="700">Static: whole batch waits for the longest</text>
+      <g font-size="9" fill="#0A0A0B">
+        <rect x="20" y="58" width="60" height="16" fill="#6FCF97"/><rect x="80" y="58" width="500" height="16" fill="#131316" stroke="#C8453A" stroke-dasharray="3 3"/><text x="30" y="70">req A</text>
+        <rect x="20" y="78" width="250" height="16" fill="#6FCF97"/><rect x="270" y="78" width="310" height="16" fill="#131316" stroke="#C8453A" stroke-dasharray="3 3"/><text x="30" y="90">req B</text>
+        <rect x="20" y="98" width="580" height="16" fill="#6FCF97"/><text x="30" y="110">req C (longest)</text>
+      </g>
+      <text x="560" y="70" fill="#C8453A" font-size="8.5" text-anchor="end">A idle, can't return</text>
+      <text x="20" y="152" fill="#6FCF97" font-size="10" font-weight="700">Continuous: finished slots refill immediately</text>
+      <g font-size="9" fill="#0A0A0B">
+        <rect x="20" y="162" width="60" height="16" fill="#6FCF97"/><rect x="82" y="162" width="130" height="16" fill="#C9C7C1"/><text x="90" y="174">new D</text>
+        <rect x="20" y="182" width="250" height="16" fill="#6FCF97"/><rect x="272" y="182" width="120" height="16" fill="#C9C7C1"/><text x="280" y="194">new E</text>
+        <rect x="20" y="202" width="580" height="16" fill="#6FCF97"/>
+      </g>
+      <text x="20" y="196" fill="#0A0A0B" font-size="9">B</text><text x="26" y="172" fill="#0A0A0B" font-size="9">A</text><text x="26" y="214" fill="#0A0A0B" font-size="9">C</text>
+      <text x="310" y="250" fill="#7A7A80" font-size="9" text-anchor="middle">Bar lengths = time spent generating. Responses can be returned the moment they finish. Schematic only.</text>
+    </svg>
+    <figcaption>Why continuous batching shortens waits for short requests</figcaption>
+  </figure>
+
+  <h3>Decoupling prefill and decode</h3>
+  <p>Because prefill is compute-bound and decode is bandwidth-bound, putting both on one machine makes them compete: a new prefill job can drain compute from decode jobs already running and slow their TPOT. A common fix is to <strong>disaggregate</strong>: run prefill and decode on different instances (different GPUs). Papers cited in the chapter show this can significantly increase the volume of requests handled within latency limits, and the cost of moving intermediate state between them isn't substantial on modern high-bandwidth GPU clusters. The right ratio of prefill to decode instances depends on workload and goals; the chapter's example: with long inputs and a TTFT priority, 2:1 to 4:1; with short inputs and a TPOT priority, 1:2 to 1:1. Those are examples from the chapter, not recommendations.</p>
+
+  <h3>Prompt caching</h3>
+  <p>Many prompts share segments, most commonly the system prompt, but also a long document that many queries refer to, or the earlier turns of a long conversation. A <strong>prompt cache</strong> (also called a context cache or prefix cache) stores the processing of those overlapping segments, so they're handled once. The chapter's illustration: a 1,000-token system prompt and a million API calls a day means about a billion repetitive input tokens avoided daily. But it isn't free: the cache takes memory, and building your own is a real engineering effort unless your model API provides it. The chapter reports provider features as of its writing: Google Gemini gave cached input tokens a 75% discount but charged extra for cache storage; Anthropic promised up to 90% cost savings and up to 75% latency reduction, with a table showing, for example, a chat with a 100,000-token cached book dropping time to first token from 11.5 s to 2.4 s and cost by 90%. Treat those as dated vendor claims; check current documentation for terms.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 220" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">PROMPT CACHE: PAY FOR THE SHARED PREFIX ONCE</text>
+      <g font-size="9.5" text-anchor="middle">
+        <rect x="20" y="44" width="220" height="30" rx="5" fill="#131316" stroke="#6FCF97"/><text x="130" y="63" fill="#6FCF97">system prompt (shared)</text>
+        <rect x="244" y="44" width="120" height="30" rx="5" fill="#131316" stroke="#7A7A80"/><text x="304" y="63" fill="#C9C7C1">user query 1</text>
+        <rect x="20" y="82" width="220" height="30" rx="5" fill="#0E0E10" stroke="#6FCF97" stroke-dasharray="4 3"/><text x="130" y="101" fill="#6FCF97">served from cache</text>
+        <rect x="244" y="82" width="150" height="30" rx="5" fill="#131316" stroke="#7A7A80"/><text x="319" y="101" fill="#C9C7C1">user query 2</text>
+        <rect x="20" y="120" width="220" height="30" rx="5" fill="#0E0E10" stroke="#6FCF97" stroke-dasharray="4 3"/><text x="130" y="139" fill="#6FCF97">served from cache</text>
+        <rect x="244" y="120" width="100" height="30" rx="5" fill="#131316" stroke="#7A7A80"/><text x="294" y="139" fill="#C9C7C1">user query 3</text>
+      </g>
+      <text x="430" y="63" fill="#C9C7C1" font-size="9">first call: full processing</text>
+      <text x="430" y="101" fill="#C9C7C1" font-size="9">later calls: only the new part</text>
+      <text x="310" y="188" fill="#7A7A80" font-size="9" text-anchor="middle">The cache must live somewhere (memory) and typically helps only for an identical leading segment.</text>
+    </svg>
+    <figcaption>The shared leading segment is the part that can be reused</figcaption>
+  </figure>
+
+  <h3>Parallelism</h3>
+  <p>Accelerators are built for parallel work, and the chapter covers a few strategies:</p>
+  <ul>
+    <li><strong>Replica parallelism:</strong> run multiple copies of the model to handle more requests at once, at the cost of more chips. Fitting models of different sizes onto different chips becomes a bin-packing puzzle (for example, three 13B models on a 40 GB GPU or reserve it for a 34B?).</li>
+    <li><strong>Tensor parallelism (intra-operator):</strong> split the tensors within an operator across devices, such as splitting one matrix column-wise for a multiplication. It lets you serve models that don't fit on one machine and can cut latency, though communication overhead trims the gain. It's the most common model-splitting approach for inference.</li>
+    <li><strong>Pipeline parallelism:</strong> split the model into stages on different devices, passing micro-batches along so stages overlap. It enables serving large models across machines but adds communication and so total latency per request, so latency-sensitive applications usually avoid it in favor of replicas; it's common in training for throughput.</li>
+    <li><strong>Context parallelism:</strong> split the input sequence across devices (first half on one machine, second half on another). <strong>Sequence parallelism:</strong> split the operators across machines (attention on one, feedforward on another). Both help long inputs and are less common.</li>
+  </ul>
+
+  <h3>Which techniques matter most, and the Summary</h3>
+  <p>The chapter's closing guidance: choose by workload and goals. KV cache work matters far more for long contexts; prompt caching for long overlapping prompts and multi-turn chat; if latency beats cost, scale up replicas. Across use cases, it names the most impactful as typically quantization (works well across models), tensor parallelism (lower latency and larger models), replica parallelism (straightforward) and attention optimization (big gains for transformers). The Summary also restates the core metric vocabulary (TTFT shaped by prefill, TPOT by decode, throughput tied to cost, a latency versus throughput trade-off), that model-level changes can change behavior while service-level ones keep the model intact, and that inference optimization completes the book's list of model adaptation techniques. The next chapter assembles them into a cohesive system.</p>
+
+  <h2>Why it matters</h2>
+  <p>This is the part of the stack where your bill and your user's patience are decided. Even if you only call APIs, you can now read a provider's feature list (prompt caching, batch pricing, speculative decoding, quantized variants) and know what it does and what it might cost in quality. And if you self-host, you have a map of what to try first: quantization, replicas and tensor parallelism, then attention and caching work.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Model-level techniques (compression, speculative or parallel decoding, attention changes, kernels) may alter quality; service-level ones (batching, prefill/decode split, prompt caching, parallelism) shouldn't.</li>
+      <li>Speculative decoding: a cheap draft model proposes, the big model verifies in parallel and keeps the agreeing prefix. It exploits idle compute during bandwidth-bound decoding.</li>
+      <li>The KV cache avoids recomputation but grows with sequence length and batch size (2 x B x S x L x H x M bytes); attention redesigns and better cache management shrink it.</li>
+      <li>Continuous batching returns finished responses immediately and refills freed slots; disaggregating prefill from decode stops the two from slowing each other.</li>
+      <li>The chapter says the most broadly impactful are quantization, tensor parallelism, replica parallelism and attention optimization.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>KV cache calculator (under an hour).</strong> Implement <code>2*B*S*L*H*M</code> and test it on the chapter's Llama 2 13B example (B 32, S 2,048, L 40, H 5,120, 2 bytes). Done when you get about 53.7 GB and can show how it changes as you double S, double B, or halve M. (Mine printed 53.69 GB.) Then compute the effect of a window of 1,000 tokens on a 10,000-token workload.</li>
+      <li><strong>Speculative decoding simulator.</strong> Write a toy where a "draft" guesses each next word correctly with probability p and the "target" is the ground-truth sentence. Implement the loop: draft K words, accept the longest correct prefix, add one target word, repeat, counting target calls. Done when you can plot or print average target calls for p = 0.5, 0.8 and 0.95 and compare against one call per token. (On a 13-word sentence with K = 4, I got roughly 7.2, 4.3 and 3.3 calls respectively.) This is a toy of the control flow, with no real models or timing.
+<pre><code>def one_round(target, i, draft_guess):   # draft_guess: list of K proposed tokens
+    accepted = 0
+    for j, tok in enumerate(draft_guess):
+        if tok == target[i + j]: accepted += 1
+        else: break
+    return accepted + 1                  # + the target's own extra token</code></pre></li>
+      <li><strong>Batching simulator.</strong> Model eight requests with different output lengths and arrival times. Simulate static batching (batch of 4, wait for the longest) and continuous batching (4 slots, refill on completion), measuring average latency. Done when continuous batching shows lower average latency on your inputs and you can explain why. (My toy run: about 74.5 vs. 27.75 time units for the two schemes on one made-up workload; the exact numbers mean nothing beyond the pattern.)</li>
+      <li><strong>Prompt cache by hand.</strong> Write a tiny cache keyed on the leading text of a prompt: for each incoming prompt, find the longest cached prefix, "pay" only for the remaining tokens (count by words), and store the new prefix. Done when 100 prompts sharing a 200-word system prompt show about 99 times the prefix cost avoided, and you can describe what happens if one character of the prefix changes.</li>
+      <li><strong>Window attention mask.</strong> Print a 12 x 12 grid for full causal attention and for a local window of 4 (a cell is "x" if the query position may attend to the key position). Done when you can count attended cells in each, and relate the difference to the KV cache saving.</li>
+      <li><strong>Replica or split? A decision memo.</strong> You must serve a 70B model at 8-bit on GPUs of 80 GB each (use the weights-only estimate from Chapter 7). Write half a page on whether one GPU suffices, what tensor parallelism would add, and when you would prefer more replicas, using the chapter's trade-offs. Done when you've named one latency risk and one cost risk of your choice.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Pick one technique (speculative decoding, PagedAttention or continuous batching) and read its original paper's introduction to see what problem it was designed for. Then move to Chapter 10, where these pieces are assembled into a full application architecture.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, written to help you build a mental model quickly. It is not a substitute for the source text; verify anything you plan to rely on, especially specific research results, vendor features, prices and any figure you intend to quote, against the original source or current documentation.</p>
+  <ul class="src-list">
+    <li><em>AI Engineering</em> by Chip Huyen (O'Reilly), Chapter 9, "Inference Optimization." This digest (Part 2, final) covers printed pages 426-448 (PDF pages 450-472): Inference Optimization (model optimization: compression, overcoming autoregressive decoding, attention mechanism optimization, kernels and compilers, the PyTorch case study; inference service optimization: batching, decoupling prefill and decode, prompt caching, parallelism) and the chapter Summary. Part 1 covered printed pages 405-425. The next chapter in the book is Chapter 10.</li>
+    <li>Works named in the chapter that I did not read directly: Chen et al. 2023 and Leviathan et al. 2022 (speculative decoding), Yang et al. 2023 (inference with reference), Cai et al. 2024 (Medusa), Fu et al. 2024 (Lookahead), Kwon et al. 2023 (PagedAttention), Dao et al. 2022 (FlashAttention), Yu et al. 2022 (Orca), Zhong et al. 2024 (DistServe), Pope et al. 2022 (KV cache size), Character.AI 2024, PyTorch 2023, Anthropic 2024 (prompt caching figures). Everything here about them is as the chapter reports it.</li>
+  </ul>
+  <p class="src-note">Flagged for accuracy: (1) The chapter's body text says attention computation grows "exponentially" with sequence length, but its footnote gives O(n squared), which is quadratic; I used the footnote's version. (2) The KV cache example is the chapter's formula; I computed about 53.7 GB where the chapter states 54 GB (rounding). (3) Provider prompt-caching discounts, storage prices and latency reductions, and the 50% batch discount mentioned in Part 1, are the chapter's snapshot of vendor claims and will date; check current vendor documentation. (4) Speedups (2x, 1.9x, over half, over 20x) are results reported for particular models, hardware and benchmarks. (5) The 2:1 to 4:1 and 1:2 to 1:1 prefill/decode ratios are the chapter's examples, not recommendations. (6) The chapter says it is unclear how the PyTorch case study's steps affected output quality. (7) The speculative decoding and batching simulators are toy models of the control flow I wrote and ran locally in Python 3; they use invented data and say nothing about real model speed. (8) The "most impactful techniques" list is the author's judgment.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
