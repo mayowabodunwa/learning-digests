@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: EC2 Purchasing Options: On-Demand, Savings Plans, Reserved, Spot and Friends</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+
+  <p class="eyebrow">AWS &middot; TOPIC 7 DIGEST</p>
+  <h1>EC2 Purchasing Options: On-Demand, Savings Plans, Reserved Instances, Spot and Friends</h1>
+  <p class="lead">An EC2 instance is the same machine no matter how you pay for it. What changes is the deal: how long you commit, how much flexibility you keep, whether AWS can take the machine back, and whether a seat is guaranteed to be there when you ask. This digest walks through each deal in plain English so the pricing page stops feeling like a maze.</p>
+
+  <h2>In one line</h2>
+  <p>EC2 lets you buy the same compute in different ways (pay as you go, commit to usage, commit to a configuration, borrow spare capacity, reserve a seat, or rent dedicated hardware), and each way trades price against commitment, flexibility and certainty.</p>
+
+  <h2>The big idea</h2>
+  <p>When I first looked at EC2 pricing I assumed "the price" was one number. It isn't. The AWS docs list seven separate ways to pay for EC2, and they answer different questions. Some are about <em>money</em> (can I pay less if I promise something?). Some are about <em>capacity</em> (will a machine actually be there when I ask?). Some are about <em>who else is on the hardware</em> (do I need a server that's just mine?). Mixing those questions up is the most common beginner mistake, so this digest keeps them apart on purpose.</p>
+  <p>One honest note before we start: this digest deliberately contains <strong>no dollar prices and no percentage guarantees of its own</strong>. Prices change by Region, instance type and over time, and the docs point you to live pricing pages for them. Where the docs state a discount ceiling ("up to"), I quote it and label it as a ceiling, not a promise.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">On-Demand Instance</span>: an instance you launch and pay for by the second while it runs, with no long-term commitment.</li>
+    <li><span class="keyterm-term">Commitment / term</span>: a promise to AWS to use (and pay for) a certain amount for a fixed period, which for Savings Plans and Reserved Instances is 1 or 3 years. e.g. "$X per hour for 1 year".</li>
+    <li><span class="keyterm-term">Savings Plan</span>: a billing deal where you commit to a steady spend measured in USD per hour, and get lower rates on matching usage.</li>
+    <li><span class="keyterm-term">Reserved Instance (RI)</span>: a billing discount (not a physical machine) that applies to matching On-Demand usage, in return for a 1 or 3 year commitment to a configuration.</li>
+    <li><span class="keyterm-term">Spot Instance</span>: an instance that runs on spare EC2 capacity at a discount, which EC2 can take back.</li>
+    <li><span class="keyterm-term">Spot price</span>: the current hourly price of a Spot Instance, set by EC2 per instance type per Availability Zone and adjusted gradually.</li>
+    <li><span class="keyterm-term">Interruption</span>: EC2 reclaiming a Spot Instance by terminating, stopping or hibernating it.</li>
+    <li><span class="keyterm-term">Capacity Reservation</span>: a reservation of compute capacity for specific instance attributes in one Availability Zone. It is about having a seat, not about a discount.</li>
+    <li><span class="keyterm-term">Tenancy</span>: whether your instance shares physical hardware with other accounts (default) or runs on hardware dedicated to you.</li>
+    <li><span class="keyterm-term">Dedicated Host / Dedicated Instance</span>: two ways to run on single-tenant hardware (details below).</li>
+    <li><span class="keyterm-term">vCPU</span>: a virtual CPU. The On-Demand quota is counted in these.</li>
+    <li><span class="keyterm-term">Availability Zone (AZ)</span>: one of the isolated locations inside an AWS Region.</li>
+    <li><span class="keyterm-term">Instance metadata</span>: information an instance can read about itself from a special local address, 169.254.169.254. Spot notices show up there.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>0. Grounding: what is actually being "purchased"?</h3>
+  <p>EC2 (Elastic Compute Cloud) rents you virtual servers called instances. If you've read the earlier EC2 digest, you know an instance is launched from an AMI and moves through a lifecycle (pending, running, stopped, terminated). Purchasing options sit on top of that. They don't change what an instance <em>is</em>. They change the <em>commercial terms</em> around it.</p>
+  <p>The docs' own summary page lists these seven options: On-Demand Instances, Savings Plans, Reserved Instances, Spot Instances, Dedicated Hosts, Dedicated Instances, and Capacity Reservations. A useful way to hold them in your head is to sort them by the question each one answers:</p>
+  <ul>
+    <li><strong>"Can I pay less if I promise to use compute?"</strong> Savings Plans and Reserved Instances.</li>
+    <li><strong>"Can I pay less if my work can be interrupted?"</strong> Spot Instances.</li>
+    <li><strong>"Can I be sure a machine is available?"</strong> Capacity Reservations (and zonal Reserved Instances, see below).</li>
+    <li><strong>"Do I need hardware that isn't shared with other accounts, or license rules tied to physical servers?"</strong> Dedicated Hosts and Dedicated Instances.</li>
+    <li><strong>"I just want to launch something now and not promise anything."</strong> On-Demand.</li>
+  </ul>
+  <p>The docs also give a short decision guide that matches this: if you can't commit to a specific instance configuration but can commit to a usage amount, Savings Plans fit. If you need a capacity reservation, use Reserved Instances (zonal) or Capacity Reservations for a specific AZ. Spot suits you if you can be flexible about when work runs and it can be interrupted. Dedicated Hosts or Instances can help with compliance requirements and with existing server-bound software licenses.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 330" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">SEVEN OPTIONS, FOUR QUESTIONS</text>
+      <rect x="20" y="40" width="270" height="68" rx="8" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="155" y="62" fill="#6FCF97" font-size="11" text-anchor="middle" font-weight="700">PAY LESS FOR A PROMISE</text>
+      <text x="155" y="82" fill="#C9C7C1" font-size="10.5" text-anchor="middle">Savings Plans</text>
+      <text x="155" y="98" fill="#C9C7C1" font-size="10.5" text-anchor="middle">Reserved Instances</text>
+      <rect x="330" y="40" width="270" height="68" rx="8" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/>
+      <text x="465" y="62" fill="#C8453A" font-size="11" text-anchor="middle" font-weight="700">PAY LESS, ACCEPT INTERRUPTION</text>
+      <text x="465" y="86" fill="#C9C7C1" font-size="10.5" text-anchor="middle">Spot Instances</text>
+      <rect x="20" y="126" width="270" height="68" rx="8" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.3"/>
+      <text x="155" y="148" fill="#F2EFE9" font-size="11" text-anchor="middle" font-weight="700">GUARANTEE A SEAT</text>
+      <text x="155" y="168" fill="#C9C7C1" font-size="10.5" text-anchor="middle">Capacity Reservations</text>
+      <text x="155" y="184" fill="#C9C7C1" font-size="10.5" text-anchor="middle">(+ zonal Reserved Instances)</text>
+      <rect x="330" y="126" width="270" height="68" rx="8" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.3"/>
+      <text x="465" y="148" fill="#F2EFE9" font-size="11" text-anchor="middle" font-weight="700">DEDICATED HARDWARE</text>
+      <text x="465" y="168" fill="#C9C7C1" font-size="10.5" text-anchor="middle">Dedicated Hosts</text>
+      <text x="465" y="184" fill="#C9C7C1" font-size="10.5" text-anchor="middle">Dedicated Instances</text>
+      <rect x="150" y="214" width="320" height="52" rx="8" fill="#131316" stroke="#7A7A80" stroke-width="1" stroke-dasharray="4 3"/>
+      <text x="310" y="236" fill="#F2EFE9" font-size="11" text-anchor="middle" font-weight="700">THE BASELINE: ON-DEMAND</text>
+      <text x="310" y="254" fill="#7A7A80" font-size="9.5" text-anchor="middle">no promise, per-second billing, you control the lifecycle</text>
+      <text x="310" y="298" fill="#7A7A80" font-size="9.5" text-anchor="middle">These can be combined: the docs say Capacity Reservations pair with Savings Plans</text>
+      <text x="310" y="312" fill="#7A7A80" font-size="9.5" text-anchor="middle">or Regional Reserved Instances to get a discount too.</text>
+    </svg>
+    <figcaption>My own grouping of the docs' seven options by the question each answers. It's a study aid, not an AWS taxonomy.</figcaption>
+  </figure>
+
+  <h3>1. On-Demand Instances: the baseline</h3>
+  <p>On-Demand is the default experience. Per the docs, you pay for compute by the second with no long-term commitment, you control the lifecycle (launch, stop, hibernate, start, reboot, terminate), and you pay only for the seconds the instance is in the <code>running</code> state, with a 60-second minimum. The per-second price for a running On-Demand instance is fixed and published on the On-Demand pricing page. The docs recommend On-Demand for short-term, irregular workloads that can't be interrupted.</p>
+  <p><strong>Not the same as "always available."</strong> If EC2 doesn't have capacity when you ask, the docs' Spot comparison table says an On-Demand launch gets an insufficient capacity error (ICE). On-Demand means "no commitment," not "guaranteed seat." That gap is exactly what Capacity Reservations fill.</p>
+  <p><strong>Quotas count vCPUs.</strong> There's a limit on running On-Demand instances per account per Region, and it's measured in vCPUs, not instance counts, grouped by instance family category. The docs' example: with a Standard-family quota of 256 vCPUs, you could run 32 <code>m5.2xlarge</code> (8 vCPUs each) or 16 <code>c5.4xlarge</code> (16 vCPUs each). The table on that page also shows default values: for the Standard families (A, C, D, H, I, M, R, T, Z) the default is 5, while several specialised families (like P, G and VT, X, Inf, Trn) default to 0 and must be raised. Treat those defaults as a snapshot of the docs page; EC2 also raises quotas automatically based on your usage, and you can request increases through Service Quotas. Instances in pending, stopping, stopped and hibernated states don't count, but <strong>Capacity Reservations do count, even when unused</strong>.</p>
+
+  <h3>2. Savings Plans: commit to a dollar rate per hour</h3>
+  <p>A Savings Plan gives lower prices than On-Demand in exchange for a commitment to a consistent amount of compute usage, measured in <strong>USD per hour</strong>, for 1 or 3 years (the docs define a year as 365 days and three years as 1,095 days). You can pay All upfront, Partial upfront or No upfront.</p>
+  <p>The important thing to grasp is that you're committing to <em>spend</em>, not to a particular machine. That's why it's flexible. The docs describe four plan types; two matter for EC2:</p>
+  <ul>
+    <li><strong>Compute Savings Plans</strong>: the most flexible. The docs say they apply to EC2 usage regardless of instance family, size, Region, operating system or tenancy, and also to Fargate and Lambda usage. You can move a workload from c5 to m5, or from one Region to another, and keep the lower rate. The docs give "up to 66% off On-Demand" as the ceiling.</li>
+    <li><strong>EC2 Instance Savings Plans</strong>: you commit to one instance family in one Region (the docs' example is m5 in Virginia). In exchange you get a deeper discount ceiling ("up to 72%"), and it still applies across sizes, operating systems and tenancy within that family and Region.</li>
+  </ul>
+  <p>The other two types are SageMaker AI Savings Plans and Database Savings Plans, which cover those services and are outside this EC2 digest.</p>
+  <p><strong>Caveats worth writing down.</strong> (1) The commitment can't be changed after purchase, but you can buy additional plans as usage changes. (2) Per the docs, Savings Plans don't reserve capacity. The Capacity Reservations page's comparison table says "No capacity reserved." (3) Spot Instances aren't covered by Savings Plans, and Spot spend doesn't use up your Compute Savings Plan commitment. (4) Dedicated Instance per-Region fees (the docs mention $2/hour in every Region where you have at least one Dedicated Instance running) are not discounted. (5) The percentages are "up to" ceilings from the docs, not what you will definitely save; actual savings depend on your usage.</p>
+  <p><strong>Where recommendations come from.</strong> The docs say to use AWS Cost Explorer to see recommended commitment levels, and to purchase and manage plans.</p>
+
+  <h3>3. Reserved Instances: commit to a configuration</h3>
+  <p>The docs open this page with a recommendation: AWS recommends Savings Plans over Reserved Instances because they're easier and more flexible, while offering lower prices (up to 72% off, the same ceiling). I'm including RIs anyway, because you'll meet them in existing accounts and on exams, and because they illustrate the idea of "commit to a configuration."</p>
+  <p><strong>An RI is a billing discount, not a machine.</strong> The docs are explicit: Reserved Instances are not physical instances. They're a discount applied to On-Demand usage that matches certain attributes. Four attributes determine the price: instance type (like <code>m4.large</code>), Region, tenancy and platform (operating system).</p>
+  <p><strong>Term and payment.</strong> 1 or 3 years (3 years gives a bigger discount, per the docs). Payment: All Upfront, Partial Upfront or No Upfront; in general, paying more upfront saves more. No Upfront still means you're obligated to pay monthly for the whole term, which is why a billing history is required first. RIs do not renew automatically; when they end you keep running but pay On-Demand rates. You cannot cancel an RI purchase, though you may be able to modify, exchange or sell it.</p>
+  <p><strong>Standard vs Convertible.</strong> Standard RIs give the biggest discount but can only be modified (not exchanged). Convertible RIs give a lower discount, but can be exchanged for another Convertible RI with different attributes, and can also be modified.</p>
+  <p><strong>Regional vs zonal scope.</strong> The scope doesn't change the price, but it changes behavior:</p>
+  <ul>
+    <li>A <strong>regional</strong> RI does <em>not</em> reserve capacity. Its discount applies in any AZ in the Region, and (only for Linux/Unix, default tenancy) across sizes within the instance family.</li>
+    <li>A <strong>zonal</strong> RI <em>does</em> reserve capacity in the named AZ, but the discount applies only in that AZ and only for that exact family and size.</li>
+  </ul>
+  <p>So "Reserved" in the name is a trap: depending on scope, you may be reserving a discount without reserving any capacity.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 300" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">WHAT EACH COMMITMENT LOCKS IN</text>
+      <text x="20" y="52" fill="#7A7A80" font-size="10">OPTION</text>
+      <text x="190" y="52" fill="#7A7A80" font-size="10">YOU PROMISE</text>
+      <text x="400" y="52" fill="#7A7A80" font-size="10">YOU KEEP FLEXIBLE</text>
+      <line x1="20" y1="58" x2="600" y2="58" stroke="#7A7A80" stroke-width="0.8"/>
+      <rect x="20" y="66" width="580" height="38" rx="6" fill="#0E0E10" stroke="#7A7A80" stroke-width="1"/>
+      <text x="30" y="89" fill="#F2EFE9" font-size="10.5" font-weight="700">On-Demand</text>
+      <text x="190" y="89" fill="#C9C7C1" font-size="10.5">nothing</text>
+      <text x="400" y="89" fill="#C9C7C1" font-size="10.5">everything</text>
+      <rect x="20" y="110" width="580" height="38" rx="6" fill="#0E0E10" stroke="#6FCF97" stroke-width="1"/>
+      <text x="30" y="133" fill="#6FCF97" font-size="10.5" font-weight="700">Compute SP</text>
+      <text x="190" y="133" fill="#C9C7C1" font-size="10.5">$/hour, 1 or 3 yr</text>
+      <text x="400" y="133" fill="#C9C7C1" font-size="10.5">family, size, Region, OS</text>
+      <rect x="20" y="154" width="580" height="38" rx="6" fill="#0E0E10" stroke="#6FCF97" stroke-width="1"/>
+      <text x="30" y="177" fill="#6FCF97" font-size="10.5" font-weight="700">EC2 Instance SP</text>
+      <text x="190" y="177" fill="#C9C7C1" font-size="10.5">$/hour + family + Region</text>
+      <text x="400" y="177" fill="#C9C7C1" font-size="10.5">size, OS, tenancy</text>
+      <rect x="20" y="198" width="580" height="38" rx="6" fill="#0E0E10" stroke="#C8453A" stroke-width="1"/>
+      <text x="30" y="221" fill="#C8453A" font-size="10.5" font-weight="700">Reserved Instance</text>
+      <text x="190" y="221" fill="#C9C7C1" font-size="10.5">type, Region, tenancy, OS</text>
+      <text x="400" y="221" fill="#C9C7C1" font-size="10.5">depends on class and scope</text>
+      <text x="310" y="262" fill="#7A7A80" font-size="9.5" text-anchor="middle">Reading guide: the more you promise, the deeper the discount ceiling the docs quote.</text>
+      <text x="310" y="278" fill="#7A7A80" font-size="9.5" text-anchor="middle">That is a general pattern in the docs, not a rule for every instance and Region.</text>
+    </svg>
+    <figcaption>Simplified for study. Real RI flexibility varies by class, scope, OS and tenancy, as described in the text above.</figcaption>
+  </figure>
+
+  <h3>4. Spot Instances: borrow spare capacity</h3>
+  <p>A Spot Instance runs on spare EC2 capacity that's available at a lower price than On-Demand. The Spot price is set by Amazon EC2 for each instance type in each AZ, and is adjusted gradually based on long-term supply and demand. Your instance runs whenever capacity is available. The docs recommend Spot when you can be flexible about when work runs and when it can be interrupted, and name data analysis, batch jobs, background processing and optional tasks as good fits.</p>
+  <p><strong>Vocabulary.</strong> A <em>Spot capacity pool</em> is a set of unused instances with the same type and AZ. A <em>Spot Instance request</em> asks for one, and is either <em>one-time</em> or <em>persistent</em> (a persistent request is resubmitted automatically after an interruption).</p>
+  <p><strong>Why it can be interrupted.</strong> The docs give three reasons: <em>capacity</em> (EC2 needs it back, mainly to repurpose capacity, but also for host maintenance or hardware decommission), <em>price</em> (the Spot price rises above a maximum price you set; the docs note that setting a maximum price makes interruptions more frequent than not setting one), and <em>constraints</em> (for example a launch group, which gets terminated together when the constraint can't be met). The docs say it is always possible that a Spot Instance might be interrupted.</p>
+  <p><strong>Interruption behavior.</strong> You choose what EC2 does: terminate (the default), stop, or hibernate. Stop requires a persistent request (and no launch group); only EC2 can restart an interrupted stopped instance, when capacity is available in the same AZ for the same type. While it's stopped you pay only for the preserved EBS volumes.</p>
+  <p><strong>The two-minute warning (with caveats).</strong> The docs describe an interruption notice issued two minutes before EC2 stops or terminates the instance. For hibernation you get the notice but not a two-minute lead, because hibernation begins immediately. The notice appears as an EventBridge event and in instance metadata, and the docs say it is emitted on a best-effort basis, so it's possible to be interrupted before a warning is available. They recommend checking for it every 5 seconds. From inside the instance, the item is <code>spot/instance-action</code> in the metadata; when nothing is planned it isn't there and you get an HTTP 404. When it is there, the docs' example output looks like <code>{"action": "terminate", "time": "2017-09-18T08:22:00Z"}</code> (a time in UTC).</p>
+  <p><strong>The earlier hint.</strong> A <em>rebalance recommendation</em> is a signal that a running Spot Instance is at elevated risk of interruption. It can arrive before the two-minute notice, but the docs warn it isn't always possible, so it may arrive together with it. It is also best-effort, and only supported for Spot Instances launched after November 5, 2020 00:00 UTC. Metadata path: <code>events/recommendations/rebalance</code>.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 270" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">A SPOT INSTANCE'S SIGNALS (TYPICAL ORDER)</text>
+      <line x1="40" y1="120" x2="580" y2="120" stroke="#7A7A80" stroke-width="2"/>
+      <circle cx="70" cy="120" r="7" fill="#6FCF97"/>
+      <text x="70" y="98" fill="#6FCF97" font-size="10.5" text-anchor="middle" font-weight="700">RUNNING</text>
+      <text x="70" y="146" fill="#7A7A80" font-size="9.5" text-anchor="middle">normal work</text>
+      <circle cx="260" cy="120" r="7" fill="#E7A79C"/>
+      <text x="260" y="98" fill="#E7A79C" font-size="10.5" text-anchor="middle" font-weight="700">REBALANCE</text>
+      <text x="260" y="146" fill="#7A7A80" font-size="9.5" text-anchor="middle">elevated risk</text>
+      <text x="260" y="160" fill="#7A7A80" font-size="9.5" text-anchor="middle">(may not come first)</text>
+      <circle cx="410" cy="120" r="7" fill="#C8453A"/>
+      <text x="410" y="98" fill="#C8453A" font-size="10.5" text-anchor="middle" font-weight="700">NOTICE</text>
+      <text x="410" y="146" fill="#7A7A80" font-size="9.5" text-anchor="middle">2 min warning</text>
+      <text x="410" y="160" fill="#7A7A80" font-size="9.5" text-anchor="middle">(best effort)</text>
+      <circle cx="540" cy="120" r="7" fill="#C8453A"/>
+      <text x="540" y="98" fill="#C8453A" font-size="10.5" text-anchor="middle" font-weight="700">INTERRUPTED</text>
+      <text x="540" y="146" fill="#7A7A80" font-size="9.5" text-anchor="middle">terminate / stop /</text>
+      <text x="540" y="160" fill="#7A7A80" font-size="9.5" text-anchor="middle">hibernate</text>
+      <rect x="60" y="195" width="500" height="54" rx="8" fill="#131316" stroke="#7A7A80" stroke-width="1" stroke-dasharray="4 3"/>
+      <text x="310" y="217" fill="#F2EFE9" font-size="10.5" text-anchor="middle" font-weight="700">YOUR JOB: make the work safe to lose</text>
+      <text x="310" y="235" fill="#7A7A80" font-size="9.5" text-anchor="middle">checkpoint often, keep state off the instance, let an Auto Scaling group replace it</text>
+    </svg>
+    <figcaption>Not to scale. The timing of the rebalance signal is not fixed, and either signal can be missing. Design for an interruption with no warning.</figcaption>
+  </figure>
+
+  <p><strong>Preparing, per the docs.</strong> Create Spot requests through an Auto Scaling group so replacements launch automatically; use an AMI (and optionally user data) so a new instance is ready quickly; remember instance store data is lost when the instance stops or terminates, so keep important data in S3, EBS or DynamoDB; split work into small tasks or use checkpoints; and test with an On-Demand instance that you terminate yourself, or with AWS Fault Injection Service.</p>
+  <p><strong>Billing when interrupted.</strong> This one has fine print. If <em>EC2</em> interrupts a Windows or Linux (non-SUSE) Spot Instance in its first hour, there's no charge; after the first hour you pay for the seconds used. If <em>you</em> stop or terminate it, you pay for seconds used. SUSE has different rules (full-hour charging in some cases). Check the billing page before relying on this. Also, Spot is not covered by Savings Plans, and EBS volumes of a stopped Spot Instance still cost money.</p>
+  <p><strong>Seeing prices.</strong> The Spot pricing page shows current lowest prices (updated every five minutes) and the console or <code>describe-spot-price-history</code> shows up to three months of history. A small gotcha from the docs: AZ codes like <code>us-west-2a</code> are mapped independently for each account, so the same code can mean different physical zones in different accounts.</p>
+
+  <h3>5. Capacity Reservations: pay for the seat, not for a discount</h3>
+  <p>An On-Demand Capacity Reservation reserves compute capacity for specified instance attributes (instance type, platform, AZ, tenancy) in one AZ, for any duration. The docs use it for scaling events, regulatory or disaster-recovery needs, and strict capacity requirements.</p>
+  <ul>
+    <li><strong>Immediate-use</strong> reservations have no term commitment; you can modify or cancel them at any time, and cancelling stops the charges.</li>
+    <li><strong>Future-dated</strong> reservations make capacity available on a date you choose, with a commitment duration you can't shrink below your initial commitment. Cancelling may carry a charge. The docs add some limits: minimum of 32 vCPUs worth of instances, and only certain families (C, G, I, M, R, T, U and X).</li>
+    <li>By default a reservation is <em>open</em>: any instance with matching attributes automatically lands in it. You can instead <em>target</em> it so only chosen instances use it.</li>
+  </ul>
+  <p>The comparison table in the docs puts it neatly: Capacity Reservations have <em>no billing discount</em> on their own (you can combine them with Savings Plans or Regional RIs to get one), whereas Savings Plans and RIs give a discount. Zonal RIs reserve capacity in an AZ; Savings Plans and regional RIs don't. One thing the docs do state: active but unused Capacity Reservations still count against your On-Demand Instance quota. How reserved capacity is billed while unused is on a separate pricing and billing page that I did not read, so check it before relying on any assumption there.</p>
+  <p><strong>Capacity Blocks for ML</strong> are a sibling feature: you reserve GPU instances for a defined period starting on a future date, for training and fine-tuning. Mentioned for completeness; it's outside the core of this topic.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">DISCOUNT AND SEAT ARE SEPARATE AXES</text>
+      <line x1="90" y1="200" x2="580" y2="200" stroke="#7A7A80" stroke-width="1.2"/>
+      <line x1="90" y1="200" x2="90" y2="45" stroke="#7A7A80" stroke-width="1.2"/>
+      <text x="335" y="228" fill="#7A7A80" font-size="10" text-anchor="middle">billing discount  &rarr;</text>
+      <text x="30" y="125" fill="#7A7A80" font-size="10" transform="rotate(-90 30 125)" text-anchor="middle">seat reserved in an AZ  &rarr;</text>
+      <rect x="110" y="140" width="130" height="44" rx="8" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.2"/>
+      <text x="175" y="167" fill="#C9C7C1" font-size="10.5" text-anchor="middle">On-Demand</text>
+      <rect x="390" y="140" width="170" height="44" rx="8" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.2"/>
+      <text x="475" y="160" fill="#6FCF97" font-size="10" text-anchor="middle">Savings Plans,</text>
+      <text x="475" y="174" fill="#6FCF97" font-size="10" text-anchor="middle">regional RIs</text>
+      <rect x="110" y="60" width="130" height="44" rx="8" fill="#0E0E10" stroke="#E7A79C" stroke-width="1.2"/>
+      <text x="175" y="87" fill="#E7A79C" font-size="10.5" text-anchor="middle">Capacity Resv.</text>
+      <rect x="390" y="60" width="170" height="44" rx="8" fill="#0E0E10" stroke="#C8453A" stroke-width="1.2"/>
+      <text x="475" y="87" fill="#C8453A" font-size="10.5" text-anchor="middle">Zonal RIs</text>
+      <text x="330" y="125" fill="#7A7A80" font-size="9" text-anchor="middle">Capacity Resv. + Savings Plan = both</text>
+    </svg>
+    <figcaption>Based on the docs' comparison table. Spot and Dedicated options aren't plotted, since they answer different questions.</figcaption>
+  </figure>
+
+  <h3>6. Dedicated Hosts and Dedicated Instances</h3>
+  <p>By default, EC2 instances run on shared-tenancy hardware, so other AWS accounts may be on the same physical server (isolated by the platform). Two options put you on hardware that is not shared with other accounts. The docs state there are no performance, security or physical differences between the two; the differences are control and billing:</p>
+  <ul>
+    <li><strong>Dedicated Host</strong>: a physical server fully dedicated to you. You can see sockets and physical cores, use host affinity (keep an instance on the same server), target placement, and bring per-socket, per-core or per-VM software licenses. Billing is per host.</li>
+    <li><strong>Dedicated Instance</strong>: instances on hardware dedicated to a single account, with no visibility or control over placement; stop and start and it might land on a different host. Billing is per instance, and BYOL support is partial. Dedicated Instances might still share hardware with your own non-dedicated instances. Note the docs also say a dedicated-tenancy EBS-backed instance's EBS volume isn't on single-tenant hardware.</li>
+  </ul>
+  <p>One more table row worth remembering: Capacity Reservations are supported for Dedicated Instances but not for Dedicated Hosts (Dedicated Hosts have their own reservation option, Dedicated Host Reservations, for a discount the docs describe as "up to 70 percent" versus On-Demand host pricing). The docs' own decision rule: if you don't need placement control or per-core licensing, consider Dedicated Instances.</p>
+
+  <h3>7. Putting it together: a worked thought experiment</h3>
+  <p>Imagine a web app with three kinds of work. A small always-on API tier, a nightly batch job that can restart if killed, and a database server that needs to be there at launch every time. A sensible-sounding split, purely illustrative: cover the steady API baseline with a Savings Plan (committing only to what you're confident you'll always run), run the batch workers on Spot with checkpoints, and consider a Capacity Reservation (or zonal RI) only where a failed launch would be costly. Anything spiky or experimental stays On-Demand. This is a mental model, not a recommendation: whether it saves money depends on real prices and real utilization, which this digest intentionally doesn't quote.</p>
+  <p><strong>Simplification flag:</strong> the "baseline vs burst" story above is the common pattern, not the only one. Plenty of workloads run entirely on Spot or entirely On-Demand.</p>
+
+  <h2>Why it matters</h2>
+  <p>Purchasing choices are where most of the savings (and surprises) in an EC2 bill come from, and they quietly shape architecture. Spot only works if your app tolerates interruption, which links straight to Auto Scaling groups and stateless design (coming up in later EC2 topics). Capacity Reservations remind you that "On-Demand" isn't a guarantee. Commitments (Savings Plans, RIs) can't be cancelled, so understanding what they lock in is worth a minute before clicking buy. A real, dated pointer: the EC2 docs themselves now lead the Reserved Instances page with a recommendation to use Savings Plans, so older blog posts that treat RIs as the default are out of date on that point.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>EC2 has seven ways to pay: On-Demand, Savings Plans, Reserved Instances, Spot, Dedicated Hosts, Dedicated Instances and Capacity Reservations. They answer different questions: discount, interruption, capacity, or hardware.</li>
+      <li>On-Demand bills per second with a 60-second minimum and no commitment, but doesn't guarantee capacity, and quotas are counted in vCPUs.</li>
+      <li>Savings Plans commit you to dollars per hour for 1 or 3 years; Compute plans are the most flexible, EC2 Instance plans trade flexibility for a deeper "up to" discount. They don't reserve capacity, and can't be changed after purchase.</li>
+      <li>Reserved Instances are a billing discount tied to configuration. Regional ones don't reserve capacity, zonal ones do. The docs now recommend Savings Plans over RIs.</li>
+      <li>Spot is spare capacity that EC2 can take back. The 2-minute notice is best effort, so design work that survives losing the instance without warning.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <p style="font-size:14px;color:var(--muted);">Heads up: projects 1, 3 and 5 need no AWS account. I ran the logic of projects 1 and 3 in Python locally while writing this. Project 2 uses a read-only AWS CLI call (<code>describe-spot-price-history</code>) whose options I checked against the CLI reference page, but I did not run it against a live account. Nothing here launches paid resources.</p>
+    <ol>
+      <li><strong>Break-even calculator (no AWS needed).</strong> Invent your own hourly On-Demand rate (a made-up number, not a real price) and a committed rate that is some fraction of it. Write a script that loops over utilization from 10% to 100% of a month and prints whether a commitment (you pay for every hour) or On-Demand (you pay only for hours used) is cheaper. <em>Done when:</em> you can point to the utilization where the winner flips, and you can explain why a commitment loses at low utilization. (My version flipped between 70% and 90% with a committed rate of 70% of the invented On-Demand rate. Yours will differ.)</li>
+      <li><strong>Read real Spot price history.</strong> With the AWS CLI configured and read permission for EC2, run <code>aws ec2 describe-spot-price-history --instance-types m5.large --product-descriptions "Linux/UNIX" --max-items 20 --query 'SpotPriceHistory[].{Zone:AvailabilityZone,Price:SpotPrice,Time:Timestamp}' --output table</code>. Swap the instance type for any you like. <em>Done when:</em> you can say whether prices differ between AZs, and why the docs say AZ codes may map differently per account.</li>
+      <li><strong>Simulate a Spot interruption watcher (no AWS needed).</strong> Write a small local HTTP server that answers 404 on a path like <code>/latest/meta-data/spot/instance-action</code> for the first few requests, then returns <code>{"action": "terminate", "time": "..."}</code>. Write a watcher that polls it (the docs suggest every 5 seconds; use shorter in the simulation) and, on seeing the notice, saves a checkpoint file and exits cleanly. <em>Done when:</em> the watcher treats 404 as "all clear" and the checkpoint exists after the notice appears. Bonus: kill the watcher at random before the notice and show your job resumes from the last checkpoint.</li>
+      <li><strong>vCPU quota planner.</strong> From the docs' example (a 256-vCPU Standard quota, <code>m5.2xlarge</code> at 8 vCPUs, <code>c5.4xlarge</code> at 16), write a function that takes a quota and a list of (type, vCPUs, count) and says whether it fits, then add a "Capacity Reservation still counts" line item. <em>Done when:</em> it correctly rejects 33 <code>m5.2xlarge</code> at a 256 quota, and shows how an unused reservation eats headroom.</li>
+      <li><strong>Decision-tree flashcards.</strong> Write a function that takes yes/no answers (interruptible? needs guaranteed capacity? needs per-core licensing? steady baseline?) and returns the option(s) the docs' guidance points to. Make it return a list, because combos are valid. <em>Done when:</em> you can run five realistic scenarios through it and justify each result using a sentence from the docs.</li>
+      <li><strong>Compare the fine print.</strong> Open the Reserved Instances, Savings Plans and Capacity Reservations pages and build a one-page table with columns: term, cancellable?, reserves capacity?, flexibility. Fill every cell with a quote-free paraphrase and a link. <em>Done when:</em> no cell says "I think", and you've noted anything the pages don't state.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Natural next questions: how Auto Scaling groups mix On-Demand and Spot in one group (the "mixed instances" idea, picked up in the Auto Scaling topic later in this series), how Capacity Rebalancing replaces at-risk Spot Instances, how Reserved Instance discounts are applied across sizes (the normalization factor on the docs' "How Reserved Instance discounts are applied" page), and what Savings Plans coverage reports in Cost Explorer show. I deliberately left out the Reserved Instance Marketplace and EC2 Fleet/Spot Fleet request mechanics.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, written to build a mental model. It is not a substitute for the official docs. Verify anything you plan to rely on (discount ceilings, quotas, billing rules, CLI syntax) against the live pages below, because AWS pricing, quotas and docs change. Source accessed on 2026-10-25.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-purchasing-options.html" target="_blank" rel="noopener">Amazon EC2 billing and purchasing options (the seven options and the decision guidance)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-on-demand-instances.html" target="_blank" rel="noopener">Purchasing On-Demand Instances (per-second billing, 60-second minimum, vCPU quotas)</a></li>
+    <li><a href="https://docs.aws.amazon.com/savingsplans/latest/userguide/what-is-savings-plans.html" target="_blank" rel="noopener">What are Savings Plans?</a> and <a href="https://docs.aws.amazon.com/savingsplans/latest/userguide/plan-types.html" target="_blank" rel="noopener">Savings Plans types</a></li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-reserved-instances.html" target="_blank" rel="noopener">Reserved Instances overview (attributes, term, payment, offering class)</a> and <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/reserved-instances-scope.html" target="_blank" rel="noopener">Regional and zonal Reserved Instances</a></li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-spot-instances.html" target="_blank" rel="noopener">Spot Instances</a>, <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-interruptions.html" target="_blank" rel="noopener">interruptions</a>, <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/interruption-behavior.html" target="_blank" rel="noopener">interruption behavior</a>, <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-instance-termination-notices.html" target="_blank" rel="noopener">interruption notices</a>, <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/rebalance-recommendations.html" target="_blank" rel="noopener">rebalance recommendations</a>, <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/prepare-for-interruptions.html" target="_blank" rel="noopener">preparing for interruptions</a>, <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/billing-for-interrupted-spot-instances.html" target="_blank" rel="noopener">billing for interrupted Spot Instances</a></li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/capacity-reservation-overview.html" target="_blank" rel="noopener">Capacity Reservations and Capacity Blocks for ML</a> and <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-capacity-reservations.html" target="_blank" rel="noopener">On-Demand Capacity Reservations (comparison with RIs and Savings Plans, limitations)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-hosts-overview.html" target="_blank" rel="noopener">Dedicated Hosts</a> and <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-instance.html" target="_blank" rel="noopener">Dedicated Instances</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-spot-price-history.html" target="_blank" rel="noopener">AWS CLI reference: ec2 describe-spot-price-history</a></li>
+  </ul>
+  <p class="src-note">Flagged for accuracy: (1) I could not run the AWS CLI command in project 2 against a live account; options were checked against the reference page only. (2) I did not fetch the Capacity Reservation pricing and billing page, the Reserved Instance discount-application page, or the Savings Plans-vs-RI page, so those details are not covered here beyond what the pages above state. (3) All discount percentages are the docs' "up to" ceilings at the time of reading, and quota defaults are a snapshot of the On-Demand page. (4) The "worked thought experiment" and the grouping figures are my own study aids, not AWS guidance. (5) Billing of unused Capacity Reservations is not covered here for the reason in point 2.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
