@@ -1,0 +1,44 @@
+[
+  {
+    "area": "ddia",
+    "label": "DDIA",
+    "books": true,
+    "scope": "the Designing Data-Intensive Applications track (its focused scope is Ch.4, Ch.10, Ch.11 only)"
+  },
+  {
+    "area": "ai-eng",
+    "label": "AI Engineering",
+    "books": true,
+    "scope": "the AI Engineering (Chip Huyen) track (its focused scope is Ch.5 onwards)"
+  },
+  {
+    "area": "mysql",
+    "label": "High Performance MySQL",
+    "books": true,
+    "scope": "the High Performance MySQL 4th ed. track (its focused scope is Ch.6, Ch.7, Ch.8 only)"
+  },
+  {
+    "area": "s3",
+    "label": "AWS S3",
+    "books": false,
+    "scope": "the AWS S3 area of Track B, every concept listed in its table"
+  },
+  {
+    "area": "ec2",
+    "label": "AWS EC2",
+    "books": false,
+    "scope": "the AWS EC2 area of Track B, every concept listed in its table"
+  },
+  {
+    "area": "vpc",
+    "label": "AWS VPC",
+    "books": false,
+    "scope": "the AWS VPC area of Track B, every concept listed in its table"
+  },
+  {
+    "area": "cloudwatch",
+    "label": "AWS CloudWatch",
+    "books": false,
+    "scope": "the AWS CloudWatch area of Track B, every concept listed in its table"
+  }
+]
