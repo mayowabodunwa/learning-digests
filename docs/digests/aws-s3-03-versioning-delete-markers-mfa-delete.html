@@ -151,3 +151,249 @@
 </head>
 <body>
 <div class="wrap">
+
+  <p class="eyebrow">AWS S3 &middot; CONCEPT 3 DIGEST</p>
+  <h1>S3 Versioning, Delete Markers &amp; MFA Delete: Keeping Every Version and Protecting the Delete Button</h1>
+  <p class="lead">By default, writing to an existing key in S3 replaces the old object, and deleting a key removes it. Turn on versioning and both of those become safer: overwrites add a new version, and deletes add a marker that hides the object instead of erasing it. MFA delete then puts a second lock on the truly permanent deletes.</p>
+
+  <h2>In one line</h2>
+  <p>S3 Versioning keeps multiple versions of an object under the same key in one bucket, a delete marker is the placeholder S3 inserts when you delete a versioned object without naming a version, and MFA delete is an optional setting that demands a one-time code from an MFA device before a version can be permanently deleted or the versioning state changed.</p>
+
+  <h2>The big idea</h2>
+  <p>In the first S3 digest we saw that a bucket is a flat list of keys. One thing that makes it risky is that a key points at one object: upload a new file to <code>report.csv</code> and the old one is gone, and delete <code>report.csv</code> and it's gone too. A typo in a script or a bug in an app can wipe out data in one call.</p>
+  <p>Versioning changes what those calls mean. A write now creates a new version next to the old one. A plain delete creates a marker on top of the stack. Nothing is lost until someone deletes a specific version on purpose. This digest walks through the three states a bucket can be in, what each request type does in each state, how you undelete something, the cost side effects, and the MFA delete lock.</p>
+  <p>Simplification label: I'll describe things from a single bucket's point of view. Other features (Object Lock, replication) interact with versioning too, and those come in later digests in this track. Where the docs I read say something specific, I say so, and I didn't quote prices.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Version</span>: one stored copy of an object under a key. A key can have many versions in a versioned bucket.</li>
+    <li><span class="keyterm-term">Version ID</span>: the identifier S3 generates for a version. Only S3 generates version IDs and you can't edit them. The docs describe them as opaque, URL-ready UTF-8 strings of no more than 1,024 bytes.</li>
+    <li><span class="keyterm-term">Current version</span>: the newest version of a key. A plain GET returns this one.</li>
+    <li><span class="keyterm-term">Noncurrent version</span>: an older version that has been superseded by a newer write or by a delete marker.</li>
+    <li><span class="keyterm-term">Simple DELETE</span>: a delete request that doesn't include a version ID.</li>
+    <li><span class="keyterm-term">Delete marker</span>: a zero-data placeholder version that S3 inserts for a simple DELETE in a versioning-enabled (or suspended) bucket. It makes the key look deleted.</li>
+    <li><span class="keyterm-term">null version</span>: the version ID given to objects stored while the bucket was unversioned, or stored while versioning is suspended.</li>
+    <li><span class="keyterm-term">Versioning subresource</span>: the bucket-level configuration where S3 stores the versioning status (and the MFA delete setting).</li>
+    <li><span class="keyterm-term">MFA (multi-factor authentication)</span>: proving who you are with something beyond your password or keys, here a six-digit code from a hardware or virtual device.</li>
+    <li><span class="keyterm-term">MFA delete</span>: a versioning setting that requires an MFA code to change the versioning state or permanently delete a version.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>0. Grounding: why overwrite and delete are dangerous without versioning</h3>
+  <p>Think of a bucket without versioning as a filing cabinet where every folder has a unique label (the key). Filing a new document under an existing label throws the old one in the shredder. Pulling a folder shreds it too. That's fine for scratch data and awful for anything precious.</p>
+  <p>The docs frame versioning as a way to keep multiple variants of an object in the same bucket so you can recover from unintended user actions and application failures. It is off by default: a new bucket is unversioned and you must turn versioning on yourself.</p>
+
+  <h3>1. The three bucket states</h3>
+  <p>A bucket is in one of three states: <strong>unversioned</strong> (the default), <strong>versioning-enabled</strong>, or <strong>versioning-suspended</strong>. You switch at the bucket level, and the state applies to all objects in the bucket, never just some.</p>
+  <ul>
+    <li><strong>One-way door.</strong> Once you enable versioning, the bucket can never go back to unversioned. You can only suspend it.</li>
+    <li><strong>Existing objects aren't rewritten.</strong> Objects already there keep a version ID of <code>null</code>, with the same contents and permissions. What changes is how S3 treats them in later requests.</li>
+    <li><strong>Suspending</strong> stops new versions piling up but doesn't delete the ones you have. Existing objects don't change.</li>
+    <li><strong>Who can turn it on:</strong> the bucket owner (the account that created the bucket) and authorized users.</li>
+  </ul>
+  <p>Under the hood, every bucket has a <em>versioning subresource</em>. An unversioned bucket stores an empty versioning configuration, and enabling it means sending a configuration with <code>Status</code> set to <code>Enabled</code> (or <code>Suspended</code> to suspend).</p>
+  <p>Practical caveat from the docs: after you enable versioning on a bucket for the first time, it can take up to 15 minutes to propagate fully. During that time you might see intermittent <code>404 NoSuchKey</code> errors for objects created or updated after enabling, and the docs recommend waiting 15 minutes before issuing writes or deletes.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="a1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#7A7A80"/></marker></defs>
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">THE THREE BUCKET STATES (A ONE-WAY DOOR)</text>
+      <rect x="20" y="60" width="160" height="80" rx="10" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.3"/>
+      <text x="100" y="92" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">Unversioned</text>
+      <text x="100" y="112" fill="#7A7A80" font-size="10" text-anchor="middle">default, IDs are null</text>
+      <rect x="230" y="60" width="160" height="80" rx="10" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="310" y="92" fill="#6FCF97" font-size="12" font-weight="700" text-anchor="middle">Enabled</text>
+      <text x="310" y="112" fill="#7A7A80" font-size="10" text-anchor="middle">new writes get IDs</text>
+      <rect x="440" y="60" width="160" height="80" rx="10" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/>
+      <text x="520" y="92" fill="#C8453A" font-size="12" font-weight="700" text-anchor="middle">Suspended</text>
+      <text x="520" y="112" fill="#7A7A80" font-size="10" text-anchor="middle">new writes are null</text>
+      <line x1="180" y1="100" x2="228" y2="100" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#a1)"/>
+      <line x1="390" y1="88" x2="438" y2="88" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#a1)"/>
+      <line x1="438" y1="116" x2="392" y2="116" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#a1)"/>
+      <text x="205" y="92" fill="#7A7A80" font-size="9" text-anchor="middle">enable</text>
+      <text x="310" y="180" fill="#C8453A" font-size="10.5" text-anchor="middle">no arrow back to Unversioned</text>
+      <text x="310" y="200" fill="#7A7A80" font-size="10" text-anchor="middle">existing objects are not rewritten when you switch</text>
+    </svg>
+    <figcaption>Fig 1. Enabled and suspended can toggle; unversioned is a place you only leave once.</figcaption>
+  </figure>
+
+  <h3>2. Version IDs and the stack of versions</h3>
+  <p>Each object has a version ID whether or not versioning is on. If versioning isn't enabled, the ID is <code>null</code>. Once enabled, S3 gives every new write a unique ID, so one bucket can hold, for example, <code>photo.gif</code> version 111111 and <code>photo.gif</code> version 121212 side by side (that's the docs' own illustration of the idea).</p>
+  <p>I like to picture each key as a stack of sheets. The top sheet is the current version. Reads without a version ID see the top sheet; everything underneath is noncurrent but still there.</p>
+
+  <h3>3. What each request does when versioning is enabled</h3>
+  <ul>
+    <li><strong>PUT (overwrite):</strong> the old object isn't overwritten. S3 adds a new version with a new ID; the old one becomes noncurrent and you can restore it.</li>
+    <li><strong>Simple DELETE:</strong> nothing is erased. S3 inserts a delete marker, which becomes the current version.</li>
+    <li><strong>GET with no version ID:</strong> returns the current version. If that's a delete marker, you get <code>404 Not Found</code>.</li>
+    <li><strong>GET with a version ID:</strong> returns that exact version, even if it's noncurrent.</li>
+    <li><strong>DELETE with a version ID:</strong> that version is permanently deleted and no delete marker is inserted. Only the bucket owner or an authorized IAM user can do this.</li>
+  </ul>
+  <p>When do new versions appear? Only when you PUT a new object. Some actions work by doing a PUT under the hood (the docs name <code>CopyObject</code>), so they create versions. Actions that modify the current object without a PUT, such as changing tags, don't create a new version.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 300" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="a2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#7A7A80"/></marker></defs>
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">ONE KEY, THREE MOMENTS (my own made-up IDs)</text>
+      <!-- col 1 -->
+      <text x="100" y="48" fill="#7A7A80" font-size="10.5" text-anchor="middle">1. PUT a.txt</text>
+      <rect x="40" y="62" width="120" height="40" rx="6" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="100" y="86" fill="#6FCF97" font-size="11" text-anchor="middle">v1 (current)</text>
+      <!-- col 2 -->
+      <text x="310" y="48" fill="#7A7A80" font-size="10.5" text-anchor="middle">2. PUT a.txt again</text>
+      <rect x="250" y="62" width="120" height="40" rx="6" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="310" y="86" fill="#6FCF97" font-size="11" text-anchor="middle">v2 (current)</text>
+      <rect x="250" y="110" width="120" height="40" rx="6" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.3"/>
+      <text x="310" y="134" fill="#C9C7C1" font-size="11" text-anchor="middle">v1 (noncurrent)</text>
+      <!-- col 3 -->
+      <text x="520" y="48" fill="#7A7A80" font-size="10.5" text-anchor="middle">3. simple DELETE a.txt</text>
+      <rect x="460" y="62" width="120" height="40" rx="6" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3" stroke-dasharray="4 3"/>
+      <text x="520" y="86" fill="#C8453A" font-size="10.5" text-anchor="middle">delete marker</text>
+      <rect x="460" y="110" width="120" height="40" rx="6" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.3"/>
+      <text x="520" y="134" fill="#C9C7C1" font-size="11" text-anchor="middle">v2 (noncurrent)</text>
+      <rect x="460" y="158" width="120" height="40" rx="6" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.3"/>
+      <text x="520" y="182" fill="#C9C7C1" font-size="11" text-anchor="middle">v1 (noncurrent)</text>
+      <line x1="162" y1="82" x2="248" y2="82" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#a2)"/>
+      <line x1="372" y1="82" x2="458" y2="82" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#a2)"/>
+      <text x="310" y="232" fill="#F2EFE9" font-size="11" text-anchor="middle">GET a.txt after step 3 returns 404 (current is a marker)</text>
+      <text x="310" y="252" fill="#6FCF97" font-size="11" text-anchor="middle">GET a.txt?versionId=v2 still returns the data</text>
+      <text x="310" y="276" fill="#7A7A80" font-size="10" text-anchor="middle">every box is a full copy of the object, not a diff</text>
+    </svg>
+    <figcaption>Fig 2. Overwrites push a new version on top; a simple delete pushes a marker on top.</figcaption>
+  </figure>
+
+  <h3>4. Delete markers in detail</h3>
+  <p>A delete marker is a placeholder that makes S3 behave as if the object is deleted. It has a key and a version ID like any other version, but differs in a few ways:</p>
+  <ul>
+    <li>It has no data and no ACL value.</li>
+    <li>A GET without a version ID returns <code>404 Not Found</code>, and the response includes the header <code>x-amz-delete-marker: true</code>.</li>
+    <li>A GET <em>with</em> the marker's own version ID returns <code>405 Method Not Allowed</code>, with <code>x-amz-delete-marker: true</code> and a <code>Last-Modified</code> header giving the marker's creation time.</li>
+    <li>Normal listings (<code>ListObjectsV2</code>, <code>ListObjects</code>) don't return objects whose current version is a delete marker. To see markers and all other versions you use <code>ListObjectVersions</code> (in the console, the "Show versions" or "List versions" toggle).</li>
+    <li>Only S3 creates delete markers, and it does so when you send a <code>DeleteObject</code> request on an object in a versioning-enabled or suspended bucket.</li>
+    <li>It costs a tiny amount to store: its size equals the size of its key name (the docs say the UTF-8 encoding adds 1 to 4 bytes per character), and it's kept in S3 Standard.</li>
+  </ul>
+
+  <h3>5. Undeleting, and the trap that adds a second marker</h3>
+  <p>To "undelete" an object, you delete its delete marker, by sending a DELETE that includes the marker's version ID. Afterwards, a simple GET returns the newest remaining version. This is just the same permanent-delete-by-version-ID operation, aimed at the marker.</p>
+  <p>The trap: if you send a plain DELETE (no version ID) while the current version is already a delete marker, S3 doesn't remove the marker. It puts <em>another</em> marker on top with a new ID. So listing versions and using the marker's ID matters.</p>
+  <p>A related console limit from the docs: you can't use the console to undelete folders; use the CLI or an SDK.</p>
+  <p>Cleanup: an <em>expired object delete marker</em> is one where every other version is gone and only the marker remains. The docs say that if your lifecycle configuration is set to delete current versions, or the <code>ExpiredObjectDeleteMarker</code> action is set explicitly, S3 removes that leftover marker.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="a3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#7A7A80"/></marker></defs>
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">TWO DIFFERENT DELETES, TWO DIFFERENT RESULTS</text>
+      <rect x="20" y="44" width="280" height="180" rx="10" fill="#0E0E10" stroke="#7A7A80" stroke-width="1"/>
+      <text x="160" y="68" fill="#F2EFE9" font-size="11.5" font-weight="700" text-anchor="middle">DELETE key (no version ID)</text>
+      <rect x="60" y="86" width="200" height="34" rx="6" fill="#131316" stroke="#C8453A" stroke-dasharray="4 3"/>
+      <text x="160" y="107" fill="#C8453A" font-size="10.5" text-anchor="middle">+ new delete marker (current)</text>
+      <rect x="60" y="126" width="200" height="34" rx="6" fill="#131316" stroke="#7A7A80"/>
+      <text x="160" y="147" fill="#C9C7C1" font-size="10.5" text-anchor="middle">old versions all still here</text>
+      <text x="160" y="190" fill="#6FCF97" font-size="10.5" text-anchor="middle">reversible</text>
+      <text x="160" y="208" fill="#7A7A80" font-size="9.5" text-anchor="middle">GET now 404s, data not erased</text>
+      <rect x="320" y="44" width="280" height="180" rx="10" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/>
+      <text x="460" y="68" fill="#F2EFE9" font-size="11.5" font-weight="700" text-anchor="middle">DELETE key?versionId=X</text>
+      <rect x="360" y="86" width="200" height="34" rx="6" fill="#131316" stroke="#C8453A"/>
+      <text x="460" y="107" fill="#C8453A" font-size="10.5" text-anchor="middle">version X removed</text>
+      <rect x="360" y="126" width="200" height="34" rx="6" fill="#131316" stroke="#7A7A80"/>
+      <text x="460" y="147" fill="#C9C7C1" font-size="10.5" text-anchor="middle">no marker added</text>
+      <text x="460" y="190" fill="#C8453A" font-size="10.5" text-anchor="middle">permanent</text>
+      <text x="460" y="208" fill="#7A7A80" font-size="9.5" text-anchor="middle">this is the one MFA delete guards</text>
+    </svg>
+    <figcaption>Fig 3. The version ID is the difference between "hide it" and "destroy it".</figcaption>
+  </figure>
+
+  <h3>6. Suspended buckets (the confusing one)</h3>
+  <p>Suspending versioning stops new versions piling up, which the docs say you might do if you only want one version or don't want charges for multiple versions. But it doesn't erase history. What the docs say about requests in a suspended bucket:</p>
+  <ul>
+    <li><strong>PUT, POST or CopyObject:</strong> the new object gets version ID <code>null</code>. If a null version already exists, it is overwritten (same key and ID, new contents). If other versioned objects exist for that key, they are not overwritten; the null version just becomes the current one.</li>
+    <li><strong>Simple DELETE:</strong> it can only remove an object whose version ID is <code>null</code>, and it inserts a delete marker. If there's no null version it removes nothing but still inserts a marker. Because a marker has no content, you lose the null version's content when it's replaced this way.</li>
+    <li><strong>DELETE with a version ID:</strong> still permanently deletes that version, even in a suspended bucket, unless permissions were explicitly denied. The docs note that to block deleting null-version objects you must explicitly deny <code>s3:DeleteObject</code> and <code>s3:DeleteObjectVersions</code>.</li>
+  </ul>
+  <p>Beginner takeaway, labelled as a simplification: suspended is not the same as unversioned. Old versions remain and still cost money, and nulls can get overwritten.</p>
+
+  <h3>7. Cost and lifecycle: versions are full copies</h3>
+  <p>The docs are clear: normal S3 rates apply to every version stored and transferred, and each version is the entire object, not a diff. Three versions means you're charged for three objects. That's why versioning and lifecycle go together:</p>
+  <ul>
+    <li>In a versioned bucket the lifecycle <code>Expiration</code> action applies to the <em>current</em> version and, instead of deleting it, adds a delete marker.</li>
+    <li>The <code>NoncurrentVersionExpiration</code> action applies to noncurrent versions and permanently removes them. The docs warn you can't recover permanently removed objects.</li>
+    <li>If you had an expiration rule on an unversioned bucket and want the same permanent-delete behavior after enabling versioning, you must add a noncurrent expiration rule.</li>
+  </ul>
+  <p>The docs also mention that a key with millions of versions can show up as a rise in HTTP 503 responses on PUT or DELETE requests, which is one more reason to expire noncurrent versions.</p>
+
+  <h3>8. MFA delete: the second lock</h3>
+  <p>Versioning protects you from mistakes, but someone with valid credentials (or a stolen key) can still delete a version by ID. MFA delete adds a requirement: the bucket owner must include two forms of authentication in any request to <strong>permanently delete an object version</strong> or <strong>change the versioning state of the bucket</strong>. Those two forms are your security credentials plus the concatenation of the MFA device's serial number, a space, and the six-digit code it currently shows.</p>
+  <ul>
+    <li><strong>Who:</strong> only the bucket owner (the root account) can enable MFA delete. Per the docs, when MFA delete is configured only the root user can permanently delete versions or change the versioning configuration, authenticating with an MFA device.</li>
+    <li><strong>Where:</strong> you can't enable it in the console. Use the AWS CLI or the API. Deleting versions in an MFA-delete bucket isn't available via the console either.</li>
+    <li><strong>Header:</strong> requests carry <code>x-amz-mfa</code>, which must use HTTPS; without it the request fails. In the CLI it's the <code>--mfa</code> parameter.</li>
+    <li><strong>Storage:</strong> the setting lives in the same versioning subresource as the status (an <code>MfaDelete</code> element next to <code>Status</code>).</li>
+    <li><strong>Limit:</strong> the docs state you cannot use MFA delete with lifecycle configurations.</li>
+    <li><strong>Device serial:</strong> for a physical device it's the device's serial number; for a virtual device it's the device ARN.</li>
+  </ul>
+  <p>Don't confuse it with <em>MFA-protected API access</em>, a different feature that uses a bucket policy to require MFA-created temporary credentials for sensitive operations. MFA delete is about stopping accidental or unauthorized permanent deletes.</p>
+  <p>The CLI shapes from the docs (placeholders in braces):</p>
+<pre><code>aws s3api put-bucket-versioning --bucket {bucket} \
+  --versioning-configuration Status=Enabled,MFADelete=Enabled \
+  --mfa "{device-serial-or-arn} {six-digit-code}"
+
+aws s3api delete-object --bucket {bucket} --key {key} \
+  --version-id {versionId} --mfa "{device-serial} {code}"</code></pre>
+
+  <h2>Why it matters</h2>
+  <p>Versioning is the first line of defense against the two classic S3 disasters: an overwrite that replaced good data with bad, and a delete (by a person, a script, or a buggy deploy) that wiped something out. It also underpins things coming up in this track, such as replication and Object Lock, and it makes lifecycle rules more interesting because you now manage current and noncurrent versions separately. The price is cost creep and some new ways to be confused (delete markers, null versions), which is why every versioned bucket should have a plan for expiring old versions.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Versioning is off by default, set per bucket, and once enabled the bucket can only be suspended, never returned to unversioned.</li>
+      <li>With versioning enabled, a PUT adds a version and a simple DELETE adds a delete marker. Only a DELETE with a version ID destroys data.</li>
+      <li>To undelete, delete the delete marker by its version ID. A plain DELETE on a marker stacks another marker.</li>
+      <li>Every version is a full object billed normally, so pair versioning with noncurrent-version expiration.</li>
+      <li>MFA delete (CLI/API only, root account, not combinable with lifecycle) needs a device code to permanently delete versions or change versioning state.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <p style="font-size:14px;color:#7A7A80;margin-top:0">Projects 1 and 2 are offline. Projects 3 to 5 use the AWS CLI on a scratch bucket in your own account. I checked the commands against the docs' syntax but haven't run them against a live account. Project 5 skips MFA delete itself because it needs the root account, which I'd rather you not use casually. Empty and delete the scratch bucket afterwards (including all versions).</p>
+    <ol>
+      <li><strong>Version-stack simulator (offline, ~1 hour).</strong> Model a key as a list of versions. Implement put, simple delete, delete-by-version-ID, and get (with and without a version ID) for the enabled state. <em>Done when</em> your simulator reproduces Fig 2 and Fig 3, returns 404 for a plain GET on a marker, and adds a second marker when you simple-delete twice.</li>
+      <li><strong>Add the suspended state (offline, ~45 min).</strong> Extend project 1 with an Unversioned/Enabled/Suspended state, null IDs, and the suspended PUT and DELETE rules from section 6. <em>Done when</em> a null version is overwritten in place while versioned ones stay, and the "enabled to unversioned" transition is rejected.</li>
+      <li><strong>Enable and observe.</strong> Create a scratch bucket, run <code>aws s3api put-bucket-versioning --bucket NAME --versioning-configuration Status=Enabled</code>, wait the docs' recommended 15 minutes, then upload <code>a.txt</code> twice with different contents. Run <code>aws s3api list-object-versions --bucket NAME</code>. <em>Done when</em> you can point at two versions with different IDs and identify which is current.</li>
+      <li><strong>Delete and revive.</strong> Run <code>aws s3api delete-object --bucket NAME --key a.txt</code>, confirm <code>aws s3api get-object</code> fails with a not-found error while <code>list-object-versions</code> shows a delete marker, then remove the marker with <code>delete-object ... --version-id MARKER_ID</code>. <em>Done when</em> a plain get-object works again.</li>
+      <li><strong>Cost guard rule.</strong> Write a lifecycle JSON with a <code>NoncurrentVersionExpiration</code> rule (for example 7 noncurrent days, as in the docs' Python example) and apply it with <code>put-bucket-lifecycle-configuration</code>. <em>Done when</em> <code>get-bucket-lifecycle-configuration</code> returns it, and you can explain in two sentences why a current-version <code>Expiration</code> rule alone would leave old versions behind.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Read the "Troubleshooting versioning" page the docs link from the versioning overview, then think about how you'd detect a key with a huge number of versions. Next in this track: S3 encryption (SSE-S3, SSE-KMS, DSSE-KMS, SSE-C and bucket keys).</p>
+
+  <h2>Sources &amp; verify</h2>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/Versioning.html">Retaining multiple versions of objects with S3 Versioning</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/versioning-workflows.html">How S3 Versioning works</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/manage-versioning-examples.html">Enabling versioning on buckets</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/DeleteMarker.html">Working with delete markers</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/ManagingDelMarkers.html">Managing delete markers</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/DeletingObjectVersions.html">Deleting object versions from a versioning-enabled bucket</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/VersionSuspendedBehavior.html">Working with objects in a versioning-suspended bucket</a> (plus its <a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/AddingObjectstoVersionSuspendedBuckets.html">adding</a> and <a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/DeletingObjectsfromVersioningSuspendedBuckets.html">deleting</a> sub-pages)</li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/MultiFactorAuthenticationDelete.html">Configuring MFA delete</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingMFADelete.html">Deleting an object from an MFA delete-enabled bucket</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/s3api/put-bucket-versioning.html">AWS CLI: put-bucket-versioning</a></li>
+  </ul>
+  <p class="src-note">This is a teaching draft, not a substitute for the AWS documentation. Verify anything you rely on against the live docs. Notes on uncertainty: docs read in October 2026; no prices quoted; CLI commands were checked against the docs' examples, not run against a live account; the version IDs in diagrams are made-up short labels; I didn't read the console-specific or troubleshooting pages in full, and the statements about Object Lock and replication are deferred to later digests.</p>
+
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
