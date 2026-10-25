@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Engineering: Dataset Engineering (Part 1): Curating Data and Getting It</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+  pre { background: #0A0A0B; border: 1px solid var(--hairline); border-radius: 8px; padding: 12px 14px; overflow-x: auto; margin: 10px 0; }
+  pre code { background: none; padding: 0; font-size: 12px; line-height: 1.55; display: block; white-space: pre; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AI &middot; CH.8 DIGEST (PART 1)</p>
+  <h1>Dataset Engineering: Curating Data (Quality, Coverage, Quantity) and Getting It</h1>
+  <p class="lead">Chapter 7 ended on a refrain practitioners keep repeating: finetuning is the easy part, good data is the hard part. Chapter 8 is about that hard part. This first part covers why the field is shifting toward data, what kinds of data each training goal needs, the three criteria the chapter keeps coming back to (quality, coverage, quantity), and how you actually acquire and annotate data. The second part covers synthetic data, distillation and the cleaning pipeline.</p>
+
+  <h2>In one line</h2>
+  <p>A model is only as good as the examples it learns from, so designing a dataset means deciding what behaviors you want to show, and then checking that your data is good enough, varied enough, and big enough to show them.</p>
+
+  <h2>The big idea</h2>
+  <p>Fewer companies can afford to build models from scratch, so more of them compete on data. That has turned data work from a side task into a real discipline, with dedicated roles for labelers, dataset creators and data quality engineers. The chapter gives you a way to think about any dataset with three questions. Is each example good (quality)? Do the examples span what real users will do (coverage)? Are there enough of them (quantity)? The surprising lesson is how often the first two beat the third: a small, carefully made set can outperform a big noisy one. The chapter is upfront that, in practice, data work "will mostly just be toil, tears, and sweat". There are tools and best practices, but no shortcut around looking at your data.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Dataset engineering</span>: building the dataset that lets you train the best model you can within your budget.</li>
+    <li><span class="keyterm-term">Model-centric vs. data-centric AI</span>: improving performance by changing the model (architecture, size, training tricks) versus changing the data (better examples, fixed labels, new processing).</li>
+    <li><span class="keyterm-term">Data curation</span>: deciding what data you need and making sure you have it, including removing data that teaches bad behavior.</li>
+    <li><span class="keyterm-term">Instruction data</span>: (instruction, response) pairs, used for supervised finetuning.</li>
+    <li><span class="keyterm-term">Preference data</span>: (instruction, winning response, losing response) triplets.</li>
+    <li><span class="keyterm-term">Reward model</span>: a model that scores responses; its training data can be preference data or ((instruction, response), score) records.</li>
+    <li><span class="keyterm-term">Chain-of-thought (CoT) data</span>: examples whose responses work through a problem step by step.</li>
+    <li><span class="keyterm-term">Single-turn vs. multi-turn data</span>: one exchange versus a back-and-forth conversation.</li>
+    <li><span class="keyterm-term">Data quality / coverage (diversity) / quantity</span>: the three curation criteria, explained below.</li>
+    <li><span class="keyterm-term">Annotation guideline</span>: written instructions telling annotators exactly what a good answer is and how to score it.</li>
+    <li><span class="keyterm-term">Annotator</span>: a person (or, increasingly, an AI) who labels or writes examples.</li>
+    <li><span class="keyterm-term">PII</span>: personally identifiable information, such as names and addresses.</li>
+    <li><span class="keyterm-term">Ossification</span>: the effect where pre-training makes a model's weights too rigid to adapt well to finetuning data.</li>
+    <li><span class="keyterm-term">Data flywheel</span>: a loop where your product's usage produces data that improves the product.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>Grounding: why data is suddenly the headline</h3>
+  <p>For most of deep learning's early years, AI benchmarks held the data fixed and asked people to build a better model. ImageNet is the classic case: same images, best model wins. That's <strong>model-centric</strong> AI. The mirror image is <strong>data-centric</strong> AI: hold the model fixed and compete on the data. The chapter lists examples. In 2021, a data-centric competition had everyone improve the same base dataset by fixing wrong labels, adding edge cases and augmenting. In 2023 and 2024, DataComp-style competitions judged datasets by how well a standard training recipe performed on them afterward.</p>
+  <p>The chapter's own caution: this split helps guide research, but real progress usually needs investment in both. It also notes how much the human side has grown: the GPT-3 contribution list credited two people with data collection, filtering and deduplication, while GPT-4's credited eighty in various data processes (the chapter's footnote, and not counting contracted annotators).</p>
+  <p>A scope note. Different training phases need differently shaped data (pre-training is often counted in tokens, finetuning in examples), but the curation principle is the same. The chapter focuses on <strong>post-training data</strong> because that's what application developers touch, and borrows pre-training lessons where they help.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 200" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs>
+        <marker id="d1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7A7A80"/></marker>
+      </defs>
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">TWO WAYS TO IMPROVE AN AI SYSTEM</text>
+      <rect x="20" y="40" width="270" height="120" rx="10" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="155" y="64" fill="#F2EFE9" font-size="11" font-weight="700" text-anchor="middle">MODEL-CENTRIC</text>
+      <text x="155" y="88" fill="#C9C7C1" font-size="9.5" text-anchor="middle">dataset: held fixed</text>
+      <text x="155" y="106" fill="#C8453A" font-size="9.5" text-anchor="middle">change: architecture, size,</text>
+      <text x="155" y="120" fill="#C8453A" font-size="9.5" text-anchor="middle">training technique</text>
+      <rect x="330" y="40" width="270" height="120" rx="10" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="465" y="64" fill="#F2EFE9" font-size="11" font-weight="700" text-anchor="middle">DATA-CENTRIC</text>
+      <text x="465" y="88" fill="#C9C7C1" font-size="9.5" text-anchor="middle">model: held fixed</text>
+      <text x="465" y="106" fill="#6FCF97" font-size="9.5" text-anchor="middle">change: labels, edge cases,</text>
+      <text x="465" y="120" fill="#6FCF97" font-size="9.5" text-anchor="middle">cleaning, new examples</text>
+      <text x="310" y="184" fill="#7A7A80" font-size="9" text-anchor="middle">In real projects you usually do both; the split is a way of organizing research.</text>
+    </svg>
+    <figcaption>Which knob are you turning?</figcaption>
+  </figure>
+
+  <h3>What data format does each goal need?</h3>
+  <p>Start from the behavior you want, then pick the data shape:</p>
+  <ul>
+    <li><strong>Self-supervised finetuning:</strong> sequences of text, no labels.</li>
+    <li><strong>Instruction finetuning:</strong> (instruction, response).</li>
+    <li><strong>Preference finetuning:</strong> (instruction, winning response, losing response).</li>
+    <li><strong>Reward model training:</strong> the preference format, or scored records in the form ((instruction, response), score).</li>
+  </ul>
+  <p>The training data should <em>exhibit</em> the behavior you want. That's easy to say and expensive to do for complex behaviors. The chapter works through two.</p>
+  <p><strong>Chain-of-thought.</strong> To get a model to reason step by step, the training responses must contain steps. The chapter cites work showing that adding step-by-step responses to finetuning data greatly improved CoT task performance across model sizes, with accuracy nearly doubling on some tasks. But writing out the reasoning for a math problem takes far more effort than writing the final answer, which is why CoT datasets are less common than plain instruction datasets.</p>
+  <p><strong>Tool use.</strong> Models often already know something about tools from pre-training, but examples help. A typical approach uses domain experts: for a personal-assistant model, ask professional assistants what they do and which tools they use. The catch is twofold. People forget steps when describing their work, so it's often necessary to watch them do it. And what's efficient for a human may not be efficient for an AI: a person opens a browser and clicks results, whereas a model can call a search API and process all results at once. That's why many teams turn to simulation for tool-use data (Part 2). Tool use may also need special formats; the chapter describes Llama 3's multi-message format, where each message has a header naming its source and destination, because one AI turn might send one message to a code interpreter and another to the user.</p>
+  <p><strong>Single-turn or multi-turn?</strong> Single-turn data teaches a model to answer one instruction and is easier to get. Multi-turn data teaches how to solve tasks, since real tasks involve clarifying questions and corrections, but needs purpose-built scenarios or more involved interactions.</p>
+  <p><strong>Curation also removes.</strong> It isn't only about adding. The chapter's example: users complain a chatbot is arrogant, because when asked to verify a statement it adds an unsolicited rewrite. You investigate and find training annotations containing unsolicited suggestions. The fix is to remove those examples and add new ones that fact-check without rewriting. (This is the chapter's illustrative scenario.)</p>
+
+  <h3>The three criteria: quality, coverage, quantity</h3>
+  <p>The chapter uses a cooking analogy: quality is how fresh the ingredients are, coverage is having the right mix of ingredients, and quantity is how much of them you have.</p>
+
+  <h3>Criterion 1: data quality</h3>
+  <p>The headline finding is that a small amount of high-quality data can outperform a lot of noisy data. Evidence the chapter cites: the Yi model family's creators found 10K carefully crafted instructions better than hundreds of thousands of noisy ones, and the LIMA study finetuned a 65B model on just 1,000 curated prompt-response pairs and got answers judged equal or preferred to GPT-4's in 43% of cases by human annotators. The same chapter notes the downside: LIMA wasn't as robust as product-grade models. The Llama 3 team also found human-written data can be more error-prone and inconsistent, particularly for nuanced safety policy, which led them to build AI-assisted annotation tools.</p>
+  <p>What <em>is</em> high quality? The chapter's short answer: data that helps you do your job efficiently and reliably. The longer answer, for finetuning, is six characteristics:</p>
+  <ol>
+    <li><strong>Relevant.</strong> Matches the task. A 19th-century legal dataset is irrelevant for modern legal questions, but ideal for questions about the 19th-century legal system.</li>
+    <li><strong>Aligned with task requirements.</strong> Annotations should match what the task demands: factually correct if it needs facts, creative if it needs creativity, concise if it needs brevity, with a justification if it needs a justification. The chapter uses "aligned" instead of "correct" on purpose, since the correct answer may not be what a user wants.</li>
+    <li><strong>Consistent.</strong> Two annotators labeling the same example shouldn't differ wildly, and two essays given the same score should be of similar quality. Inconsistent labels confuse the model. Clear annotation guidelines are what get you both alignment and consistency.</li>
+    <li><strong>Correctly formatted.</strong> Strip stray formatting that interferes with learning (HTML tags from scraped reviews), and watch for trailing whitespace, newlines, inconsistent casing and numeric formats. The author recalls a painful bug where a float column was stored as integers and rounded.</li>
+    <li><strong>Sufficiently unique.</strong> Duplicates can bias the model and cause contamination. "Sufficiently" because some use cases tolerate some duplication.</li>
+    <li><strong>Compliant.</strong> Follows your internal and external policies and laws. If you may not train on PII, your data can't contain any.</li>
+  </ol>
+  <p><em>Simplification:</em> these six are the chapter's working checklist for finetuning data, not an industry standard. The chapter notes other organizations define data quality with different dimension lists (for example, completeness, timeliness and so on), and that specific use cases add their own.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">SIX CHECKS FOR A FINETUNING EXAMPLE</text>
+      <g font-size="10">
+        <rect x="20" y="40" width="180" height="62" rx="8" fill="#0E0E10" stroke="#7A7A80"/><text x="110" y="62" fill="#F2EFE9" font-weight="700" text-anchor="middle">RELEVANT</text><text x="110" y="82" fill="#C9C7C1" font-size="9" text-anchor="middle">is it about my task?</text>
+        <rect x="220" y="40" width="180" height="62" rx="8" fill="#0E0E10" stroke="#7A7A80"/><text x="310" y="62" fill="#F2EFE9" font-weight="700" text-anchor="middle">ALIGNED</text><text x="310" y="82" fill="#C9C7C1" font-size="9" text-anchor="middle">does it show what I want?</text>
+        <rect x="420" y="40" width="180" height="62" rx="8" fill="#0E0E10" stroke="#7A7A80"/><text x="510" y="62" fill="#F2EFE9" font-weight="700" text-anchor="middle">CONSISTENT</text><text x="510" y="82" fill="#C9C7C1" font-size="9" text-anchor="middle">same call each time?</text>
+        <rect x="20" y="120" width="180" height="62" rx="8" fill="#0E0E10" stroke="#7A7A80"/><text x="110" y="142" fill="#F2EFE9" font-weight="700" text-anchor="middle">FORMATTED</text><text x="110" y="162" fill="#C9C7C1" font-size="9" text-anchor="middle">no stray tags / spaces?</text>
+        <rect x="220" y="120" width="180" height="62" rx="8" fill="#0E0E10" stroke="#7A7A80"/><text x="310" y="142" fill="#F2EFE9" font-weight="700" text-anchor="middle">UNIQUE</text><text x="310" y="162" fill="#C9C7C1" font-size="9" text-anchor="middle">not a duplicate?</text>
+        <rect x="420" y="120" width="180" height="62" rx="8" fill="#0E0E10" stroke="#C8453A"/><text x="510" y="142" fill="#C8453A" font-weight="700" text-anchor="middle">COMPLIANT</text><text x="510" y="162" fill="#C9C7C1" font-size="9" text-anchor="middle">allowed to use it?</text>
+      </g>
+      <text x="310" y="220" fill="#7A7A80" font-size="9" text-anchor="middle">Annotation guidelines are the tool that makes "aligned" and "consistent" happen.</text>
+    </svg>
+    <figcaption>The chapter's six quality characteristics, as a checklist</figcaption>
+  </figure>
+
+  <h3>Criterion 2: data coverage (diversity)</h3>
+  <p>Your training data should span the range of problems and styles your users will bring: detailed versus terse instructions, typos, different programming languages, different tones. Which dimensions matter depends on the application. A French-to-English tool doesn't need language diversity but may benefit from variety in topic, length and speaking style, whereas a global product-recommendation chatbot needs linguistic and cultural diversity more than domain diversity. For general-purpose chatbots, the chapter says to cover a wide range of topics and speaking patterns, and cites NVIDIA's Nemotron effort, which deliberately varied tasks, topics and instructions (including output format, length, and open-ended versus yes-or-no answers). One caution from the chapter: a paper found that in some cases adding more <em>heterogeneous</em> data can make performance worse, so "more diverse" isn't automatically better.</p>
+  <p><strong>A real data mix.</strong> The chapter uses Meta's Llama 3 report to show how the mix changes by phase. Its table (domain shares by phase) shows, for example, general knowledge at 50% in pre-training, 52.66% in supervised finetuning and 81.99% in preference finetuning, with math and reasoning at 25%, 21.19% and 5.89%, and coding at 17%, 14.89% and 6.93%. Math, reasoning and code are nearly half of pre-training and SFT data, which the author suspects is far above their share of the internet. The report said annealing on small amounts of high-quality code and math data boosted key benchmarks. The preference-tuning mix has much less code and math, likely because the goal is to mirror the real distribution of user preferences. These are the numbers as the chapter reports them for one model family, not a recipe.</p>
+  <p><strong>How do you choose a mix?</strong> A simple approach is to mirror real usage. A more empirical approach, used by Meta: train several small models on each candidate mix and extrapolate (scaling-law style) to predict how a large model would do.</p>
+  <p><strong>Quality and diversity together.</strong> The chapter describes an experiment training a 7B model on three 2,000-example datasets: high quality but not diverse, diverse but low quality, and both. The one that was both high quality and diverse produced the best model.</p>
+
+  <h3>Criterion 3: data quantity</h3>
+  <p>"How much data do I need?" is like "how much money do I need?" The answer ranges from one example (a fun experiment showed models can learn from a single example) to millions. For scale: Llama 2 and Llama 3 were trained on 2 trillion and 16 trillion tokens, which the chapter equates to about 1 billion and 15 billion examples at 2,000 tokens each, dwarfing even a million-example finetuning set.</p>
+  <p><em>Sidebar: should I train from scratch if I have millions?</em> Worth evaluating. The chapter flags <strong>ossification</strong>: pre-training can make weights too rigid to adapt well to a lot of finetuning data, and smaller models are more susceptible. So finetuning isn't always better, especially with abundant data.</p>
+  <p>Besides quality and diversity, three things set how much data you need:</p>
+  <ul>
+    <li><strong>Finetuning technique.</strong> Full finetuning needs orders of magnitude more data than PEFT such as LoRA. Tens of thousands to millions of pairs suggests trying full finetuning; a few hundred to a few thousand suggests PEFT.</li>
+    <li><strong>Task complexity.</strong> Sentiment classification needs far less than question answering over financial filings.</li>
+    <li><strong>Base model strength.</strong> The closer the base model is to what you want, the fewer examples you need, so bigger base models need fewer finetuning examples (the reverse of pre-training). OpenAI's finetuning guide shows that with 100 examples, more advanced models finetune much better, but with 550,000 examples all five models tested performed similarly. The chapter's takeaway: small data, use PEFT on a stronger model; large data, full finetuning on a smaller model can work.</li>
+  </ul>
+  <p><strong>Start small.</strong> Before investing in a big dataset, try a small, well-crafted set (say 50 examples). If it helps, more data likely helps more; if nothing improves, a bigger dataset rarely fixes that. But the chapter cautions against concluding too fast: bad hyperparameters, low data quality or weak prompts can all mask gains. It says that in the vast majority of cases you should see improvement with 50 to 100 examples. <em>Caveat:</em> that is the author's experience-based rule, not a guarantee.</p>
+  <p><strong>Lower-quality data first.</strong> You can reduce how much expensive data you need by finetuning first on cheaper material. Three patterns: self-supervised then supervised (raw legal documents, then question-answer pairs), less-relevant then relevant (tweet sentiment, then product sentiment), and synthetic then real (generate lots of synthetic medical reports, then finetune on your limited real ones). The chapter warns the last is harder to get right: two finetuning jobs to coordinate, and you can burn compute for a worse model than just finetuning on high-quality data.</p>
+  <p><strong>Estimate the payoff.</strong> Finetune on 25%, 50% and 100% of your data and plot performance against size. A steep slope means doubling the data should help a lot; a plateau means it won't. Usually you get diminishing returns (the first 1,000 examples might add ten points, the next 1,000 only five, to use the chapter's illustration). And diversity matters as well as count: one paper found big gains as the number of finetuning <em>tasks</em> rose from 9 to 282, then a plateau, with small improvements out to 1,836 tasks. Diversity can show up in task types, topics and output formats.</p>
+  <p>Finally, budget caps everything. If you have $10,000 for annotation at $2 an example, that's 5,000 examples at most, and money spent on data isn't available for compute.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">DIMINISHING RETURNS (SCHEMATIC, NOT REAL DATA)</text>
+      <line x1="70" y1="200" x2="570" y2="200" stroke="#7A7A80"/>
+      <line x1="70" y1="40" x2="70" y2="200" stroke="#7A7A80"/>
+      <text x="320" y="228" fill="#C9C7C1" font-size="10" text-anchor="middle">number of training examples</text>
+      <text x="22" y="120" fill="#C9C7C1" font-size="10" transform="rotate(-90 22 120)" text-anchor="middle">performance</text>
+      <path d="M70,190 C130,110 200,80 300,64 C400,52 480,48 560,46" fill="none" stroke="#6FCF97" stroke-width="2"/>
+      <circle cx="120" cy="134" r="4" fill="#F2EFE9"/><text x="128" y="152" fill="#F2EFE9" font-size="9">25%</text>
+      <circle cx="220" cy="82" r="4" fill="#F2EFE9"/><text x="228" y="100" fill="#F2EFE9" font-size="9">50%</text>
+      <circle cx="400" cy="54" r="4" fill="#F2EFE9"/><text x="408" y="74" fill="#F2EFE9" font-size="9">100%</text>
+      <text x="170" y="62" fill="#6FCF97" font-size="9.5" text-anchor="middle">steep: more data pays</text>
+      <text x="480" y="90" fill="#C8453A" font-size="9.5" text-anchor="middle">flattening: more data pays less</text>
+    </svg>
+    <figcaption>Train on subsets of your data to see which part of the curve you're on</figcaption>
+  </figure>
+
+  <h3>Data acquisition and annotation</h3>
+  <p>The aim is a dataset of the size, quality and diversity you need, while respecting user privacy and regulations. Sources: public data, purchased proprietary data, annotation, and synthesis. The chapter points out the most valuable source is usually <strong>your own application's data</strong>: it's perfectly relevant and matches the distribution you care about. If you can build a <em>data flywheel</em> (usage produces data that improves the product), you gain an advantage. User-generated data can be user content, system-generated usage data, or explicit feedback. (Designing feedback is the subject of Chapter 10.)</p>
+  <p>Before creating data, check what exists: marketplaces offer open and proprietary sets. Usually the result is mix-and-match. The chapter's illustrative walk-through of building an instruction set:</p>
+  <ol>
+    <li>Find a promising dataset (say 10,000 examples).</li>
+    <li>Remove low-quality instructions (9,000 left).</li>
+    <li>Set aside examples with low-quality responses (3,000), leaving 6,000 with good instructions and good responses.</li>
+    <li>Write responses by hand for those 3,000 good instructions (now 9,000 good examples).</li>
+    <li>Notice a gap in topic X, write instruction templates for it, and use AI to synthesize 2,000 instructions from them.</li>
+    <li>Annotate those synthetic instructions by hand (now 11,000).</li>
+  </ol>
+  <p>The author stresses this is a heavily simplified sketch: real life adds rounds of rewriting guidelines, re-annotating, fact-checking with a second set of annotators, or discovering that too many instructions per template hurt diversity.</p>
+  <p><strong>Public datasets, with a warning.</strong> The chapter lists places to look (Hugging Face, Kaggle, Google Dataset Search, government portals like Data.gov, academic repositories, cloud-hosted open data collections such as AWS Open Data, built-in framework datasets, and evaluation harness datasets) and insists that you should never fully trust any dataset. Inspect and validate it, always check the license, and understand where it comes from, because even a commercially licensed dataset may include material from a source that isn't.</p>
+  <p><strong>Annotation is hard mostly because of the guidelines.</strong> You must state what a good response looks like and why. Can a response be correct but unhelpful? What separates a 3 from a 4? Guidelines are needed for human and AI annotators alike. The chapter reports that some teams, including LinkedIn, found annotation guidelines among the hardest parts of their pipeline, and it's "alarming" how often people abandon careful annotation halfway and hope the model figures it out. Good news: the guidelines are the same as for evaluation data (Chapter 4), so effort there pays twice, and your evaluation examples can serve as seeds for synthesis.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs>
+        <marker id="d2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7A7A80"/></marker>
+        <marker id="d2g" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#6FCF97"/></marker>
+      </defs>
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">DATA FLYWHEEL</text>
+      <rect x="40" y="70" width="130" height="60" rx="10" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="105" y="96" fill="#F2EFE9" font-size="11" font-weight="700" text-anchor="middle">PRODUCT</text>
+      <text x="105" y="114" fill="#C9C7C1" font-size="9" text-anchor="middle">users use it</text>
+      <rect x="245" y="40" width="130" height="60" rx="10" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="310" y="66" fill="#F2EFE9" font-size="11" font-weight="700" text-anchor="middle">DATA</text>
+      <text x="310" y="84" fill="#C9C7C1" font-size="9" text-anchor="middle">content, usage, feedback</text>
+      <rect x="450" y="70" width="130" height="60" rx="10" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="515" y="96" fill="#F2EFE9" font-size="11" font-weight="700" text-anchor="middle">BETTER MODEL</text>
+      <text x="515" y="114" fill="#C9C7C1" font-size="9" text-anchor="middle">after curation + training</text>
+      <path d="M170,90 C200,70 220,70 243,70" fill="none" stroke="#6FCF97" marker-end="url(#d2g)"/>
+      <path d="M375,70 C410,70 430,80 448,90" fill="none" stroke="#6FCF97" marker-end="url(#d2g)"/>
+      <path d="M515,132 C515,190 105,190 105,132" fill="none" stroke="#6FCF97" marker-end="url(#d2g)"/>
+      <text x="310" y="212" fill="#7A7A80" font-size="9" text-anchor="middle">Still needs curation, privacy handling and compliance at each step.</text>
+    </svg>
+    <figcaption>Why application data is the most valuable data (when you have it)</figcaption>
+  </figure>
+
+  <h2>Why it matters</h2>
+  <p>Part 1 turns "get some data" into a checklist. When a finetune disappoints, you can ask which criterion failed: are examples noisy (quality), are whole kinds of user requests missing (coverage), or is there simply too little (quantity)? It also tells you where the real cost lives: not the training run, but the guidelines, the annotation and the inspection.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Data curation has three criteria: quality, coverage (diversity) and quantity, and the first two often beat sheer volume.</li>
+      <li>The chapter's six data-quality checks: relevant, aligned with task requirements, consistent, correctly formatted, sufficiently unique, compliant.</li>
+      <li>Different training phases want different data mixes; Llama 3's reported mixes differ a lot between pre-training, SFT and preference tuning.</li>
+      <li>How much data you need depends on finetuning method, task complexity and base model strength; test on small slices (like 50 examples, then 25/50/100% of your set) before scaling up.</li>
+      <li>Your own application data is usually the best data, and annotation guidelines are the hardest part of annotation.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Dataset audit script.</strong> Take any small instruction dataset (10 to 200 rows, from your own notes or a public dataset whose license you've checked) as a CSV. Write a script that reports: row count, min/median/max lengths for instructions and responses, number of exact duplicate instructions, and number of identical instructions with different responses. Done when it prints those numbers and you've opened ten random rows and written down one problem you only saw by eye.</li>
+      <li><strong>Annotation guideline drill.</strong> Pick a task (for example, scoring helpful answers to cooking questions from 1 to 5) and write a one-page guideline with a definition of each score and two worked examples per score. Then have yourself or a friend label the same ten answers independently and compute the percentage of agreement. Done when you've found at least one rule that was ambiguous and rewritten it.</li>
+      <li><strong>Learning-curve experiment, no GPU.</strong> Use any small text classification task (even a sentiment set) with scikit-learn or a simple model of your choice. Train on 25%, 50% and 100% of the training set, record accuracy, and plot or print the three points. Done when you can say whether more data would pay off for your task and why. This mirrors the chapter's idea on a toy scale; it isn't an LLM finetune.</li>
+      <li><strong>Coverage matrix.</strong> For an app idea, list 3 to 4 dimensions of variation (for example topic, length, tone, language) and 3 values each. Tag 30 example prompts against them in a spreadsheet. Done when you can point to cells of the matrix with zero examples and write one example prompt for each.</li>
+      <li><strong>Mix planner.</strong> Given a budget of 5,000 examples at $2 each (the chapter's arithmetic) and five slices of real usage with percentages you invent, compute how many examples each slice gets under "mirror real usage" and under "boost rare but important slices." Done when you can write a two-sentence argument for which mix you'd start with and what experiment would test it.</li>
+      <li><strong>License and lineage checklist.</strong> Find a public dataset and write down its stated license, where its data came from, and what you cannot verify. Done when you've listed at least two questions you would need answered before using it in a product.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Reread the six quality characteristics and apply them to a dataset you know. Next question to chase: if humans are slow and expensive at all this, can AI generate and verify the data? That's Part 2.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, written to help you build a mental model quickly. It is not a substitute for the source text; verify anything you plan to rely on, especially specific research results, vendor features and any figure you intend to quote, against the original source or current documentation.</p>
+  <ul class="src-list">
+    <li><em>AI Engineering</em> by Chip Huyen (O'Reilly), Chapter 8, "Dataset Engineering." This digest (Part 1) covers printed pages 363-380 (PDF pages 387-404): the chapter opener, A Data-Centric View of AI, Data Curation (what data you need, data quality, data coverage, data quantity), and Data Acquisition and Annotation including the public dataset resources list, stopping where "Data Augmentation and Synthesis" begins. Part 2 covers synthesis, distillation and processing.</li>
+    <li>Papers and reports named in the chapter that I did not read directly: Zhou et al. 2023 (LIMA and the quality/diversity experiment), Young et al. 2024 (Yi), Dubey et al. 2024 (Llama 3), Chung et al. 2022 (instruction-finetuned models), Hernandez et al. 2021 (ossification), OpenAI's finetuning guide. Everything here about them is as the chapter reports it.</li>
+  </ul>
+  <p class="src-note">Flagged for accuracy: (1) The six quality characteristics are the chapter's own working list; other definitions exist. (2) The Llama 3 data-mix percentages are the chapter's table for that model family and will not transfer to your project. (3) "50 to 100 examples should show improvement" is the author's experience, not a guarantee, and the chapter itself lists reasons it can fail. (4) The 10,000 to 11,000 example walk-through and the $10,000 / $2 budget arithmetic are the chapter's illustrations. (5) The learning-curve figure is a schematic of the idea, not data. (6) My projects use small non-LLM tasks to teach the data habits; they are not runnable proofs of the chapter's LLM results. (7) The chapter's resource list of public datasets is described here only in general terms; verify any site and its license yourself.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
