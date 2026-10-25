@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>High Performance MySQL: Inside the Optimizer, Join Order, Sorting and Execution (Part 2)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">SQL &middot; CH.8 DIGEST (PART 2)</p>
+  <h1>Inside the Optimizer: Cost, Join Order, Sorting and the Execution Engine</h1>
+  <p class="lead">Part 1 followed a query to the server's door. Part 2 goes inside: how MySQL turns your SQL into a plan, how it guesses which plan is cheapest, how it decides the order to join tables, what a "filesort" really is, and how the plan is then carried out one small step at a time.</p>
+
+  <h2>In one line</h2>
+  <p>MySQL doesn't run your SQL as written; it parses it, rewrites it, estimates the cost of alternative plans, picks one, and then executes that plan with a small set of low-level storage engine calls.</p>
+
+  <h2>The big idea</h2>
+  <p>You write <em>what</em> you want. The server decides <em>how</em> to get it. The "how" is chosen by a component called the <strong>query optimizer</strong>, which compares possible plans using estimated costs and picks the cheapest guess. Because it's guessing from statistics, it is usually good and sometimes wrong, and knowing the reasons it can be wrong is what lets you help it (or leave it alone).</p>
+  <p>The single most important message of this part, in the source's own emphasis, is: <strong>don't preemptively try to outsmart the optimizer.</strong> You can end up defeating it, or making your queries harder to maintain for no benefit. Learn what it does so you can tell when it genuinely needs help.</p>
+  <p>This part covers printed pages 205 to 218: "The Query Optimization Process" (parser and preprocessor, the optimizer, cost, static vs dynamic optimizations, the list of optimizations, statistics, join execution, the execution plan, the join optimizer, sort optimizations), "The Query Execution Engine," and "Returning Results to the Client." Part 3 covers optimizer limitations and specific query types.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Parser</span>: breaks the SQL text into tokens and builds a parse tree, checking it follows the SQL grammar.</li>
+    <li><span class="keyterm-term">Preprocessor</span>: checks things the parser can't, such as whether tables and columns exist, whether names are ambiguous, and whether you have the privileges.</li>
+    <li><span class="keyterm-term">Query optimizer</span>: the part that turns a valid parse tree into an execution plan.</li>
+    <li><span class="keyterm-term">Cost-based</span>: choosing among plans by predicted cost. <span class="keyterm-term">Cost</span> is an abstract unit, originally "one random 4 KB page read," now more elaborate.</li>
+    <li><span class="keyterm-term">Statistics</span>: numbers about tables and indexes (pages, distinct values, row length) that the optimizer uses to guess.</li>
+    <li><span class="keyterm-term">Cardinality</span>: the number of distinct values in an index or column. A <code>yes/no</code> column has low cardinality.</li>
+    <li><span class="keyterm-term">Static vs dynamic optimization</span>: static can be done once from the query's shape; dynamic depends on actual values and data, so it's re-evaluated every run.</li>
+    <li><span class="keyterm-term">Nested-loop join</span>: for each row from table A, look for matching rows in table B, and so on.</li>
+    <li><span class="keyterm-term">Hash join</span>: build an in-memory lookup table (a hash) from one input, then probe it with rows from the other.</li>
+    <li><span class="keyterm-term">Left-deep tree</span>: a join plan that always starts with one table and joins the next table into the result, one at a time.</li>
+    <li><span class="keyterm-term">Search space</span>: the set of all possible plans the optimizer could consider.</li>
+    <li><span class="keyterm-term">STRAIGHT_JOIN</span>: a keyword that forces tables to be joined in the order you wrote them.</li>
+    <li><span class="keyterm-term">Filesort</span>: MySQL's name for sorting rows itself when an index can't provide the order. Not necessarily a file.</li>
+    <li><span class="keyterm-term">Handler (storage engine API)</span>: the interface the server uses to ask an engine for rows, e.g. "give me the first row of this index," "give me the next."</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>Grounding first: after step 1 of the road from Part 1 (the SQL arrives), the server has two big jobs. The <em>front half</em> (parse, preprocess, optimize) turns text into a plan. The <em>back half</em> (execute) follows the plan. The front half is where nearly all the cleverness, and most of the performance surprises, live. The source says up front that it takes liberties in describing these as separate steps, since in the real server they often overlap.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 190" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="b1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#C9C7C1"/></marker></defs>
+      <text x="320" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">FROM SQL TEXT TO ROWS</text>
+      <rect x="15" y="50" width="100" height="60" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="65" y="76" fill="#F2EFE9" font-size="11" text-anchor="middle">parser</text>
+      <text x="65" y="94" fill="#7A7A80" font-size="9" text-anchor="middle">grammar, tokens</text>
+      <rect x="140" y="50" width="110" height="60" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="195" y="76" fill="#F2EFE9" font-size="11" text-anchor="middle">preprocessor</text>
+      <text x="195" y="94" fill="#7A7A80" font-size="9" text-anchor="middle">names, privileges</text>
+      <rect x="275" y="50" width="110" height="60" rx="8" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="330" y="76" fill="#F2EFE9" font-size="11" text-anchor="middle">optimizer</text>
+      <text x="330" y="94" fill="#C8453A" font-size="9" text-anchor="middle">picks the plan</text>
+      <rect x="410" y="50" width="100" height="60" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="460" y="76" fill="#F2EFE9" font-size="11" text-anchor="middle">executor</text>
+      <text x="460" y="94" fill="#7A7A80" font-size="9" text-anchor="middle">follows plan</text>
+      <rect x="535" y="50" width="90" height="60" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="580" y="76" fill="#F2EFE9" font-size="11" text-anchor="middle">engine</text>
+      <text x="580" y="94" fill="#7A7A80" font-size="9" text-anchor="middle">handler calls</text>
+      <line x1="115" y1="80" x2="138" y2="80" stroke="#C9C7C1" marker-end="url(#b1)"/>
+      <line x1="250" y1="80" x2="273" y2="80" stroke="#C9C7C1" marker-end="url(#b1)"/>
+      <line x1="385" y1="80" x2="408" y2="80" stroke="#C9C7C1" marker-end="url(#b1)"/>
+      <line x1="510" y1="80" x2="533" y2="80" stroke="#C9C7C1" marker-end="url(#b1)"/>
+      <text x="320" y="142" fill="#7A7A80" font-size="10" text-anchor="middle">errors (a syntax error, a missing table) can be raised at any stage</text>
+      <text x="320" y="164" fill="#7A7A80" font-size="10" text-anchor="middle">simplified: the real stages overlap, as the source itself notes</text>
+    </svg>
+    <figcaption>The front half builds a plan; the back half carries it out.</figcaption>
+  </figure>
+
+  <h3>1. Parser and preprocessor</h3>
+  <p>The parser reads your text, breaks it into tokens, and builds a parse tree using the SQL grammar. It catches things like invalid ordering of tokens or an unterminated quoted string. The preprocessor then checks meaning: do these tables and columns exist, are any column names ambiguous, and do you have the privileges? The source says the privilege check is normally very fast unless the server has a very large number of privileges.</p>
+
+  <h3>2. The optimizer: cost-based, and only as good as its inputs</h3>
+  <p>A query can usually be run many ways and still give the same answer. The optimizer's job is to choose. MySQL's is <strong>cost-based</strong>: it predicts the cost of candidate plans and picks the cheapest prediction. You can peek at its guess for the last query you ran in your session by looking at the <code>Last_query_cost</code> status value. I tried it on my made-up 60,000-row <code>orders</code> table:</p>
+  <ul>
+    <li><code>SELECT COUNT(*) FROM orders</code> then <code>SHOW STATUS LIKE 'Last_query_cost'</code> gave about 6,074.7.</li>
+    <li><code>SELECT COUNT(*) FROM orders WHERE customer_id = 5</code> (an indexed lookup) gave about 4.0.</li>
+  </ul>
+  <p>Those numbers are specific to my table and server version. The source says the original unit was one random 4 KB page read but that it has since grown to include things like the estimated cost of evaluating a <code>WHERE</code> comparison, so don't read my 6,074 as "6,074 page reads." The point to take: the number is a <em>relative</em> yardstick, and a lookup that uses an index is estimated to be far cheaper than a full scan.</p>
+  <p>The estimate is built from statistics: pages per table or index, cardinality, row and key lengths, and key distribution. Notably (per the source) it does <strong>not</strong> account for caching: it assumes every read is a disk I/O.</p>
+
+  <h3>Why the optimizer can pick a bad plan</h3>
+  <p>The source gives a list of reasons. In my words:</p>
+  <ul>
+    <li><strong>Statistics can be off.</strong> Engines supply them and they range from exact to wildly wrong. (The source says InnoDB doesn't keep an exact row count because of its MVCC design.)</li>
+    <li><strong>Cost isn't the same as real time.</strong> A plan reading more pages might actually be faster if the reads are sequential or the pages are already cached. The optimizer doesn't know which pages are in memory.</li>
+    <li><strong>Its goal differs from yours.</strong> You want fastest; it minimizes <em>estimated cost</em>.</li>
+    <li><strong>It ignores concurrency.</strong> Other queries running at the same time aren't part of its calculation.</li>
+    <li><strong>It sometimes follows fixed rules instead of costs.</strong> The source's example: if there's a full-text <code>MATCH()</code> clause it will use a <code>FULLTEXT</code> index when one exists, even if another approach would be faster.</li>
+    <li><strong>It can't cost what it doesn't control,</strong> like stored functions and user-defined functions.</li>
+    <li><strong>It can't consider every possible plan,</strong> so it can miss the best one (more on this under join order).</li>
+  </ul>
+  <p>I saw the estimates-aren't-exact point in practice: I ran <code>EXPLAIN ANALYZE</code> (which actually runs the query and prints real numbers beside the estimates, available in MySQL 8.0) on a join. The plan estimated about 200 customers passing a filter and the real count was 250; it estimated about 6,041 joined rows and got 7,500. That's a decent guess, and still not exact.</p>
+
+  <h3>Static vs dynamic optimizations</h3>
+  <p>The source splits optimizations into two kinds. <strong>Static</strong> ones depend only on the query's shape (for example, simplifying an expression with algebra) so they can be done once and stay valid even when you rerun with different values. Think compile-time. <strong>Dynamic</strong> ones depend on context (which constant is in the <code>WHERE</code>, how many rows an index holds), so they must be re-evaluated each execution. Think run-time. The difference matters for prepared statements and stored procedures: MySQL can do the static work once, but has to redo the dynamic work each time. The source even notes MySQL sometimes re-optimizes while executing.</p>
+
+  <h3>3. A tour of optimizations MySQL knows how to do</h3>
+  <p>The source calls its list "woefully incomplete," and so is mine, but it gives a feel for what the optimizer does without being asked.</p>
+  <ul>
+    <li><strong>Reordering joins.</strong> Tables don't have to be joined in the order you wrote them (more below).</li>
+    <li><strong>Converting outer joins to inner joins.</strong> If the <code>WHERE</code> clause or schema makes an outer join behave like an inner one, MySQL rewrites it, which also makes it eligible for reordering. I saw this: for a <code>LEFT JOIN</code> followed by <code>WHERE o.total &gt; 5</code> on the right-hand table, the rewritten query shown by <code>SHOW WARNINGS</code> said <code>join</code>, and the plan put <code>orders</code> first.</li>
+    <li><strong>Algebra and constant folding.</strong> Expressions are simplified; impossible or trivially true parts are dropped. In my test, <code>WHERE 5=5 AND id&gt;5 AND status=1</code> was shown back as just <code>status = 1 and id &gt; 5</code>.</li>
+    <li><strong>COUNT(), MIN() and MAX() shortcuts.</strong> For the minimum of a column that is the leftmost part of a B-tree index, MySQL can just read the first index entry (and the last for the maximum). When it does this you'll see <code>Select tables optimized away</code> in <code>EXPLAIN</code>, which literally means the table was replaced by a constant. I confirmed that message for <code>MIN(id), MAX(id)</code> and for <code>MIN(placed)</code> on indexed columns.</li>
+    <li><strong>Constants from key lookups.</strong> A lookup on a primary key or unique index with a constant can be done at optimization time, and the answer treated as a constant for the rest of the query. That is the <code>const</code> access type. The source also notes constantness can propagate: if a <code>USING</code> or <code>ON</code> clause forces two columns to be equal and one is a known constant, the other is too. (In my test of a join on a primary key, <code>EXPLAIN</code> showed <code>const</code> for the table pinned by <code>WHERE o.id = 5</code> and then a lookup with <code>ref: const</code> into the second table.)</li>
+    <li><strong>Covering indexes</strong> to avoid reading rows (Chapter 7).</li>
+    <li><strong>Subquery optimization.</strong> Some subqueries get converted into more efficient forms such as index lookups.</li>
+    <li><strong>Early termination.</strong> Stop as soon as the answer is known. The obvious case is <code>LIMIT</code>. Another: an impossible condition aborts the query during optimization, and <code>EXPLAIN</code> says <code>Impossible WHERE</code> (I got this from <code>WHERE 1=0</code>; with a primary key compared to a value that cannot exist, my 8.0 server instead said <code>no matching row in const table</code>). A third kind is "not exists": for a query like "find customers with no orders," written as a <code>LEFT JOIN ... WHERE orders.id IS NULL</code>, MySQL stops looking at a customer's orders after finding one, because that customer is already excluded. My <code>EXPLAIN</code> showed <code>Not exists</code> in <code>Extra</code>.</li>
+    <li><strong>Equality propagation.</strong> If two columns are forced equal by a join condition, a filter on one applies to the other. The source says you don't need to repeat a <code>WHERE</code> condition on both tables "to help" the optimizer (that's advice from other databases and just makes queries harder to maintain). I checked that a range filter on <code>orders.id</code> combined with an equality join to <code>item.order_id</code> gave a range scan on one table and a primary key lookup on the other, but the rewritten SQL that 8.0 prints back didn't show the condition copied onto both, so I can't confirm the mechanism from output. Treat that as the source's claim.</li>
+    <li><strong><code>IN()</code> lists.</strong> Per the source, many databases treat <code>IN(...)</code> as shorthand for lots of <code>OR</code>s, but MySQL sorts the list and uses a binary search (about O(log n) in the list size) where a chain of <code>OR</code> is O(n). I did not test this; it's the source's claim.</li>
+  </ul>
+  <p>The takeaway the source wants you to hold: <strong>let the optimizer work.</strong> If you do know something it doesn't (a fact guaranteed by your application, say, or a missing feature, or a cost estimate that prefers a costlier plan), you can help with a hint, a rewritten query, a schema change or a new index. The source points to the MySQL manual's "Index Hints" and "Optimizer Hints" sections for version-specific options.</p>
+
+  <h3>Table and index statistics</h3>
+  <p>One design detail explains a lot of behaviour: the server layer holds the optimizer but <em>does not store statistics itself</em>. Each storage engine keeps its own (and may do it differently), so the optimizer asks the engine for figures such as pages per table/index, cardinality, row and key lengths, and key distribution. That's why a stale or inaccurate statistic from an engine feeds directly into a bad plan, and why Chapter 7's advice about keeping statistics fresh (<code>ANALYZE TABLE</code>) shows up here.</p>
+
+  <h3>4. How MySQL executes joins</h3>
+  <p>The source stresses an unusual use of the word: in MySQL, <em>every</em> query is a join, even a single-table <code>SELECT</code>, a subquery, or reading a temporary table. A <code>UNION</code> is run as a series of separate queries whose results are spooled into a temporary table and read back out; each piece, and that final read, counts as a join. So understanding joins means understanding query execution generally.</p>
+  <p>The classic strategy is the <strong>nested-loop join</strong>: loop over a row of the first table, and for each one, loop to find matches in the second, and so on until every table has matched; emit a row; then backtrack to find the next match. The source says that as of MySQL 8.0.20 the older block-nested-loop is gone and a <strong>hash join</strong> takes its place, and that the change keeps joins as fast or faster, especially when one side fits in memory. I saw both in my tests: a join where an index exists used nested loops with index lookups, while a join between two columns that had no index showed <code>Using join buffer (hash join)</code> in <code>EXPLAIN</code> and <code>Inner hash join</code> in the tree format.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="b2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#C9C7C1"/></marker></defs>
+      <text x="320" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">NESTED LOOP: A ROW FROM A, THEN MATCHES IN B, THEN C</text>
+      <rect x="30" y="50" width="130" height="150" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="95" y="70" fill="#F2EFE9" font-size="11" text-anchor="middle">table A</text>
+      <rect x="45" y="82" width="100" height="22" rx="4" fill="#C8453A" opacity="0.35" stroke="#C8453A"/>
+      <text x="95" y="97" fill="#F2EFE9" font-size="10" text-anchor="middle">row a1</text>
+      <rect x="45" y="112" width="100" height="22" rx="4" fill="#131316" stroke="#7A7A80"/>
+      <text x="95" y="127" fill="#7A7A80" font-size="10" text-anchor="middle">row a2</text>
+      <rect x="45" y="142" width="100" height="22" rx="4" fill="#131316" stroke="#7A7A80"/>
+      <text x="95" y="157" fill="#7A7A80" font-size="10" text-anchor="middle">row a3</text>
+      <rect x="255" y="50" width="130" height="150" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="320" y="70" fill="#F2EFE9" font-size="11" text-anchor="middle">table B</text>
+      <rect x="270" y="82" width="100" height="22" rx="4" fill="#6FCF97" opacity="0.3" stroke="#6FCF97"/>
+      <text x="320" y="97" fill="#F2EFE9" font-size="10" text-anchor="middle">b7 (match)</text>
+      <rect x="270" y="112" width="100" height="22" rx="4" fill="#6FCF97" opacity="0.3" stroke="#6FCF97"/>
+      <text x="320" y="127" fill="#F2EFE9" font-size="10" text-anchor="middle">b9 (match)</text>
+      <rect x="480" y="50" width="130" height="150" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="545" y="70" fill="#F2EFE9" font-size="11" text-anchor="middle">table C</text>
+      <rect x="495" y="82" width="100" height="22" rx="4" fill="#6FCF97" opacity="0.3" stroke="#6FCF97"/>
+      <text x="545" y="97" fill="#F2EFE9" font-size="10" text-anchor="middle">c2 (match)</text>
+      <line x1="145" y1="93" x2="253" y2="93" stroke="#C9C7C1" marker-end="url(#b2)"/>
+      <line x1="370" y1="93" x2="478" y2="93" stroke="#C9C7C1" marker-end="url(#b2)"/>
+      <text x="320" y="224" fill="#7A7A80" font-size="10" text-anchor="middle">emit a row; if no more matches in C, back up to B; then A</text>
+      <text x="320" y="242" fill="#7A7A80" font-size="10" text-anchor="middle">(simplified: since 8.0.20 hash joins also exist, per the source)</text>
+    </svg>
+    <figcaption>The shape of a nested-loop join: always "start somewhere, then probe the next table."</figcaption>
+  </figure>
+
+  <h3>The execution plan is a tree, not bytecode</h3>
+  <p>Many databases compile a query to bytecode. MySQL produces a <strong>tree of instructions</strong> that the execution engine follows. The plan contains enough information to rebuild the query. You can see this: in MySQL 8.0, put <code>EXPLAIN FORMAT=TREE</code> before a statement to print the tree (the source's footnote says this too). I ran it on a three-table join and got nested "Nested loop inner join" lines with a table scan or index lookup at each leaf, plus an estimated cost on each. The source also mentions <code>EXPLAIN EXTENDED</code> followed by <code>SHOW WARNINGS</code> to see the rewritten query. <strong>Version note:</strong> on my 8.0.46 server, <code>EXPLAIN EXTENDED</code> gave a syntax error, while plain <code>EXPLAIN</code> followed by <code>SHOW WARNINGS</code> printed the rewritten query (with a note, code 1003). If the keyword fails for you, drop it. That is a difference between the book and my version, not necessarily a book error for the version it targeted.</p>
+  <p>A join of several tables could be drawn as a balanced tree (pairs joined, then pairs of pairs). The source says MySQL doesn't do that: it always starts with one table and joins the next, so plans are <strong>left-deep trees</strong>, like a chain of "result so far, plus the next table."</p>
+
+  <figure>
+    <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="b3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#C9C7C1"/></marker></defs>
+      <text x="320" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">LEFT-DEEP: ONE LONG CHAIN, NOT A BALANCED TREE</text>
+      <text x="140" y="46" fill="#7A7A80" font-size="11" text-anchor="middle">balanced (not MySQL)</text>
+      <rect x="105" y="58" width="70" height="26" rx="6" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="140" y="75" fill="#7A7A80" font-size="10" text-anchor="middle">join</text>
+      <rect x="45" y="118" width="60" height="26" rx="6" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="75" y="135" fill="#7A7A80" font-size="10" text-anchor="middle">A+B</text>
+      <rect x="175" y="118" width="60" height="26" rx="6" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="205" y="135" fill="#7A7A80" font-size="10" text-anchor="middle">C+D</text>
+      <line x1="125" y1="84" x2="85" y2="116" stroke="#7A7A80"/>
+      <line x1="155" y1="84" x2="195" y2="116" stroke="#7A7A80"/>
+      <text x="490" y="46" fill="#6FCF97" font-size="11" text-anchor="middle">left-deep (MySQL)</text>
+      <rect x="540" y="58" width="60" height="26" rx="6" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="570" y="75" fill="#F2EFE9" font-size="10" text-anchor="middle">join D</text>
+      <rect x="440" y="104" width="60" height="26" rx="6" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="470" y="121" fill="#F2EFE9" font-size="10" text-anchor="middle">join C</text>
+      <rect x="370" y="150" width="60" height="26" rx="6" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="400" y="167" fill="#F2EFE9" font-size="10" text-anchor="middle">join B</text>
+      <rect x="320" y="196" width="40" height="22" rx="6" fill="#C8453A" opacity="0.3" stroke="#C8453A"/>
+      <text x="340" y="211" fill="#F2EFE9" font-size="10" text-anchor="middle">A</text>
+      <line x1="560" y1="84" x2="490" y2="104" stroke="#6FCF97"/>
+      <line x1="470" y1="130" x2="420" y2="150" stroke="#6FCF97"/>
+      <line x1="395" y1="176" x2="350" y2="196" stroke="#6FCF97"/>
+      <text x="320" y="236" fill="#7A7A80" font-size="10" text-anchor="middle">start with A, keep joining one more table</text>
+    </svg>
+    <figcaption>My own sketch of the two shapes; the source describes the same idea with its own figures.</figcaption>
+  </figure>
+
+  <h3>5. The join optimizer: choosing the order</h3>
+  <p>The most important part of the optimizer, per the source, is the <strong>join optimizer</strong>, which picks the order tables are visited. Often many orders give the same answer at different cost. The source's example joins a film table, a link table, and an actor table, and shows that the order MySQL chose was <em>not</em> the one a human might guess. I rebuilt the idea with my own tables (<code>customer</code>, <code>orders</code>, <code>item</code>), where I filter customers by region:</p>
+  <ul>
+    <li>Left alone, MySQL started with <code>customer</code> (scanning 2,000 rows, estimated 200 passing the region filter), then used the <code>customer_id</code> index on <code>orders</code>, then the primary key of <code>item</code>. The tree-format cost for the whole plan was about 4,749.</li>
+    <li>With <code>STRAIGHT_JOIN</code> forcing the order <code>item</code>, <code>orders</code>, <code>customer</code>, MySQL scanned an index on all ~88,651 estimated item rows and looked up each order and customer. Its estimated total cost was about 71,025, roughly 15 times the other plan.</li>
+  </ul>
+  <p>Both are estimates from my one dataset and version, but they show the principle the source makes: starting where you examine the fewest rows means fewer lookups into later tables, so less backtracking and rereading. <strong>STRAIGHT_JOIN</strong> forces your order and is for the rare cases the optimizer gets wrong; the source says such cases are rare and that in most cases the optimizer beats a human.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">SAME QUERY, TWO JOIN ORDERS (MY TEST TABLES, ESTIMATES)</text>
+      <text x="160" y="48" fill="#6FCF97" font-size="11" font-weight="700" text-anchor="middle">optimizer's choice</text>
+      <rect x="40" y="60" width="240" height="30" rx="6" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="160" y="79" fill="#F2EFE9" font-size="10" text-anchor="middle">customer (filter ~200 rows)</text>
+      <rect x="40" y="100" width="240" height="30" rx="6" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="160" y="119" fill="#F2EFE9" font-size="10" text-anchor="middle">orders via customer_id index</text>
+      <rect x="40" y="140" width="240" height="30" rx="6" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="160" y="159" fill="#F2EFE9" font-size="10" text-anchor="middle">item via primary key</text>
+      <text x="160" y="196" fill="#6FCF97" font-size="11" text-anchor="middle">est. cost ~4.7 thousand</text>
+      <text x="480" y="48" fill="#C8453A" font-size="11" font-weight="700" text-anchor="middle">STRAIGHT_JOIN order</text>
+      <rect x="360" y="60" width="240" height="30" rx="6" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="480" y="79" fill="#F2EFE9" font-size="10" text-anchor="middle">item (scan ~88k index entries)</text>
+      <rect x="360" y="100" width="240" height="30" rx="6" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="480" y="119" fill="#F2EFE9" font-size="10" text-anchor="middle">orders via primary key (each)</text>
+      <rect x="360" y="140" width="240" height="30" rx="6" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="480" y="159" fill="#F2EFE9" font-size="10" text-anchor="middle">customer via primary key (each)</text>
+      <text x="480" y="196" fill="#C8453A" font-size="11" text-anchor="middle">est. cost ~71 thousand</text>
+      <text x="320" y="220" fill="#7A7A80" font-size="10" text-anchor="middle">fewer rows in the first table = fewer probes into the rest</text>
+    </svg>
+    <figcaption>Costs are MySQL's own relative estimates from <code>EXPLAIN FORMAT=TREE</code> on my data, not timings.</figcaption>
+  </figure>
+
+  <h3>When there are too many orders to try</h3>
+  <p>A join over n tables has n factorial (n!) possible orders. The source's example: 10 tables can be joined 3,628,800 ways (that is 10!, and the arithmetic checks out). Trying them all would take longer than the query, so when the table count exceeds the <code>optimizer_search_depth</code> setting, MySQL switches to shortcuts such as greedy searches. On my 8.0.46 server that variable was set to 62; defaults can vary by version, so check yours. The consequence, which the source states plainly, is that on rare occasions MySQL might miss the best plan because it deliberately doesn't look at all of them.</p>
+  <p>Some joins can't be reordered, which actually helps by shrinking the search. A <code>LEFT JOIN</code> and correlated subqueries are examples, because one table's result depends on another's data.</p>
+
+  <h3>6. Sort optimizations: what "filesort" means</h3>
+  <p>Sorting can be costly, so avoid it or do it on fewer rows. If MySQL can't get sorted output from an index, it sorts the rows itself. It <em>always</em> calls this a <strong>filesort</strong>, even if no file is involved. If the data fits in the sort buffer it uses a quicksort in memory; otherwise it sorts in chunks (quicksorting each) and merges them.</p>
+  <p>The source describes two algorithms:</p>
+  <ul>
+    <li><strong>Two-pass (older).</strong> Read the row pointers and the <code>ORDER BY</code> columns, sort those, then go back and re-read the rows in sorted order. The second read is lots of random I/O.</li>
+    <li><strong>Single-pass (newer).</strong> Read all columns the query needs, sort those, then output. This avoids the second table read and trades random I/O for sequential I/O, but each sort entry is bigger so fewer fit in the buffer, which can mean more merge passes.</li>
+  </ul>
+  <p>A gotcha the source flags: filesort can use far more temporary space than you'd expect, because it allocates a fixed-size record large enough for the largest possible row, including the full declared length of every <code>VARCHAR</code>, and 4 bytes per character with <code>utf8mb4</code>. It reports seeing temporary space many times the table's size on disk. (That's a reminder from Chapter 6: sloppy column lengths have a cost beyond the table.)</p>
+  <p>When sorting a join, MySQL sorts at one of two points:</p>
+  <ul>
+    <li>If the <code>ORDER BY</code> only uses columns from the <em>first</em> table in the join order, it can filesort that table first and then do the join. <code>EXPLAIN</code> shows <code>Using filesort</code>.</li>
+    <li>Otherwise it stores the join result in a temporary table and filesorts that afterward: <code>Using temporary; Using filesort</code>. Per the source, a <code>LIMIT</code> is applied <em>after</em> the filesort, so the temporary table and sort can be large.</li>
+  </ul>
+  <p>My test matched: joining <code>customer</code> (first in the order) and <code>orders</code>, <code>ORDER BY c.name</code> showed only <code>Using filesort</code>, but <code>ORDER BY o.total</code> (a column of the second table) showed <code>Using temporary; Using filesort</code>. And, as Chapter 7 predicted, <code>ORDER BY placed LIMIT 5</code> on a table with an index on <code>placed</code> needed no filesort at all, while <code>ORDER BY total LIMIT 5</code> (no index) did.</p>
+
+  <h3>7. The execution engine and the handler API</h3>
+  <p>With a plan in hand, execution is comparatively simple: the engine follows the instructions. Many instructions call methods in the storage engine interface, called the <strong>handler API</strong>. Each table instance in a query gets a handler object (three mentions of the same table means three handlers, created early, during optimization, so the optimizer can ask for column and index information). The interface has a lot of functionality but needs only about a dozen "building-block" operations to run most queries, such as "read the first row in an index" and "read the next row in an index," which is already enough for an index scan. That simplicity is what makes pluggable engines possible, and the source adds that it also explains some optimizer limitations (Part 3).</p>
+  <p>Not everything is a handler call. The server itself manages table locks (the engine may add its own lower-level locks, like InnoDB's row locks, on top) and anything shared by all engines, like date and time functions, views and triggers, lives in the server.</p>
+  <p>To see the building blocks yourself, I ran <code>FLUSH STATUS</code>, then <code>SELECT COUNT(*) FROM orders WHERE customer_id = 5</code>, then <code>SHOW SESSION STATUS LIKE 'Handler_read%'</code>. The counters read <code>Handler_read_key = 1</code> and <code>Handler_read_next = 30</code>: one index lookup to find the start, then 30 "next entry" calls, matching the 30 rows. That is my own observation of the idea, not something the book walks through.</p>
+
+  <h3>8. Returning results to the client</h3>
+  <p>The last step is the reply. Even a statement with no result set still answers (for example, with how many rows it affected). The server sends results <strong>incrementally</strong>: as soon as the last table produces a row, it can and should send it. Two benefits: the server doesn't hold the row in memory, and the client starts receiving sooner. Each row goes in its own protocol packet, though packets can be batched at the TCP layer. The source points to a hint called <code>SQL_BUFFER_RESULT</code> if you need to influence that behaviour (see "Optimizer Hints" in the manual).</p>
+  <p>This ties back to Part 1: the server streams, which is why the client can't ask for "just the first few" after the fact.</p>
+
+  <h2>Why it matters</h2>
+  <p>Almost every confusing <code>EXPLAIN</code> output becomes readable once you hold this picture. A surprising join order is the join optimizer minimizing early rows. <code>Using filesort</code> and <code>Using temporary</code> are the sort rules. A bad plan on a table that changed a lot is probably stale statistics. And "don't outsmart the optimizer" has teeth: forcing orders or hand-copying conditions can lock in a plan that was good yesterday and wrong after the data changes.</p>
+  <p>It also tells you where to intervene when you must: update statistics, add an index that changes cost, rewrite the query, or (rarely) hint. Part 3 turns this into a list of places the optimizer is known to struggle and rewrites that help.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>The front half (parse, preprocess, optimize) builds a plan; the back half runs it with a few low-level engine calls.</li>
+      <li>MySQL's optimizer is cost-based and guesses from engine statistics, so it can be wrong; it also doesn't know what's cached.</li>
+      <li>Don't preemptively outsmart it. Help only when you know something it doesn't.</li>
+      <li>In MySQL every query is a join; plans are left-deep chains, and the join order is chosen to touch the fewest rows early.</li>
+      <li>"Filesort" means MySQL sorted the rows itself, not necessarily on disk. Sorting by a non-first table needs a temporary table too.</li>
+      <li>Rows stream to the client as they are produced.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Read a plan as a tree.</strong> Pick a three-table join on made-up data and run it three ways: plain <code>EXPLAIN</code>, <code>EXPLAIN FORMAT=TREE</code>, and (on 8.0.18 or later) <code>EXPLAIN ANALYZE</code>. Write down where estimated and actual rows differ most. Done when you can explain one difference.</li>
+      <li><strong>Join-order duel.</strong> Time and cost the same join with and without <code>STRAIGHT_JOIN</code> in the "wrong" order. Record the tree cost and a real timing (repeat three times). Done when you can say whether the cost ratio predicted the time ratio.</li>
+      <li><strong>Optimization spotter.</strong> Write a short query for each: a <code>MIN()</code> on an indexed column, a <code>WHERE 1=0</code>, a primary key equality, a "customers with no orders" <code>LEFT JOIN</code>, and a left join the <code>WHERE</code> turns into an inner join. Run <code>EXPLAIN</code> and <code>SHOW WARNINGS</code> for each and name the optimization you see. Done when each has a one-line note.</li>
+      <li><strong>Filesort lab.</strong> Join two tables and try <code>ORDER BY</code> on a first-table column, a second-table column, and columns from both. Predict <code>Extra</code> before each run. Bonus: check <code>Sort_merge_passes</code> from <code>SHOW SESSION STATUS</code> after sorting a big result with a deliberately small <code>sort_buffer_size</code> (set it only in your session, on a scratch server).</li>
+      <li><strong>Statistics sabotage.</strong> Load a table, run <code>ANALYZE TABLE</code>, capture a plan; then bulk-delete most rows without re-analyzing and capture it again. Done when you can describe whether the estimates drifted and what refreshed them.</li>
+      <li><strong>Count the handler calls.</strong> Use <code>FLUSH STATUS</code> and <code>SHOW SESSION STATUS LIKE 'Handler_read%'</code> around a full scan, an index range, and a primary key lookup. Done when you can match each counter pattern to the access type.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Read the manual's section on optimizer hints and index hints alongside the join-order discussion, and try one on a plan you understand well, so you see what changes before you ever need it for real.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <ul class="src-list">
+    <li><em>High Performance MySQL</em>, 4th Edition, Chapter 8, "Query Performance Optimization." This digest (Part 2) covers printed pages 205 to 218 (PDF pages 227 to 240 of the source file): "The Query Optimization Process" (parser and preprocessor, the query optimizer and its cost model, static vs dynamic optimizations, the list of optimizations, table and index statistics, MySQL's join execution strategy, the execution plan, the join optimizer, sort optimizations), "The Query Execution Engine," and "Returning Results to the Client."</li>
+    <li>Everything labelled "I ran," "I tried," "I saw," or "my table" comes from small made-up tables (<code>customer</code>, <code>orders</code>, <code>item</code>) on a local MySQL 8.0.46 server. None of it reproduces the book's Sakila examples or output.</li>
+  </ul>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the book; verify anything you plan to rely on against the book or the MySQL manual for your version. <strong>Tested by me:</strong> <code>Last_query_cost</code>, outer-to-inner join rewrite, constant folding, <code>Select tables optimized away</code>, <code>Impossible WHERE</code>, <code>Not exists</code>, hash join output, <code>EXPLAIN FORMAT=TREE</code>, <code>EXPLAIN ANALYZE</code>, the <code>STRAIGHT_JOIN</code> cost difference, the <code>Using filesort</code> vs <code>Using temporary; Using filesort</code> behaviour, the <code>optimizer_search_depth</code> value, and the <code>Handler_read%</code> counters. <strong>Taken on the source's word, not tested:</strong> equality propagation's mechanism, the <code>IN()</code> binary search, the two filesort algorithms and fixed-size sort records, the cost-model history, the lack of caching in the cost estimate, the handler API's "dozen operations," and result-streaming details. <strong>Simplifications flagged above:</strong> the stage pipeline, the nested-loop picture, and the left-deep sketch. <strong>Version differences noticed:</strong> <code>EXPLAIN EXTENDED</code> is a syntax error on my 8.0.46 server (plain <code>EXPLAIN</code> plus <code>SHOW WARNINGS</code> prints the rewritten query), and an impossible primary key value showed <code>no matching row in const table</code> rather than <code>Impossible WHERE</code>.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
