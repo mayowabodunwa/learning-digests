@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: CloudWatch Synthetics Canaries and RUM: Testing Like a User and Watching Real Users</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS CLOUDWATCH &middot; CONCEPT 8 DIGEST</p>
+  <h1>CloudWatch Synthetics Canaries and RUM: Testing Like a User and Watching Real Users</h1>
+  <p class="lead">Every other CloudWatch tool in this track waits for something to happen: a server reports a metric, an app writes a log. But what if nobody is using your site at 3am and it's broken? And what if your servers say everything is fine while real users on slow phones are staring at a blank page? Synthetics canaries and RUM are the two answers: one pretends to be a user on a schedule, the other watches real ones.</p>
+
+  <h2>In one line</h2>
+  <p>CloudWatch Synthetics runs scripted "canaries" on a schedule to test your endpoints the way a customer would, while CloudWatch RUM (real user monitoring) collects performance and error data from actual user sessions in their browsers and apps.</p>
+
+  <h2>The big idea</h2>
+  <p>There are two ways to find out if your application is healthy from the outside in. <strong>Synthetic monitoring</strong> means you write (or generate) a script that does what a user does: load the page, log in, call the API. It runs every minute or every few minutes whether or not any real customer is around, and it reports pass or fail plus timing. Its strength is that it's predictable: the same test, the same way, so a change in the result means something changed. Its weakness is that it only tests what you scripted.</p>
+  <p><strong>Real user monitoring</strong> is the opposite trade. A small piece of code in your web or mobile app reports how things went for real people: how long pages took to load, which JavaScript errors happened, which browsers and countries are affected. It sees reality, including things you never thought to script, but it needs real traffic to say anything and it's a sample of what happened, not a controlled experiment. Used together they cover each other's blind spots, and both publish into the same CloudWatch metrics and alarms you already know.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Canary</span>: a configurable script that runs on a schedule to monitor an endpoint or API, following the same routes and actions as a customer. Named after the canary in the coal mine.</li>
+    <li><span class="keyterm-term">Synthetic monitoring</span>: testing with scripted, artificial traffic rather than real users.</li>
+    <li><span class="keyterm-term">Blueprint</span>: a ready-made canary template in the console (heartbeat monitor, API canary, broken link checker, visual monitoring, canary recorder, GUI workflow builder, multi checks).</li>
+    <li><span class="keyterm-term">Runtime version</span>: the Synthetics library version (and language) your canary runs on, for example <code>syn-nodejs-puppeteer-9.1</code> in the docs' example.</li>
+    <li><span class="keyterm-term">Headless browser</span>: a real browser engine with no visible window, driven by code. Canaries in the Node.js and Python runtimes can use Playwright, Puppeteer or Selenium for this.</li>
+    <li><span class="keyterm-term">HAR file</span>: an HTTP archive, a record of every web request a page made and how long each took.</li>
+    <li><span class="keyterm-term">Artifacts</span>: what a canary run saves: logs, screenshots, HAR files, stored in an S3 bucket.</li>
+    <li><span class="keyterm-term">RUM (real user monitoring)</span>: collecting client-side performance and error data from real user sessions.</li>
+    <li><span class="keyterm-term">App monitor</span>: the RUM resource you create for an application; it generates the code snippet you add to your app.</li>
+    <li><span class="keyterm-term">Session sample</span>: the percentage of user sessions the RUM client reports on.</li>
+    <li><span class="keyterm-term">Web vitals</span>: standard measurements of page experience such as largest contentful paint and cumulative layout shift.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>Grounding: what "from the outside" means</h3>
+  <p>An EC2 instance can report CPU at 5 percent while a misconfigured load balancer, an expired certificate or a broken login form means no customer can actually use the site. Metrics from inside tell you machines are fine; they can't tell you the <em>experience</em> is fine. Canaries and RUM measure the experience directly. That is why they sit at the top of the monitoring stack, and why their metrics are good candidates for alarms.</p>
+
+  <h3>1. Canaries: what they are</h3>
+  <p>The docs describe canaries as configurable scripts, written in Node.js, Python or Java, that run on a schedule to monitor your endpoints and APIs. Under the hood they create Lambda functions in your account, and they use Lambda layers that contain the Synthetics library. Canaries work over HTTP and HTTPS. They can check availability and latency, store load-time data and UI screenshots, monitor REST APIs, URLs and website content, and the docs say they can check for unauthorized changes from phishing, code injection and cross-site scripting.</p>
+  <ul>
+    <li><strong>Browser support:</strong> Node.js and Python runtimes can drive headless browsers through Playwright, Puppeteer or Selenium (supported browsers include Chrome and Firefox, though the docs say canaries on Selenium support only Chrome). Java canaries have no browser support or frameworks.</li>
+    <li><strong>Schedule:</strong> run once or on a schedule; the docs say canaries can run as often as once per minute, with rate or cron expressions. In the console, a continuous rate is between once a minute and once an hour (the CLI reference says a frequency between <code>rate(1 minute)</code> and <code>rate(1 hour)</code>).</li>
+    <li><strong>Availability:</strong> the docs list it as available in all commercial AWS Regions and the GovCloud Regions.</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 620 220" role="img" aria-label="A schedule triggers a canary that visits your site and stores artifacts in S3, publishes metrics to CloudWatch, and an alarm watches SuccessPercent">
+      <defs><marker id="ah13" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#C9C7C1"/></marker></defs>
+      <rect x="10" y="80" width="90" height="55" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="55" y="105" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#F2EFE9">schedule</text>
+      <text x="55" y="122" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#7A7A80">rate(5 minutes)</text>
+      <rect x="140" y="65" width="130" height="85" rx="10" fill="#131316" stroke="#C8453A"/>
+      <text x="205" y="92" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#C8453A">canary</text>
+      <text x="205" y="110" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#C9C7C1">script runs as a</text>
+      <text x="205" y="124" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#C9C7C1">Lambda function</text>
+      <rect x="320" y="15" width="120" height="50" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="380" y="36" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">your website / API</text>
+      <text x="380" y="52" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#7A7A80">gets visited</text>
+      <rect x="320" y="80" width="120" height="50" rx="8" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="380" y="101" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">S3 artifacts</text>
+      <text x="380" y="117" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#7A7A80">logs, screenshots, HAR</text>
+      <rect x="320" y="145" width="120" height="55" rx="8" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="380" y="166" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">CloudWatch metrics</text>
+      <text x="380" y="182" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#7A7A80">CloudWatchSynthetics</text>
+      <rect x="500" y="145" width="105" height="55" rx="8" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="552" y="170" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#C9C7C1">alarm</text>
+      <text x="552" y="186" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#7A7A80">SuccessPercent</text>
+      <g stroke="#C9C7C1" stroke-width="1.3" marker-end="url(#ah13)">
+        <path d="M102 107 L138 107"/><path d="M272 90 L318 45"/><path d="M272 107 L318 105"/><path d="M272 125 L318 170"/><path d="M442 172 L498 172"/>
+      </g>
+    </svg>
+    <figcaption>Schematic: a canary cycle. The schedule, names and alarm are example choices, not defaults.</figcaption>
+  </figure>
+
+  <h3>2. Blueprints: the quick-start canaries</h3>
+  <p>When you create a canary in the console you can start from a blueprint, then edit the generated Node.js script. From the docs:</p>
+  <ul>
+    <li><strong>Heartbeat monitoring:</strong> loads a URL and stores a screenshot, an HTTP archive (HAR) file and logs of accessed URLs. The simplest "is the site up and how fast" canary.</li>
+    <li><strong>API canary:</strong> tests the basic read and write functions of a REST API. Each request has an endpoint, a method, headers and a body. The blueprint supports GET and POST and integrates with API Gateway. Not supported by Playwright runtimes.</li>
+    <li><strong>Broken link checker:</strong> collects the links on a page and tests up to a number you set (the starting URL counts as the first link). It reports status code and failure reason for each and detects problems like 404s and invalid host names. Not supported by Playwright runtimes.</li>
+    <li><strong>Visual monitoring:</strong> compares screenshots against a baseline run and fails if the difference exceeds a threshold percentage you set. Supported on specific runtimes only (not Python/Selenium or Playwright), per the docs.</li>
+    <li><strong>Canary recorder:</strong> a Chrome extension that records your clicks and typing and generates a Node.js script. Not supported for Playwright canaries.</li>
+    <li><strong>GUI workflow builder:</strong> you specify actions (click, verify selector, verify text, input text, click with navigation) so the canary can, for example, fill a login form and check the welcome message.</li>
+    <li><strong>Multi checks:</strong> a JSON-configured blueprint offering HTTP, DNS, SSL certificate and TCP checks, up to 10 checks, run sequentially.</li>
+  </ul>
+
+  <h3>3. What a canary publishes</h3>
+  <p>By default canaries publish metrics to the <code>CloudWatchSynthetics</code> namespace with <code>CanaryName</code> as a dimension. (Remember namespaces and dimensions from the first digest.) The ones worth knowing, from the docs' metrics table:</p>
+  <ul>
+    <li><code>SuccessPercent</code>: the percentage of runs that succeed and find no failures (Average, Percent). This is the natural thing to alarm on.</li>
+    <li><code>Duration</code>: how long a run took, in milliseconds.</li>
+    <li><code>Failed</code>: the number of runs that failed to execute, for failures related to the canary itself.</li>
+    <li><code>2xx</code>, <code>4xx</code>, <code>5xx</code>: counts of the canary's network requests by response code range (reported for certain runtime versions).</li>
+    <li><code>VisualMonitoringSuccessPercent</code> and others for visual comparison.</li>
+  </ul>
+  <p>Canaries that use the library's <code>executeStep()</code> or <code>executeHttpStep()</code> also publish <code>SuccessPercent</code> and <code>Duration</code> per step with a <code>StepName</code> dimension. So a multi-step login-then-checkout canary tells you <em>which</em> step broke.</p>
+  <p><em>Simplification:</em> "Failed" and "SuccessPercent" are different on purpose. As I read the table, <code>Failed</code> counts runs that failed to execute because of the canary itself, while <code>SuccessPercent</code> reflects whether the run found no failures at all. If your site returns an error, I would expect that to lower <code>SuccessPercent</code>; check the docs for the exact behaviour in your runtime.</p>
+
+  <h3>4. Creating a canary: the pieces involved</h3>
+  <p>The console flow in the docs (<strong>Application Signals, Synthetics Canaries, Create Canary</strong>) asks for: a blueprint or your own script; a name; the URL to test (including the protocol); optionally extra Regions to run from (multilocation canaries); the runtime version; a schedule; an optional timeout (the docs recommend no shorter than 15 seconds to allow for Lambda cold starts); data retention for successful and failed runs; an S3 bucket for artifacts; an IAM role; optional default alarms; optional VPC settings; tags; and optional X-Ray active tracing.</p>
+  <ul>
+    <li><strong>Resources created:</strong> per the docs, potentially an IAM role and policy, an S3 bucket named <code>cw-syn-results-&lt;accountID&gt;-&lt;region&gt;</code>, alarms named <code>Synthetics-Alarm-&lt;canaryName&gt;-&lt;index&gt;</code> if you opt in, Lambda functions and layers prefixed <code>cwsyn-</code>, and a log group <code>/aws/lambda/cwsyn-...</code>. Remember to delete these when you clean up.</li>
+    <li><strong>VPC:</strong> to test an endpoint on a VPC, the docs say you pick private subnets, because a Lambda function can't be given a public IP, and the canary must still be able to reach CloudWatch and S3 (NAT gateway or VPC endpoints; the VPC track again).</li>
+    <li><strong>Be a good citizen:</strong> the docs warn to monitor only endpoints and APIs you own or have permission to test, because the schedule creates traffic.</li>
+    <li><strong>CLI:</strong> <code>aws synthetics create-canary</code> requires <code>--name</code>, <code>--code</code>, <code>--artifact-s3-location</code>, <code>--execution-role-arn</code>, <code>--schedule</code> and <code>--runtime-version</code>. The reference's example uses <code>--schedule Expression="rate(10 minutes)"</code> and <code>--runtime-version syn-nodejs-puppeteer-9.1</code>. Canary names allow lowercase letters, digits, hyphens and underscores, and the docs say not to put secrets in the name.</li>
+    <li><strong>Retention:</strong> the default for both success and failure data is 31 days per the CLI reference. The console docs state a range of 1 to 455 days, while the CLI reference's formal constraint shows a larger maximum. Check the live limit before relying on a number.</li>
+    <li><strong>Events:</strong> the docs also have a page on monitoring canary events with EventBridge, connecting this back to the previous digest.</li>
+  </ul>
+
+  <h3>5. CloudWatch RUM: how it works</h3>
+  <p>You create an <strong>app monitor</strong> for your application. RUM generates a code snippet that you add to your app (the docs recommend installing the web client with NPM as a JavaScript module; a CDN-hosted HTML option exists but the docs warn it's often blocked by ad blockers). The RUM client then captures data from a percentage of user sessions, which you choose, and shows it in a prebuilt dashboard. For web apps it can analyse page load times, client-side errors and user behaviour; for mobile it covers screen load times, app launch times, network errors, crashes, and Android ANRs and iOS app hangs.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 210" role="img" aria-label="A user's browser runs the RUM web client, sampling some sessions and sending events to CloudWatch RUM, which feeds a dashboard, metrics, and optionally CloudWatch Logs">
+      <defs><marker id="ah14" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#C9C7C1"/></marker></defs>
+      <rect x="10" y="40" width="190" height="130" rx="12" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="105" y="62" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#7A7A80">user's browser</text>
+      <rect x="25" y="75" width="160" height="35" rx="6" fill="#131316" stroke="#7A7A80"/>
+      <text x="105" y="97" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#C9C7C1">your web app</text>
+      <rect x="25" y="120" width="160" height="38" rx="6" fill="#131316" stroke="#C8453A"/>
+      <text x="105" y="136" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#C8453A">RUM web client</text>
+      <text x="105" y="150" text-anchor="middle" font-family="Inter, sans-serif" font-size="9.5" fill="#C9C7C1">samples X% of sessions</text>
+      <rect x="260" y="60" width="150" height="90" rx="10" fill="#131316" stroke="#6FCF97"/>
+      <text x="335" y="88" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#6FCF97">app monitor</text>
+      <text x="335" y="108" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#C9C7C1">page loads, JS errors,</text>
+      <text x="335" y="122" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#C9C7C1">HTTP errors, sessions</text>
+      <rect x="470" y="30" width="135" height="45" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="537" y="57" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">RUM dashboard</text>
+      <rect x="470" y="85" width="135" height="45" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="537" y="105" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">metrics: AWS/RUM</text>
+      <text x="537" y="121" text-anchor="middle" font-family="Inter, sans-serif" font-size="9.5" fill="#7A7A80">alarm-able</text>
+      <rect x="470" y="140" width="135" height="45" rx="8" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="537" y="160" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#C9C7C1">CloudWatch Logs</text>
+      <text x="537" y="176" text-anchor="middle" font-family="Inter, sans-serif" font-size="9.5" fill="#7A7A80">optional copy, longer keep</text>
+      <g stroke="#C9C7C1" stroke-width="1.3" marker-end="url(#ah14)">
+        <path d="M202 138 L258 118"/><path d="M412 90 L468 55"/><path d="M412 105 L468 107"/><path d="M412 125 L468 160"/>
+      </g>
+    </svg>
+    <figcaption>Schematic: the RUM data path. Simplified: authorization (Cognito identity pool or a resource policy) sits between the client and the app monitor.</figcaption>
+  </figure>
+
+  <p><strong>Options when creating a web app monitor</strong> (docs): an application domain list (wildcards allowed); which telemetry to collect (performance telemetry, JavaScript errors, HTTP errors; choosing more generates more events and more charges); a checkbox to allow the web client to set cookies so user and session IDs can be collected; the session sample percentage (default 100 percent, and reducing it lowers cost and data); whether to store a copy of telemetry in CloudWatch Logs; authorization (a new or existing Amazon Cognito identity pool, a different identity provider, or a resource-based policy); which pages to include or exclude; and X-Ray active tracing. Even with nothing selected, the monitor still collects session start events and page IDs, so you can see how many users you have by OS, browser, device and location.</p>
+  <ul>
+    <li><strong>Retention:</strong> RUM end-user data is kept 30 days and then deleted, per the docs. To keep it longer, send a copy to CloudWatch Logs and set that log group's retention (default 30 days there, adjustable).</li>
+    <li><strong>Privacy:</strong> because the client can set cookies for user and session IDs, think about consent requirements where you operate. The docs have a dedicated privacy page; I haven't summarised it.</li>
+    <li><strong>Metrics:</strong> web metrics land in the <code>AWS/RUM</code> namespace with an <code>application_name</code> dimension (the app monitor name). Examples: <code>JsErrorCount</code>, <code>Http4xxCount</code>, <code>Http5xxCount</code>, <code>PageViewCount</code>, <code>SessionCount</code>, <code>PerformanceNavigationDuration</code>, and web vitals such as <code>WebVitalsLargestContentfulPaint</code>, <code>WebVitalsCumulativeLayoutShift</code> and <code>WebVitalsInteractionToNextPaint</code>.</li>
+    <li><strong>Apdex-style buckets:</strong> the docs define navigation "satisfied" as under 2000 ms, "tolerated" between 2000 and 8000 ms, and "frustrated" above 8000 ms.</li>
+  </ul>
+
+  <h3>6. Canary or RUM?</h3>
+  <div class="card">
+    <p><strong>Canary:</strong> you need to know the checkout is up at 3am with zero traffic, test a new endpoint before launch, or check a certificate or link. It's controlled and repeatable.</p>
+    <p><strong>RUM:</strong> you need to know how real users on real devices experience speed and errors, and which browsers or regions are worse. It's real but depends on traffic and sampling.</p>
+    <p><em>Simplification:</em> in practice you'd use both and alarm on a canary's <code>SuccessPercent</code> and a RUM error metric. The docs also integrate both with Application Signals and X-Ray tracing for deeper debugging, which belongs to the next concept.</p>
+  </div>
+
+  <h2>Why it matters</h2>
+  <p>"The servers are green" is not the same as "customers can buy things". Canaries give you an always-on customer stand-in, and RUM gives you the view from the customer's seat. Both feed ordinary CloudWatch metrics, so everything you learned about alarms, composite alarms and dashboards applies. They also cost money in ways that scale with how often you run canaries and how much RUM data you collect, so choose frequency and sample rate on purpose. I'm not quoting prices here.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>A canary is a scheduled script (run as a Lambda function) that acts like a user; it publishes <code>SuccessPercent</code>, <code>Duration</code> and more to <code>CloudWatchSynthetics</code> and saves artifacts to S3.</li>
+      <li>Blueprints (heartbeat, API, broken link, visual, recorder, GUI workflow, multi checks) get you started; you can edit the generated script.</li>
+      <li>RUM uses an app monitor and a code snippet to sample real sessions: page loads, JS errors, HTTP errors, web vitals; data kept 30 days unless copied to Logs.</li>
+      <li>Synthetic is controlled but only tests what you scripted; RUM is real but needs traffic and is sampled.</li>
+      <li>Both can be alarmed on like any other metric.</li>
+    </ul>
+  </div>
+
+  <h2>Recall questions</h2>
+  <ol>
+    <li>Why can a canary tell you something that EC2 CPU metrics can't?</li>
+    <li>Name three canary blueprints and what each checks.</li>
+    <li>Which metric would you put an alarm on to be told "the canary is failing", and in which namespace is it?</li>
+    <li>What does lowering RUM's session sample percentage change?</li>
+    <li>How long does RUM keep data by default, and how could you keep it longer?</li>
+  </ol>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Heartbeat on a site you own.</strong> In the console, create a canary from the heartbeat blueprint for a personal page or a lab endpoint you control, running <code>rate(5 minutes)</code>. <em>Done when:</em> you've opened a run's screenshot and HAR file, and can list which AWS resources it created (role, bucket, Lambda, log group).</li>
+      <li><strong>Alarm on it.</strong> Create an alarm on <code>SuccessPercent</code> for your canary (namespace <code>CloudWatchSynthetics</code>, dimension <code>CanaryName</code>) that goes to ALARM below 100 for 2 of 3 periods, with an SNS action. <em>Done when:</em> you've broken the target on purpose (for example point the canary at a URL that 404s by editing it) and received the email.</li>
+      <li><strong>A two-step API canary.</strong> Use the API canary blueprint (or the docs' sample scripts) with two HTTP steps. <em>Done when:</em> you can find <code>StepName</code> in the metrics and explain what each step's <code>Duration</code> tells you.</li>
+      <li><strong>Visual baseline.</strong> Create a visual monitoring canary on a page you control, let it set a baseline, change visible text on the page, and see it fail. <em>Done when:</em> you've adjusted the threshold or an ignore region and seen the effect.</li>
+      <li><strong>RUM on a toy page.</strong> Create a RUM app monitor for a static test page (an S3-hosted page is fine if you've done the S3 track), paste the snippet, set the session sample to 100 percent, and visit the page from a couple of browsers. Throw a deliberate JavaScript error. <em>Done when:</em> the error and your browsers show up in the RUM dashboard and you can find <code>JsErrorCount</code> under <code>AWS/RUM</code>.</li>
+      <li><strong>Cost thinking on paper.</strong> For a site with 100,000 sessions a day, write down what changes if you set the RUM sample to 10 percent, and what changes if you move a canary from <code>rate(1 minute)</code> to <code>rate(5 minutes)</code>. <em>Done when:</em> you've written which knobs reduce cost and what visibility you lose with each. Clean up every resource afterwards.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Read the page on canary security considerations and the one on running a canary in a VPC, then the RUM privacy page. Next in this track is the last concept: Container Insights, Lambda Insights, ServiceLens and X-Ray tracing.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the official documentation. Verify anything you plan to rely on (limits, CLI syntax, pricing, permissions, console steps) against the live pages below. AWS docs change over time; these pages were read in October 2026.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Synthetics_Canaries.html" target="_blank" rel="noopener">Synthetic monitoring (canaries)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Synthetics_Canaries_Blueprints.html" target="_blank" rel="noopener">Using canary blueprints</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Synthetics_Canaries_Create.html" target="_blank" rel="noopener">Creating a canary</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Synthetics_Canaries_metrics.html" target="_blank" rel="noopener">CloudWatch metrics published by canaries</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/synthetics/create-canary.html" target="_blank" rel="noopener">AWS CLI reference: synthetics create-canary</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-RUM.html" target="_blank" rel="noopener">CloudWatch RUM</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-RUM-get-started-create-app-monitor.html" target="_blank" rel="noopener">Creating a CloudWatch RUM app monitor for a web application</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-RUM-metrics.html" target="_blank" rel="noopener">CloudWatch metrics that you can collect with CloudWatch RUM</a></li>
+  </ul>
+  <p class="src-note">Flagged: no pricing is quoted. One page fetch for canary metrics returned no usable content on the first attempt (wrong address) and I discarded it; the metrics here come from the corrected page. The canary data-retention range differs between the console docs (1 to 455 days) and the CLI reference constraint, so I haven't stated a hard maximum. My comparison of the <code>Failed</code> and <code>SuccessPercent</code> metrics is my reading of the docs' one-line descriptions, not an explicit statement. I did not read the pages on cron scheduling for canaries, the function library, multilocation canaries, groups, RUM authorization, privacy or mobile setup. The diagrams, schedules and names are my own illustrations, and the micro-projects have not been run against a live account.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
