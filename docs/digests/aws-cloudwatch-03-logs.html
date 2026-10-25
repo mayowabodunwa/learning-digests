@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: CloudWatch Logs: Log Groups, Streams, Retention, Metric Filters and Subscription Filters</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS CLOUDWATCH &middot; CONCEPT 3 DIGEST</p>
+  <h1>CloudWatch Logs: Log Groups, Streams, Retention, Metric Filters and Subscription Filters</h1>
+  <p class="lead">Metrics tell you that something is wrong. Logs tell you what actually happened. This digest covers how CloudWatch Logs organises text records (log events, log streams, log groups), how long it keeps them (retention), and the two filters that turn a log group into something active: metric filters that make numbers out of text, and subscription filters that stream matching lines to another service.</p>
+
+  <h2>In one line</h2>
+  <p>CloudWatch Logs stores timestamped text records in log groups, deletes them on a schedule you choose, and can watch the incoming flow to count patterns into metrics or forward matches somewhere else.</p>
+
+  <h2>The big idea</h2>
+  <p>Your application, your servers and many AWS services write lines of text describing what they are doing. Those lines are useless if they only live on a disk that might disappear. CloudWatch Logs gives them a central home. You organise them into <strong>log groups</strong> (one per application or purpose), and inside each group every source gets its own <strong>log stream</strong>. The group is where you set the rules that apply to everything inside it: how long to keep data, who can read it, and which filters watch it.</p>
+  <p>Then come the two filters. A <strong>metric filter</strong> looks at each incoming line, and if it matches your pattern, adds a data point to a normal CloudWatch metric. That is the bridge back to the previous two digests: once a log pattern is a metric, you can graph it and put an alarm on it. A <strong>subscription filter</strong> is different. It does not make a metric, it sends the matching log events on to another service (a Kinesis data stream, an Amazon Data Firehose stream, or a Lambda function) so something else can process them in near real time.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Log event</span>: one record of something that happened. CloudWatch Logs understands exactly two properties: a timestamp and the raw message. The message must be UTF-8 text.</li>
+    <li><span class="keyterm-term">Log stream</span>: a sequence of log events that share the same source. Typically that means one application instance or resource, for example the access log of one particular web host.</li>
+    <li><span class="keyterm-term">Log group</span>: a collection of log streams that share the same retention, monitoring and access control settings. Every log stream belongs to exactly one log group. The docs say there is no limit on how many streams one group can hold.</li>
+    <li><span class="keyterm-term">Retention setting</span>: how long log events are kept before they are expired and deleted. Set per log group.</li>
+    <li><span class="keyterm-term">Log class</span>: a log group is either Standard (full featured) or Infrequent Access (cheaper ingestion, fewer features). It is chosen when the group is created and can't be changed afterwards.</li>
+    <li><span class="keyterm-term">Filter pattern</span>: a small piece of syntax that says which log events you care about. The same syntax is used by metric filters, subscription filters, searching log events, and Live Tail.</li>
+    <li><span class="keyterm-term">Metric filter</span>: a rule on a log group that extracts numbers from matching events and publishes them to a CloudWatch metric.</li>
+    <li><span class="keyterm-term">Subscription filter</span>: a rule on a log group (or the account) that delivers matching events to a destination service as they arrive.</li>
+    <li><span class="keyterm-term">Default value (metric filter)</span>: the number reported for a period in which logs arrived but nothing matched.</li>
+    <li><span class="keyterm-term">Deletion protection</span>: an optional switch on a log group that blocks delete operations until you turn it off. It is off by default.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>Grounding: why logs are a separate thing from metrics</h3>
+  <p>A metric is a number over time: "CPU was 63 percent at 14:02". It is compact and easy to alarm on, but it throws away the story. A log event keeps the story: "14:02:11 order 8841 failed: payment provider timed out". If a metric alarm says the error rate jumped, the logs are where you go to find out which errors, for which customers, in which order.</p>
+  <p>The two are meant to work together, and that is the thread running through this digest. Logs are the detailed record. Metric filters compress that record back into numbers when you want to graph or alarm on it. Subscription filters ship that record onward when you want another system to work with it.</p>
+  <p><em>Simplification:</em> I describe "logs" as plain text lines. CloudWatch Logs accepts any UTF-8 message, and many people write each line as structured JSON so it can be filtered by field later. Both are the same thing to the service: a timestamp plus a message.</p>
+
+  <h3>1. The hierarchy: events, streams and groups</h3>
+  <p>Think of three nested containers.</p>
+  <ul>
+    <li>A <strong>log event</strong> is one line (or one multi-line record) with a timestamp.</li>
+    <li>A <strong>log stream</strong> holds the events that came from one source, in order. If you have three web servers, a common layout is one stream per server.</li>
+    <li>A <strong>log group</strong> holds the streams that belong together. The docs give the example of a group named <code>MyWebsite.com/Apache/access_log</code> that holds one stream per host.</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 620 250" role="img" aria-label="A log group containing three log streams, each holding a sequence of log events, with group-level settings listed on the right">
+      <rect x="20" y="20" width="400" height="215" rx="12" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="36" y="42" font-family="JetBrains Mono, monospace" font-size="12" fill="#F2EFE9">log group: /shop/web/access</text>
+      <g font-family="JetBrains Mono, monospace" font-size="10.5">
+        <rect x="36" y="56" width="368" height="50" rx="8" fill="#131316" stroke="#7A7A80"/>
+        <text x="46" y="73" fill="#C9C7C1">stream: web-server-1</text>
+        <rect x="46" y="80" width="62" height="18" rx="3" fill="#0A0A0B" stroke="#6FCF97"/><text x="52" y="93" fill="#6FCF97">event</text>
+        <rect x="114" y="80" width="62" height="18" rx="3" fill="#0A0A0B" stroke="#6FCF97"/><text x="120" y="93" fill="#6FCF97">event</text>
+        <rect x="182" y="80" width="62" height="18" rx="3" fill="#0A0A0B" stroke="#C8453A"/><text x="188" y="93" fill="#C8453A">ERROR</text>
+        <rect x="250" y="80" width="62" height="18" rx="3" fill="#0A0A0B" stroke="#6FCF97"/><text x="256" y="93" fill="#6FCF97">event</text>
+        <text x="322" y="93" fill="#7A7A80">... time</text>
+        <rect x="36" y="114" width="368" height="50" rx="8" fill="#131316" stroke="#7A7A80"/>
+        <text x="46" y="131" fill="#C9C7C1">stream: web-server-2</text>
+        <rect x="46" y="138" width="62" height="18" rx="3" fill="#0A0A0B" stroke="#6FCF97"/><text x="52" y="151" fill="#6FCF97">event</text>
+        <rect x="114" y="138" width="62" height="18" rx="3" fill="#0A0A0B" stroke="#6FCF97"/><text x="120" y="151" fill="#6FCF97">event</text>
+        <text x="190" y="151" fill="#7A7A80">... time</text>
+        <rect x="36" y="172" width="368" height="50" rx="8" fill="#131316" stroke="#7A7A80"/>
+        <text x="46" y="189" fill="#C9C7C1">stream: web-server-3</text>
+        <rect x="46" y="196" width="62" height="18" rx="3" fill="#0A0A0B" stroke="#6FCF97"/><text x="52" y="209" fill="#6FCF97">event</text>
+        <text x="120" y="209" fill="#7A7A80">... time</text>
+      </g>
+      <rect x="445" y="20" width="160" height="215" rx="12" fill="#131316" stroke="#C8453A"/>
+      <text x="525" y="44" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#C8453A">set on the GROUP</text>
+      <g font-family="Inter, sans-serif" font-size="11.5" fill="#F2EFE9" text-anchor="middle">
+        <text x="525" y="76">retention</text>
+        <text x="525" y="100">access control</text>
+        <text x="525" y="124">metric filters</text>
+        <text x="525" y="148">subscription filters</text>
+        <text x="525" y="172">tags</text>
+        <text x="525" y="196">deletion protection</text>
+      </g>
+      <text x="525" y="222" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#7A7A80">apply to every stream inside</text>
+    </svg>
+    <figcaption>Schematic: events live in streams, streams live in a group, and the group is where the rules are attached.</figcaption>
+  </figure>
+
+  <p><strong>Why group-level settings matter.</strong> According to the docs, retention settings and metric filters are assigned to a log group and then apply to every stream in it. So a sensible habit is to split groups by how you want to treat the data. Debug chatter from a test app and audit records need very different retention, so they belong in different groups.</p>
+  <p><strong>How logs get in.</strong> CloudWatch Logs receives events automatically from several AWS services. For your own sources you can use the CloudWatch agent (which can ship metrics and logs), the <code>aws logs put-log-events</code> CLI command, or the <code>PutLogEvents</code> API, which uploads batches of events. We cover the agent properly in a later concept of this track.</p>
+  <p><strong>Housekeeping features</strong> the docs list for log groups: tags (key-value labels, up to 50 per log group, useful for cost tracking by owner or environment) and deletion protection, which blocks all deletion operations on the group until you explicitly disable it.</p>
+
+  <h3>2. Log classes: Standard vs Infrequent Access</h3>
+  <p>When you create a log group you pick a class. <strong>Standard</strong> is the full-featured option for logs you monitor in real time or read often. <strong>Infrequent Access</strong> is a lower-cost option for logs you rarely read, such as ad-hoc querying and after-the-fact investigation. The docs say the two classes differ in ingestion cost only (storage and Logs Insights query charges are the same). I'm deliberately not quoting any prices, since I'd need the live pricing page for that.</p>
+  <p>The part that matters for this digest is the feature table. Per the docs, <strong>metric filters</strong> and <strong>subscription filters</strong> are both supported on Standard log groups and <strong>not</strong> on Infrequent Access log groups. Live Tail and the embedded metric format are also Standard only. And, important: after a log group is created, its class can't be changed. Pick on purpose.</p>
+  <p><em>Caveat:</em> the docs also mention a third class, <code>Delivery</code>, meant only for delivering AWS Lambda logs to S3 or Firehose, with a fixed two-day retention. I'm not covering it further.</p>
+
+  <h3>3. Retention: how long events stay</h3>
+  <p>By default, per the docs, log data is stored indefinitely (the console shows <code>Never Expire</code>). You can set a retention period on each log group, and you can change it at any time. Events older than the setting are expired and deleted automatically.</p>
+  <p>Why you care: stored logs cost money, and logs can contain things you shouldn't keep forever. Setting retention on every group is a cheap habit that stops silent growth. The CLI reference says valid values for <code>--retention-in-days</code> are a fixed list: 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 2192, 2557, 2922, 3288 and 3653. You can't type an arbitrary number like 45. To go back to never expiring you use a different command (<code>delete-retention-policy</code>), not <code>put-retention-policy</code>.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 180" role="img" aria-label="Timeline showing events older than the retention setting being marked for deletion and actually deleted up to 72 hours later">
+      <defs><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#C9C7C1"/></marker></defs>
+      <path d="M30 100 L590 100" stroke="#C9C7C1" stroke-width="1.5" marker-end="url(#ah2)"/>
+      <text x="590" y="122" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#7A7A80">time</text>
+      <circle cx="80" cy="100" r="6" fill="#6FCF97"/>
+      <text x="80" y="82" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">event written</text>
+      <circle cx="330" cy="100" r="6" fill="#C8453A"/>
+      <text x="330" y="82" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">retention reached</text>
+      <text x="330" y="146" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#7A7A80">marked for deletion</text>
+      <rect x="330" y="92" width="190" height="16" fill="#C8453A" opacity="0.25"/>
+      <circle cx="520" cy="100" r="6" fill="#7A7A80"/>
+      <text x="520" y="82" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">actually deleted</text>
+      <text x="425" y="130" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#F2EFE9">typically up to 72h</text>
+      <path d="M80 112 L330 112" stroke="#6FCF97" stroke-width="2"/>
+      <text x="205" y="164" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#6FCF97">kept for the retention period</text>
+    </svg>
+    <figcaption>Schematic: retention is a deletion deadline, not an instant deletion. The 72 hour figure is the docs' "typically", with longer possible in rare cases.</figcaption>
+  </figure>
+
+  <p><strong>The catch.</strong> The docs note that CloudWatch Logs doesn't delete events the instant they reach the retention setting. It typically takes up to 72 hours afterwards, and in rare situations longer. Events that have reached their retention are marked for deletion and, per the docs, stop adding to archival storage cost even before they're physically gone. The same note warns about a subtle trap: if you lengthen retention while expired-but-not-yet-deleted events still exist, those events can survive until the new, longer date. If you need data gone for a compliance reason, don't assume the deadline is exact.</p>
+
+  <h3>4. Filter patterns: the shared mini-language</h3>
+  <p>Both kinds of filter, plus searching and Live Tail, use one pattern syntax. Learning it once pays off three times. The docs describe four styles:</p>
+  <ul>
+    <li><strong>Plain terms in unstructured text.</strong> <code>ERROR</code> matches events containing that word. <code>ERROR ARGUMENTS</code> matches events that contain both. <code>?ERROR ?ARGUMENTS</code> matches events with either. <code>ERROR -ARGUMENTS</code> includes ERROR but excludes ARGUMENTS. Put an exact phrase in double quotes: <code>"INTERNAL SERVER ERROR"</code>. Patterns are case sensitive.</li>
+    <li><strong>JSON patterns</strong> in curly braces, using <code>$.</code> to pick a field: <code>{ $.eventType = "UpdateTrail" }</code> or <code>{ $.latency &lt; 50 }</code>. Compound conditions use <code>&amp;&amp;</code> and <code>||</code>.</li>
+    <li><strong>Space-delimited patterns</strong> in square brackets, where you name each field: <code>[ip, user, username, timestamp, request, status_code, bytes]</code>, optionally with conditions such as <code>status_code = 404 || status_code = 410</code>.</li>
+    <li><strong>Regular expressions</strong> wrapped in percent signs, for example <code>%AUTHORIZED%</code>. The docs list the supported operators and say parentheses aren't supported.</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 620 230" role="img" aria-label="Four log lines tested against three filter patterns with match results">
+      <g font-family="JetBrains Mono, monospace" font-size="11">
+        <text x="20" y="22" fill="#7A7A80">log events</text>
+        <text x="330" y="22" fill="#7A7A80">ERROR</text>
+        <text x="410" y="22" fill="#7A7A80">ERROR -TIMEOUT</text>
+        <text x="540" y="22" fill="#7A7A80">?WARN ?ERROR</text>
+        <path d="M14 30 L610 30" stroke="rgba(242,239,233,0.15)"/>
+        <text x="20" y="56" fill="#C9C7C1">ERROR payment TIMEOUT</text>
+        <text x="345" y="56" fill="#6FCF97">yes</text><text x="450" y="56" fill="#C8453A">no</text><text x="560" y="56" fill="#6FCF97">yes</text>
+        <text x="20" y="92" fill="#C9C7C1">ERROR disk full</text>
+        <text x="345" y="92" fill="#6FCF97">yes</text><text x="450" y="92" fill="#6FCF97">yes</text><text x="560" y="92" fill="#6FCF97">yes</text>
+        <text x="20" y="128" fill="#C9C7C1">WARN slow query</text>
+        <text x="345" y="128" fill="#C8453A">no</text><text x="450" y="128" fill="#C8453A">no</text><text x="560" y="128" fill="#6FCF97">yes</text>
+        <text x="20" y="164" fill="#C9C7C1">error disk full (lowercase)</text>
+        <text x="345" y="164" fill="#C8453A">no</text><text x="450" y="164" fill="#C8453A">no</text><text x="560" y="164" fill="#C8453A">no</text>
+      </g>
+      <text x="20" y="206" font-family="Inter, sans-serif" font-size="11" fill="#C9C7C1">Case sensitive: the lowercase line never matches. These are my own made-up lines.</text>
+    </svg>
+    <figcaption>Schematic: three unstructured patterns tried on four invented log lines (including a case-sensitivity miss).</figcaption>
+  </figure>
+
+  <p><em>Simplification:</em> I skipped many details such as numeric operators in space-delimited patterns, wildcard selectors, and quota limits on regex use in a pattern. The docs page has them all and is worth skimming once.</p>
+
+  <h3>5. Metric filters: text in, numbers out</h3>
+  <p>A metric filter takes a log group, a filter pattern, and a recipe for a metric. As events come in, any event matching the pattern adds to the metric. The docs list its parts:</p>
+  <ul>
+    <li><strong>Filter pattern</strong>: what to look for.</li>
+    <li><strong>Metric name and namespace</strong>: where the result goes (you met both in the Metrics digest).</li>
+    <li><strong>Metric value</strong>: the number to publish per match. For counting occurrences it's 1. It can also be a number pulled out of the event, for example the docs show <code>{ $.latency = * } metricValue: $.latency</code>, which publishes the latency value found in a JSON event.</li>
+    <li><strong>Default value</strong>: the number reported for a period when logs arrived but nothing matched. The docs recommend setting it (even to 0) so the metric isn't "spotty". Note the caveat in the docs: if no logs are ingested at all during a minute, no value is reported. You also can't set a default value if you assign dimensions.</li>
+    <li><strong>Dimensions</strong>: optional, only for JSON and space-delimited patterns, up to three. Each unique name/value pair creates a new variant of the metric.</li>
+    <li><strong>Unit</strong>: optional. Pick the right one up front, since the docs say changing it later has no effect.</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 620 200" role="img" aria-label="Log events flow into a log group, a metric filter tests each one, matches become data points on a metric, which an alarm can watch">
+      <defs><marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#C9C7C1"/></marker></defs>
+      <rect x="15" y="60" width="120" height="80" rx="10" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="75" y="92" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#F2EFE9">log group</text>
+      <text x="75" y="112" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#7A7A80">new events arrive</text>
+      <rect x="185" y="60" width="130" height="80" rx="10" fill="#131316" stroke="#C8453A"/>
+      <text x="250" y="88" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#C8453A">metric filter</text>
+      <text x="250" y="108" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#C9C7C1">pattern: ERROR</text>
+      <text x="250" y="124" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#C9C7C1">value: 1, default: 0</text>
+      <rect x="365" y="60" width="110" height="80" rx="10" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="420" y="92" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#6FCF97">metric</text>
+      <text x="420" y="112" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#C9C7C1">MyApp / ErrorCount</text>
+      <rect x="520" y="60" width="85" height="80" rx="10" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="562" y="104" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#C9C7C1">alarm</text>
+      <path d="M137 100 L183 100" stroke="#C9C7C1" stroke-width="1.5" marker-end="url(#ah3)"/>
+      <path d="M317 100 L363 100" stroke="#C9C7C1" stroke-width="1.5" marker-end="url(#ah3)"/>
+      <path d="M477 100 L518 100" stroke="#C9C7C1" stroke-width="1.5" marker-end="url(#ah3)"/>
+      <text x="250" y="170" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">only events after the filter exists are counted</text>
+      <text x="340" y="30" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#7A7A80">illustrative names; the filter adds to the metric each minute</text>
+    </svg>
+    <figcaption>Schematic: the log-to-alarm path. The names MyApp and ErrorCount are my own illustration.</figcaption>
+  </figure>
+
+  <p><strong>Important behaviours to know.</strong></p>
+  <ul>
+    <li><strong>Not retroactive.</strong> Per the docs, a metric filter only publishes data points for events that happen after the filter was created. It does not go back through old logs.</li>
+    <li><strong>Standard class only.</strong> Metric filters aren't supported on Infrequent Access groups.</li>
+    <li><strong>At least once.</strong> The docs say delivery to the metric is at least once, so occasional duplicates can happen. A count from a metric filter is a good signal, but not an accounting-grade total.</li>
+    <li><strong>Watch dimension cardinality.</strong> The docs warn that dimension values are charged like custom metrics and that you shouldn't use high-cardinality fields such as an IP address or request ID as dimensions. They also say AWS might disable a metric filter that generates 1000 different name/value pairs for its dimensions over a certain amount of time.</li>
+  </ul>
+  <p>For a Lambda function or EC2 app, this is the classic pattern: log <code>ERROR</code> lines, a metric filter counts them per minute, and an alarm (last digest) emails you when the count passes a threshold.</p>
+
+  <h3>6. Subscription filters: a live feed to another service</h3>
+  <p>A subscription filter gives you "a real-time feed of log events" delivered to another service, per the docs: an Amazon Kinesis Data Streams stream, an Amazon Data Firehose stream, or an AWS Lambda function (and the docs also describe streaming to Amazon OpenSearch Service). You create the destination first, then the subscription filter, which holds a filter pattern and the destination's address.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 220" role="img" aria-label="A log group with a subscription filter forwarding matching events to Kinesis, Firehose or Lambda">
+      <defs><marker id="ah4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#C9C7C1"/></marker></defs>
+      <rect x="15" y="70" width="130" height="80" rx="10" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="80" y="104" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#F2EFE9">log group</text>
+      <text x="80" y="124" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#7A7A80">Standard class</text>
+      <rect x="200" y="75" width="140" height="70" rx="10" fill="#131316" stroke="#C8453A"/>
+      <text x="270" y="102" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#C8453A">subscription filter</text>
+      <text x="270" y="122" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#C9C7C1">pattern + destination</text>
+      <rect x="415" y="15" width="190" height="46" rx="8" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="510" y="43" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#F2EFE9">Kinesis Data Streams</text>
+      <rect x="415" y="87" width="190" height="46" rx="8" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="510" y="115" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#F2EFE9">Amazon Data Firehose</text>
+      <rect x="415" y="159" width="190" height="46" rx="8" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="510" y="187" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="#F2EFE9">AWS Lambda function</text>
+      <path d="M147 110 L198 110" stroke="#C9C7C1" stroke-width="1.5" marker-end="url(#ah4)"/>
+      <path d="M342 100 L413 42" stroke="#C9C7C1" stroke-width="1.5" marker-end="url(#ah4)"/>
+      <path d="M342 110 L413 110" stroke="#C9C7C1" stroke-width="1.5" marker-end="url(#ah4)"/>
+      <path d="M342 120 L413 180" stroke="#C9C7C1" stroke-width="1.5" marker-end="url(#ah4)"/>
+      <text x="378" y="212" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#7A7A80">delivered base64 encoded + gzip compressed</text>
+    </svg>
+    <figcaption>Schematic: a subscription filter picks matching events and pushes them to a destination you choose (shown as three options; you pick one per filter).</figcaption>
+  </figure>
+
+  <p><strong>Details the docs give.</strong></p>
+  <ul>
+    <li>Events are sent base64 encoded and compressed with gzip, so a receiver must decode and decompress.</li>
+    <li>Delivery usually happens in less than three minutes after ingestion ("soon after being ingested"), so it is near real time, not instant.</li>
+    <li>Delivery is at least once, so duplicates may occasionally occur. Events may also be batched when possible, though batching is not guaranteed.</li>
+    <li>If the destination returns a retryable error (throttling, HTTP 5xx), CloudWatch Logs keeps retrying for up to 24 hours. For a non-retryable error such as <code>AccessDeniedException</code>, the filter is disabled for up to 10 minutes and the logs in that window are skipped.</li>
+    <li>Standard-class log groups only.</li>
+    <li>The CLI command <code>put-subscription-filter</code> takes a role ARN that gives CloudWatch Logs permission to deliver, unless the destination is a cross-account logical destination. For a Lambda destination, the CLI reference notes that <code>iam:PassRole</code> is not required.</li>
+  </ul>
+  <p><strong>A limit I can't pin down.</strong> The Subscriptions overview page says each log group can have up to five subscription filters and each account can have one account-level subscription filter per Region. The CLI reference page for <code>put-subscription-filter</code> says up to two per log group. The two pages disagree, so check the current quotas page before designing around the number.</p>
+
+  <h3>7. Metric filter vs subscription filter at a glance</h3>
+  <div class="card">
+    <p><strong>Metric filter:</strong> output is a CloudWatch metric (a number per minute). Use it when you want to graph or alarm on how often something appears in logs. Keeps working inside CloudWatch.</p>
+    <p><strong>Subscription filter:</strong> output is the matching log events themselves, pushed to Kinesis, Firehose or Lambda. Use it when another system needs the actual text, for example to archive, enrich or analyse it.</p>
+    <p><strong>Neither</strong> is how you ask ad-hoc questions about old data. That is what the next concept (Logs Insights) is for.</p>
+  </div>
+
+  <h2>Why it matters</h2>
+  <p>Almost every "what went wrong?" investigation on AWS ends in a log group, and almost every "tell me when X happens" requirement that isn't a built-in metric ends in a metric filter. Retention is also where surprise bills and compliance questions come from, because the default is to keep everything forever. Knowing what lives on the group (retention, filters, class) lets you look at one log group and predict its behaviour.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Events live in streams, streams live in a group. Rules like retention and filters are set on the group.</li>
+      <li>Default retention is keep forever. You pick from a fixed list of day values, and deletion can lag by up to about 72 hours.</li>
+      <li>A metric filter turns matching log lines into a metric. It is not retroactive and works on Standard class groups.</li>
+      <li>A subscription filter streams matching events to Kinesis, Firehose or Lambda, base64 and gzip encoded.</li>
+      <li>Log class can't be changed after creation, so choose it up front.</li>
+    </ul>
+  </div>
+
+  <h2>Recall questions</h2>
+  <ol>
+    <li>Which two properties does a log event have?</li>
+    <li>If you want 30 days of retention on a group, which command do you use, and what would you run to go back to never expiring?</li>
+    <li>You create a metric filter today. Will it count errors from last week? Why or why not?</li>
+    <li>Why shouldn't you use a request ID as a metric filter dimension?</li>
+    <li>What must a Lambda function do with the data it receives from a subscription filter?</li>
+  </ol>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Build the hierarchy by hand.</strong> Run <code>aws logs create-log-group --log-group-name /lab/shop</code>, then <code>aws logs create-log-stream --log-group-name /lab/shop --log-stream-name web-1</code>, then push a few events with <code>aws logs put-log-events</code> using <code>--log-events timestamp=&lt;ms since epoch&gt;,message="..."</code> (on GNU/Linux, <code>date +%s%3N</code> gives the current time in milliseconds; the reference warns the timestamp is milliseconds, not seconds, and events older than 14 days are rejected). <em>Done when:</em> you can see the events in the console under that stream and can explain which setting would live on the group vs the stream.</li>
+      <li><strong>Set and read retention.</strong> Use <code>aws logs put-retention-policy --log-group-name /lab/shop --retention-in-days 3</code> and confirm with <code>aws logs describe-log-groups --log-group-name-prefix /lab</code>. Then try an invalid value such as 45. <em>Done when:</em> you've seen the accepted value in the output and recorded what the invalid one does.</li>
+      <li><strong>Test patterns before using them.</strong> In the console, use the filter pattern test box with sample lines (or <code>aws logs test-metric-filter --filter-pattern ERROR --log-event-messages "line one" "line two"</code>, which takes up to 50 messages and returns a <code>matches</code> list) to try <code>ERROR</code>, <code>ERROR -TIMEOUT</code>, and <code>"INTERNAL SERVER ERROR"</code> against six lines you invent. <em>Done when:</em> you have a small table of which lines matched each pattern and you can explain every result, including a case-sensitivity miss.</li>
+      <li><strong>Make a metric from logs.</strong> Create a metric filter on <code>/lab/shop</code> with <code>aws logs put-metric-filter</code> (pattern <code>ERROR</code>, <code>metricValue=1</code>, <code>defaultValue=0</code>, a namespace of your choice). Then send new events, some with ERROR. <em>Done when:</em> the metric shows counts in the console and you've confirmed that events sent <em>before</em> the filter existed were not counted.</li>
+      <li><strong>Extract a number.</strong> Write JSON log events like <code>{"latency": 50, "requestType": "GET"}</code> and create a metric filter using pattern <code>{ $.latency = * }</code> with metric value <code>$.latency</code>. <em>Done when:</em> you can graph the Average of that metric and read your latency values off it.</li>
+      <li><strong>Subscription to Lambda (stretch).</strong> Create a small Lambda that decodes base64, gunzips and prints the payload, then attach it with <code>aws logs put-subscription-filter</code> (the function needs permission to be invoked by CloudWatch Logs). <em>Done when:</em> the function's own logs show the decoded events from your test log group.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Read the docs page on filter pattern syntax end to end once, then the page on cross-account cross-Region log centralization, which I only mention here. Next in this track is the Logs Insights query language, the tool for asking questions of logs you've already collected.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the official documentation. Verify anything you plan to rely on (limits, CLI syntax, pricing, console steps) against the live pages below. AWS docs change over time; these pages were read in October 2026.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatchLogsConcepts.html" target="_blank" rel="noopener">Amazon CloudWatch Logs concepts</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/Working-with-log-groups-and-streams.html" target="_blank" rel="noopener">Working with log groups and log streams (sending logs, retention, tags)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch_Logs_Log_Classes.html" target="_blank" rel="noopener">Log classes</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/MonitoringLogData.html" target="_blank" rel="noopener">Creating metrics from log events using filters</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/FilterAndPatternSyntaxForMetricFilters.html" target="_blank" rel="noopener">Filter pattern syntax for metric filters</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/FilterAndPatternSyntax.html" target="_blank" rel="noopener">Filter pattern syntax (general: unstructured, JSON, space-delimited, regex)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/Subscriptions.html" target="_blank" rel="noopener">Real-time processing of log data with subscriptions</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/logs/put-retention-policy.html" target="_blank" rel="noopener">AWS CLI reference: logs put-retention-policy</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/logs/put-metric-filter.html" target="_blank" rel="noopener">AWS CLI reference: logs put-metric-filter</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/logs/put-log-events.html" target="_blank" rel="noopener">AWS CLI reference: logs put-log-events</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/logs/test-metric-filter.html" target="_blank" rel="noopener">AWS CLI reference: logs test-metric-filter</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/logs/put-subscription-filter.html" target="_blank" rel="noopener">AWS CLI reference: logs put-subscription-filter</a></li>
+  </ul>
+  <p class="src-note">Flagged: no pricing is quoted. The subscription filter quota is inconsistent between the Subscriptions overview (five per log group) and the CLI reference (two per log group), so I haven't committed to a number. I opened the CLI references for <code>put-log-events</code> and <code>test-metric-filter</code> and used their documented syntax. <code>create-log-group</code>, <code>create-log-stream</code>, <code>describe-log-groups</code> and <code>delete-retention-policy</code> are named from the concept pages and the CLI's logs command set, but I did not open each reference page, so check their syntax before running. The CLI examples for put-metric-filter and put-subscription-filter are sketches built from documented options, not copied from the docs. The SVG diagrams, log lines and names are my own illustrations, and the micro-projects have not been run against a live account.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
