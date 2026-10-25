@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DDIA: Ch.6 Partitioning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+  pre { background:#0A0A0B; border:1px solid var(--hairline); border-radius:8px; padding:14px 16px; overflow-x:auto; font-family:"JetBrains Mono",monospace; font-size:11.5px; line-height:1.5; color:var(--body); margin:10px 0 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">SYSTEMS &middot; CH.6 DIGEST</p>
+  <h1>Partitioning: Splitting Data Across Machines</h1>
+  <p class="lead">Replication copies the same data to several machines. Partitioning does something different: it splits one big dataset into pieces so that no single machine has to hold or serve all of it. This chapter is about how to choose the pieces, how secondary indexes complicate that choice, what to do when you add or remove machines, and how a request finds the right machine. I'll lean on one picture throughout: a library where the books are shelved across many rooms.</p>
+
+  <h2>In one line</h2>
+  <p>Partitioning (also called sharding) spreads data and query load across nodes by giving each record to exactly one partition, and almost every design decision is about avoiding hot spots while keeping lookups, range scans, and rebalancing cheap.</p>
+
+  <h2>The big idea</h2>
+  <p>Past a certain size, one machine can't store the data or keep up with the queries. You break the data into partitions and place different partitions on different nodes. If the split is fair, ten nodes handle roughly ten times the data and throughput. If it's unfair (<strong>skew</strong>), one node becomes a <strong>hot spot</strong> and the rest sit idle, which defeats the point. The two main ways to decide which record goes where are by key range (sorted, great for range scans, risky for hot spots) and by hash of the key (even, but range scans are lost). On top of that come secondary indexes (two ways to partition them), rebalancing (don't move more data than necessary), and request routing (how does a client know where to go).</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Partition (shard)</span>: one slice of the dataset. The same idea has other names: shard in MongoDB, Elasticsearch and SolrCloud; region in HBase; tablet in Bigtable; vnode in Cassandra and Riak; vBucket in Couchbase.</li>
+    <li><span class="keyterm-term">Skew</span>: an unfair split where some partitions get more data or load than others.</li>
+    <li><span class="keyterm-term">Hot spot</span>: a partition with disproportionately high load.</li>
+    <li><span class="keyterm-term">Key range partitioning</span>: each partition owns a continuous range of keys.</li>
+    <li><span class="keyterm-term">Hash partitioning</span>: each partition owns a range of hash values of the key.</li>
+    <li><span class="keyterm-term">Compound primary key</span>: a key made of several columns; in Cassandra only the first part is hashed to pick the partition and the rest sorts data within it.</li>
+    <li><span class="keyterm-term">Secondary index</span>: an index on something other than the primary key (all cars with color red); it finds occurrences of a value rather than one unique record.</li>
+    <li><span class="keyterm-term">Document-partitioned (local) index</span>: each partition keeps an index only over its own documents.</li>
+    <li><span class="keyterm-term">Term-partitioned (global) index</span>: one index covering all partitions, itself split up by the indexed term.</li>
+    <li><span class="keyterm-term">Scatter/gather</span>: sending a query to all partitions and combining the answers.</li>
+    <li><span class="keyterm-term">Rebalancing</span>: moving data and load between nodes when nodes are added, removed, or fail.</li>
+    <li><span class="keyterm-term">Pre-splitting</span>: configuring an initial set of partitions on an empty database.</li>
+    <li><span class="keyterm-term">Service discovery</span>: the general problem of finding which address handles a request.</li>
+    <li><span class="keyterm-term">ZooKeeper</span>: a coordination service many systems use to track which node owns which partition.</li>
+    <li><span class="keyterm-term">Gossip protocol</span>: nodes spreading cluster-state changes among themselves.</li>
+    <li><span class="keyterm-term">MPP database</span>: a massively parallel processing relational database, usually for analytics, which splits complex queries into parallel stages.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>Grounding first. The chapter's footnote makes one thing clear: partitioning here has nothing to do with a <em>network partition</em> (a netsplit fault between nodes, which Chapter 8 covers). Same word, different thing. Partitioning is a deliberate decision to cut data up. Each partition is, in effect, a small database of its own, although a database may support operations that touch several partitions. Partitioned databases were pioneered in the 1980s by products such as Teradata and Tandem NonStop SQL and later rediscovered by NoSQL databases and Hadoop-based warehouses, for both transactional and analytic workloads.</p>
+
+  <h3>Partitioning and replication together</h3>
+  <p>Partitioning is usually combined with replication: each record belongs to exactly one partition, but copies of that partition live on several nodes. With leader-follower replication, each partition has its own leader on one node and followers on others, so a node can be leader for some partitions and follower for others. Everything from Chapter 5 applies per partition, and the choice of partitioning scheme is mostly independent of the replication scheme, so the chapter ignores replication from here on.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">PARTITIONS x REPLICAS ON 3 NODES</text>
+      <g font-size="10" text-anchor="middle">
+        <rect x="30" y="40" width="170" height="150" rx="8" fill="#0E0E10" stroke="#7A7A80"/><text x="115" y="58" fill="#7A7A80">node 1</text>
+        <rect x="235" y="40" width="170" height="150" rx="8" fill="#0E0E10" stroke="#7A7A80"/><text x="320" y="58" fill="#7A7A80">node 2</text>
+        <rect x="440" y="40" width="170" height="150" rx="8" fill="#0E0E10" stroke="#7A7A80"/><text x="525" y="58" fill="#7A7A80">node 3</text>
+        <rect x="50" y="72" width="130" height="30" rx="5" fill="#0E0E10" stroke="#C8453A"/><text x="115" y="91" fill="#C8453A">P1 leader</text>
+        <rect x="50" y="112" width="130" height="30" rx="5" fill="#0E0E10" stroke="#C9C7C1"/><text x="115" y="131" fill="#C9C7C1">P3 follower</text>
+        <rect x="255" y="72" width="130" height="30" rx="5" fill="#0E0E10" stroke="#C8453A"/><text x="320" y="91" fill="#C8453A">P2 leader</text>
+        <rect x="255" y="112" width="130" height="30" rx="5" fill="#0E0E10" stroke="#C9C7C1"/><text x="320" y="131" fill="#C9C7C1">P1 follower</text>
+        <rect x="460" y="72" width="130" height="30" rx="5" fill="#0E0E10" stroke="#C8453A"/><text x="525" y="91" fill="#C8453A">P3 leader</text>
+        <rect x="460" y="112" width="130" height="30" rx="5" fill="#0E0E10" stroke="#C9C7C1"/><text x="525" y="131" fill="#C9C7C1">P2 follower</text>
+      </g>
+      <text x="320" y="216" fill="#7A7A80" font-size="9.5" text-anchor="middle">each node leads some partitions and follows others (one possible layout, invented)</text>
+    </svg>
+    <figcaption>Fig 1. Each record lives in one partition; each partition is copied to several nodes. (My own sketch.)</figcaption>
+  </figure>
+
+  <h3>Partitioning key-value data</h3>
+  <p>The goal: spread data and query load evenly. Randomly assigning records to nodes would spread data evenly, but then you can't tell which node holds an item and must ask all nodes. Better: assume a key-value model where you always access records by primary key, like looking up an entry in a paper encyclopedia, and assign by key.</p>
+
+  <h3>By key range</h3>
+  <p>Give each partition a continuous range of keys, like encyclopedia volumes. Knowing the boundaries tells you which partition has a key, and knowing which node has the partition tells you where to go. Ranges needn't be evenly spaced, because the data isn't (many words start with some letters). Boundaries can be set by an administrator or automatically. Used by Bigtable, HBase, RethinkDB, and MongoDB before version 2.4 (per the book).</p>
+  <p>Within a partition, keys can stay sorted, so <strong>range scans</strong> are easy: for sensor data keyed by timestamp you can fetch a whole month in one query. The downside is hot spots from access patterns. If the key is a timestamp and partitions are days, all of today's writes hit today's partition. A fix: put something else first, such as the sensor name, so writes spread across sensors. The cost is that fetching many sensors over a time range now needs one range query per sensor.</p>
+
+  <h3>By hash of the key</h3>
+  <p>Because of skew risk, many stores hash the key. A good hash function turns skewed or similar-looking inputs into evenly spread numbers (a 32-bit one gives 0 to 2<sup>32</sup> &minus; 1). It doesn't need to be cryptographically strong: Cassandra and MongoDB use MD5, Voldemort uses Fowler-Noll-Vo. Be careful with built-in language hashes: in Java's <code>Object.hashCode()</code> and Ruby's <code>Object#hash</code> the same key can hash differently in different processes, so they may be unsuitable. Each partition then owns a range of <em>hashes</em>. Boundaries can be evenly spaced or pseudorandom (the latter is sometimes called consistent hashing).</p>
+  <p>A naming warning from the source: "consistent hashing" has nothing to do with replica consistency or ACID consistency; it's a particular approach to rebalancing. The book says it doesn't work very well for databases and is rarely used in practice, though some documentation still mentions it, and suggests just saying <em>hash partitioning</em>.</p>
+  <p>The cost of hashing is that you lose efficient range queries: neighbouring keys are scattered. In MongoDB's hash-based mode, a range query goes to all partitions; the source says Riak, Couchbase and Voldemort don't support range queries on the primary key. <strong>Cassandra's compromise:</strong> a compound primary key whose first column is hashed to pick the partition, while the other columns sort data within it. You can't range-search the first column, but with a fixed first column you can range-scan the rest. That models one-to-many nicely: key <code>(user_id, update_timestamp)</code> gets one user's updates in a time range, in order, from a single partition.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">KEY RANGE vs HASH: WHERE DO TODAY'S WRITES GO?</text>
+      <text x="20" y="46" fill="#7A7A80" font-size="10">key range (key = timestamp): all new writes hit the newest partition</text>
+      <g stroke="#7A7A80"><rect x="20" y="54" width="130" height="34" fill="#0E0E10"/><rect x="150" y="54" width="130" height="34" fill="#0E0E10"/><rect x="280" y="54" width="130" height="34" fill="#0E0E10"/><rect x="410" y="54" width="130" height="34" fill="#C8453A"/></g>
+      <g font-size="9.5" text-anchor="middle" fill="#C9C7C1"><text x="85" y="75">Mon</text><text x="215" y="75">Tue</text><text x="345" y="75">Wed</text><text x="475" y="75" fill="#0A0A0B" font-weight="700">Thu: all writes</text></g>
+      <text x="20" y="130" fill="#7A7A80" font-size="10">hash partitioning: writes spread, but range scans must ask everyone</text>
+      <g stroke="#7A7A80"><rect x="20" y="138" width="130" height="34" fill="#6FCF97"/><rect x="150" y="138" width="130" height="34" fill="#6FCF97"/><rect x="280" y="138" width="130" height="34" fill="#6FCF97"/><rect x="410" y="138" width="130" height="34" fill="#6FCF97"/></g>
+      <g font-size="9.5" text-anchor="middle" fill="#0A0A0B"><text x="85" y="159">hash 0-25%</text><text x="215" y="159">25-50%</text><text x="345" y="159">50-75%</text><text x="475" y="159">75-100%</text></g>
+      <text x="20" y="206" fill="#C9C7C1" font-size="10">middle path: compound key (sensor, time) - hash the sensor, sort by time within it</text>
+      <text x="320" y="238" fill="#7A7A80" font-size="9" text-anchor="middle">invented partitions for illustration</text>
+    </svg>
+    <figcaption>Fig 2. The same writes, two layouts. (My own sketch.)</figcaption>
+  </figure>
+
+  <h3>Skewed workloads and hot spots</h3>
+  <p>Hashing helps but can't eliminate hot spots. If all requests are for one key (say a celebrity's activity), identical IDs hash identically. The source says most data systems cannot compensate for this automatically, so the application must: for a known hot key, add a random number to the start or end of the key. A two-digit random number would split writes across 100 different keys that can live on different partitions. The price: reads must now read all 100 keys and combine them, and you need bookkeeping to know which keys are split, since splitting everything would be wasteful overhead.</p>
+
+  <h3>Partitioning and secondary indexes</h3>
+  <p>Everything so far assumes access by primary key. A secondary index finds all occurrences of a value (red cars, articles containing a word). They are the bread and butter of relational and many document databases and the raison d'&ecirc;tre of search servers like Solr and Elasticsearch. Some key-value stores, such as HBase and Voldemort, avoided them for implementation complexity; Riak began adding them. The problem is that they don't map neatly onto partitions, and there are two approaches. The running example is a used-car site partitioned by listing ID with indexes on color and make.</p>
+  <p><strong>Document-partitioned (local) indexes.</strong> Each partition indexes only its own documents. A write touches one partition. But a read for "red cars" has no reason to find them all in one partition, so you must <strong>scatter/gather</strong> the query to all partitions and merge. That makes secondary-index reads expensive and prone to tail latency amplification (Chapter 1) even when run in parallel. Still widely used: the source lists MongoDB, Riak, Cassandra, Elasticsearch, SolrCloud and VoltDB, and notes vendors recommend structuring partitioning so secondary-index queries hit one partition, which isn't always possible (especially with several secondary indexes in one query).</p>
+  <p><strong>Term-partitioned (global) indexes.</strong> One index covers all partitions but is itself partitioned, differently from the data: perhaps colors a to r on one index partition and s to z on another. The <em>term</em> (like <code>color:red</code>) decides the partition (the word comes from full-text indexing). You can partition by the term itself (good for range scans, say on price) or by its hash (more even). Reads are more efficient: go to the one partition holding the term. Writes are slower and more complicated, since one document may touch several index partitions on different nodes. Keeping it perfectly in sync would need a distributed transaction, not supported everywhere, so updates are often asynchronous: right after a write, the index may not reflect it yet. The source's example is Amazon DynamoDB's global secondary indexes, which the 2014 developer guide says update within a fraction of a second normally but may have longer propagation delays when infrastructure faults occur. (Other users: Riak's search, and the Oracle data warehouse, which offers local or global.)</p>
+
+  <figure>
+    <svg viewBox="0 0 640 240" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">LOCAL vs GLOBAL SECONDARY INDEX</text>
+      <rect x="20" y="36" width="290" height="170" rx="8" fill="#0E0E10" stroke="#C9C7C1"/><text x="165" y="56" fill="#F2EFE9" font-size="10.5" font-weight="700" text-anchor="middle">LOCAL (by document)</text>
+      <text x="165" y="82" fill="#C9C7C1" font-size="9.5" text-anchor="middle">P0 holds docs 0-499 + its own index</text>
+      <text x="165" y="98" fill="#C9C7C1" font-size="9.5" text-anchor="middle">P1 holds docs 500-999 + its own index</text>
+      <text x="165" y="128" fill="#6FCF97" font-size="9.5" text-anchor="middle">write: touches 1 partition</text>
+      <text x="165" y="146" fill="#C8453A" font-size="9.5" text-anchor="middle">read "red": ask ALL partitions</text>
+      <text x="165" y="176" fill="#7A7A80" font-size="9" text-anchor="middle">(scatter/gather)</text>
+      <rect x="330" y="36" width="290" height="170" rx="8" fill="#0E0E10" stroke="#C9C7C1"/><text x="475" y="56" fill="#F2EFE9" font-size="10.5" font-weight="700" text-anchor="middle">GLOBAL (by term)</text>
+      <text x="475" y="82" fill="#C9C7C1" font-size="9.5" text-anchor="middle">index part A: colors a-r (all docs)</text>
+      <text x="475" y="98" fill="#C9C7C1" font-size="9.5" text-anchor="middle">index part B: colors s-z (all docs)</text>
+      <text x="475" y="128" fill="#6FCF97" font-size="9.5" text-anchor="middle">read "red": ask 1 index partition</text>
+      <text x="475" y="146" fill="#C8453A" font-size="9.5" text-anchor="middle">write: may touch several</text>
+      <text x="475" y="176" fill="#7A7A80" font-size="9" text-anchor="middle">(often updated asynchronously)</text>
+      <text x="320" y="228" fill="#7A7A80" font-size="9" text-anchor="middle">my own simplified sketch</text>
+    </svg>
+    <figcaption>Fig 3. Local indexes make writes cheap and reads expensive; global indexes reverse that. (My own sketch.)</figcaption>
+  </figure>
+
+  <h3>Rebalancing partitions</h3>
+  <p>Over time throughput grows, datasets grow, and machines fail, so data and requests must move between nodes: <strong>rebalancing</strong>. Minimum requirements per the source: afterwards the load is shared fairly; the database keeps accepting reads and writes meanwhile; and no more data than necessary moves.</p>
+  <p><strong>How not to do it: hash mod N.</strong> It looks easy (<code>hash(key) mod 10</code> picks one of 10 nodes), but if N changes most keys must move. The book's example: a key with hash 123456 is on node 6 with 10 nodes, node 3 with 11, node 0 with 12. In a quick test of my own with 10,000 made-up keys going from 10 to 11 nodes, about 9 in 10 keys changed node. Far too much movement.</p>
+  <p><strong>Fixed number of partitions.</strong> Create many more partitions than nodes (for example 1,000 partitions on 10 nodes, about 100 each). A new node steals a few partitions from each existing node until things are fair; removal reverses it. Only whole partitions move; the key-to-partition assignment never changes, only partition-to-node. The transfer takes time, so the old assignment serves requests meanwhile. More powerful machines can be given more partitions. Used by Riak, Elasticsearch, Couchbase and Voldemort. Catch: the number is usually fixed at setup and is effectively your maximum node count, so choose high enough for growth, but each partition has overhead, and partition size grows with total data. Too big makes rebalancing and recovery costly; too small wastes overhead; with a highly variable dataset size it's hard to hit "just right".</p>
+  <p><strong>Dynamic partitioning.</strong> For key-range partitioning, fixed boundaries are risky (you could end up with everything in one partition), so HBase and RethinkDB create partitions dynamically: when one grows past a configured size (HBase default 10 GB, per the book) it splits in two; if lots of data is deleted, a small one merges with a neighbour, similar to a B-tree's top level. A half can then move to another node. Benefit: the partition count tracks data volume. Caveat: an empty database starts as one partition, so all writes hit one node until the first split; HBase and MongoDB allow <strong>pre-splitting</strong>, which for key ranges requires knowing the key distribution. It also works with hash partitioning (MongoDB since 2.4 does both).</p>
+  <p><strong>Proportional to nodes.</strong> Cassandra and Ketama use a fixed number of partitions <em>per node</em>. Partitions grow with data while nodes stay fixed, and shrink when nodes are added. A new node randomly picks existing partitions to split and takes half of each. Random splits can be unfair but average out over many partitions (Cassandra default 256 per node, per the book); Cassandra 3.0 added a fairer algorithm. This needs hash partitioning, and matches the original definition of consistent hashing most closely.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">ADDING A NODE WITH A FIXED PARTITION COUNT</text>
+      <text x="20" y="44" fill="#7A7A80" font-size="10">before: 12 partitions on 3 nodes</text>
+      <g font-size="9" text-anchor="middle" fill="#F2EFE9">
+        <g stroke="#C9C7C1" fill="#0E0E10"><rect x="20" y="52" width="140" height="40"/><rect x="180" y="52" width="140" height="40"/><rect x="340" y="52" width="140" height="40"/></g>
+        <text x="90" y="76">p1 p2 p3 p4</text><text x="250" y="76">p5 p6 p7 p8</text><text x="410" y="76">p9 p10 p11 p12</text>
+      </g>
+      <text x="20" y="130" fill="#7A7A80" font-size="10">after: each old node gives up one partition to the new node</text>
+      <g font-size="9" text-anchor="middle" fill="#F2EFE9">
+        <g stroke="#C9C7C1" fill="#0E0E10"><rect x="20" y="138" width="110" height="40"/><rect x="145" y="138" width="110" height="40"/><rect x="270" y="138" width="110" height="40"/></g>
+        <rect x="395" y="138" width="110" height="40" fill="#0E0E10" stroke="#6FCF97"/>
+        <text x="75" y="162">p1 p2 p3</text><text x="200" y="162">p5 p6 p7</text><text x="325" y="162">p9 p10 p11</text><text x="450" y="162" fill="#6FCF97">p4 p8 p12</text>
+      </g>
+      <text x="320" y="208" fill="#7A7A80" font-size="9.5" text-anchor="middle">keys still map to the same partitions; only partitions-to-nodes changed</text>
+    </svg>
+    <figcaption>Fig 4. Whole partitions move; nothing is rehashed. (My own sketch with invented numbers.)</figcaption>
+  </figure>
+
+  <h3>Automatic or manual rebalancing</h3>
+  <p>It's a gradient. Fully automatic is convenient but can be unpredictable: rebalancing is expensive (rerouting requests, moving lots of data) and can overload the network or nodes. Combined with automatic failure detection it can cascade: an overloaded node is slow, others declare it dead, rebalancing shifts more load onto the struggling system. Hence a human in the loop can help. Couchbase, Riak and Voldemort generate a suggested assignment but need an administrator to commit it (per the book).</p>
+
+  <h3>Request routing</h3>
+  <p>After rebalancing, the question is: for key "foo", which IP and port do I contact? That's an instance of <strong>service discovery</strong>, a general problem for anything reachable over a network. Three approaches:</p>
+  <ol>
+    <li>Clients contact <em>any</em> node (for example via a round-robin load balancer); if it doesn't own the partition it forwards the request and relays the reply.</li>
+    <li>A <em>routing tier</em> that is partition-aware and forwards requests but handles none itself.</li>
+    <li><em>Clients know</em> the partition assignment and connect directly.</li>
+  </ol>
+  <p>The hard part is how that component learns about assignment changes, and everyone must agree or requests go to the wrong place. Consensus protocols exist but are hard to implement (Chapter 9). Many systems use a coordination service like ZooKeeper: nodes register, ZooKeeper holds the authoritative partition-to-node map, and the routing tier or clients subscribe for changes. Per the book: LinkedIn's Espresso uses Helix (built on ZooKeeper) with a routing tier; HBase, SolrCloud and Kafka use ZooKeeper; MongoDB uses its own config servers and <code>mongos</code> routers. Cassandra and Riak use a gossip protocol among nodes (approach 1), avoiding an external dependency at the cost of more complexity in the nodes. Couchbase doesn't rebalance automatically, simplifying its design, and uses a routing tier called moxi. Finding IP addresses changes more slowly than partition assignment, so DNS often suffices.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">THREE WAYS TO FIND THE RIGHT NODE</text>
+      <g font-size="9.5" text-anchor="middle">
+        <rect x="14" y="36" width="196" height="150" rx="8" fill="#0E0E10" stroke="#C9C7C1"/><text x="112" y="56" fill="#F2EFE9" font-weight="700">1. any node</text>
+        <text x="112" y="84" fill="#C9C7C1">client -> node A</text><text x="112" y="100" fill="#C9C7C1">A forwards -> node B</text><text x="112" y="116" fill="#C9C7C1">B replies via A</text><text x="112" y="152" fill="#7A7A80">(Cassandra, Riak style)</text>
+        <rect x="222" y="36" width="196" height="150" rx="8" fill="#0E0E10" stroke="#C9C7C1"/><text x="320" y="56" fill="#F2EFE9" font-weight="700">2. routing tier</text>
+        <text x="320" y="84" fill="#C9C7C1">client -> router</text><text x="320" y="100" fill="#C9C7C1">router knows the map</text><text x="320" y="116" fill="#C9C7C1">router -> right node</text><text x="320" y="152" fill="#7A7A80">(mongos, Espresso style)</text>
+        <rect x="430" y="36" width="196" height="150" rx="8" fill="#0E0E10" stroke="#C9C7C1"/><text x="528" y="56" fill="#F2EFE9" font-weight="700">3. smart client</text>
+        <text x="528" y="84" fill="#C9C7C1">client holds the map</text><text x="528" y="100" fill="#C9C7C1">client -> right node</text><text x="528" y="116" fill="#C9C7C1">no middleman</text><text x="528" y="152" fill="#7A7A80">(map kept fresh somehow)</text>
+      </g>
+      <text x="320" y="214" fill="#7A7A80" font-size="9.5" text-anchor="middle">in all three: who tells whom when ownership changes? (ZooKeeper, gossip, config servers)</text>
+    </svg>
+    <figcaption>Fig 5. Same question, three places to answer it. (My own sketch.)</figcaption>
+  </figure>
+
+  <h3>Parallel query execution</h3>
+  <p>Single-key reads and writes (plus scatter/gather) are about the limit of most NoSQL stores. MPP relational databases for analytics support far richer queries: a typical warehouse query has joins, filters, grouping and aggregation. The MPP optimizer splits it into stages and partitions that run in parallel on different nodes, which especially helps queries scanning large parts of the data. The source calls it a specialized topic and defers some techniques to Chapter 10.</p>
+
+  <h3>The chapter in review (its Summary)</h3>
+  <ul>
+    <li>Goal: spread data and queries evenly and avoid hot spots; pick a scheme suited to the data and rebalance as nodes come and go.</li>
+    <li>Key range: sorted, efficient range queries, hot-spot risk if access clusters on nearby keys; usually rebalanced dynamically by splitting.</li>
+    <li>Hash: destroys ordering (range queries inefficient) but spreads load; usually a fixed number of partitions assigned several-per-node, though dynamic is possible. Hybrids with compound keys exist.</li>
+    <li>Secondary indexes: document-partitioned (cheap writes, scatter/gather reads) or term-partitioned (single-partition reads, multi-partition writes).</li>
+    <li>Routing ranges from partition-aware load balancing to parallel query engines. Partitions mostly operate independently, which is what lets them scale, but writes spanning several partitions are hard to reason about (what if one succeeds and one fails?), which the following chapters address.</li>
+  </ul>
+
+  <h2>Why it matters</h2>
+  <p>"Why is one shard on fire?", "why is this query slow across the cluster?", "why did adding a node trigger a storm of data movement?" are all partitioning questions. Choosing a partition key is one of the most consequential schema decisions in a distributed database, and it's hard to change later.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Partitioning splits the dataset so each record lives in exactly one partition; replication then copies each partition. Don't confuse it with network partitions.</li>
+      <li>Key range keeps order (range scans) but can create hot spots; hash spreads evenly but loses ordering. Compound keys can blend the two.</li>
+      <li>Hashing can't save you from one extremely hot key; the app may have to split it (and then reads fan out).</li>
+      <li>Local secondary indexes: cheap writes, scatter/gather reads. Global (term-partitioned): cheap reads, costlier and often asynchronous writes.</li>
+      <li>Avoid hash mod N for placement; use many fixed partitions, dynamic splitting, or partitions per node. And decide how requests find the owner of a key.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Mod N damage.</strong> Hash 10,000 keys with a stable hash (not your language's per-process one) and assign them by hash mod N. Count how many keys change node going from 10 to 11 nodes. Then use 100 fixed partitions with whole-partition moves and count again. Done when you can report both percentages.</li>
+      <li><strong>Hot spot lab.</strong> Simulate sensor writes keyed by timestamp into 4 range partitions and print writes per partition. Change the key to (sensor, timestamp) and compare. Done when you can show the skew drop and name the query that got more expensive.</li>
+      <li><strong>Salt a hot key.</strong> Send 10,000 writes to one key spread by a random suffix 0 to 9, then write the read that sums all ten. Done when totals match and you have a plan for tracking which keys are salted.</li>
+      <li><strong>Scatter/gather.</strong> Build 3 in-memory partitions of car records, each with a local color index. Write a global query that fans out and merges; then build a term-partitioned index and compare how many partitions each read and write touches. Done when you can print the counts.</li>
+      <li><strong>Mini router.</strong> Keep a partition-to-node map in a dict, a router function that forwards requests, and a rebalance function that moves one partition. Done when requests keep succeeding after the move, and you can describe what would happen if the router's map were stale.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Take any database you use and find out how it picks a partition for a row and whether its secondary indexes are local or global. Chapter 7 next asks what happens when one write must touch several partitions.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, written to help you build a mental model quickly. It is not a substitute for the source; verify anything you plan to rely on against the original before using it for real.</p>
+  <ul class="src-list">
+    <li>Martin Kleppmann, <em>Designing Data-Intensive Applications</em> (O'Reilly, 2017), Chapter 6, "Partitioning," in full including its Summary: printed pages 199 to 218 (PDF pages 221 to 240 of the supplied file).</li>
+  </ul>
+  <p class="src-note">Flagged for accuracy: (1) Which database uses which scheme or default (HBase 10 GB split size, Cassandra's 256 partitions per node, MongoDB versions, DynamoDB index delay wording) are the book's statements from around 2014 to 2017 and may be outdated; check current documentation. (2) The DynamoDB sentence is the book's citation of the 2014 developer guide, not something I checked against current AWS docs. (3) "About 9 in 10 keys moved" is from my own quick simulation with made-up keys, not a number from the book; the book only says most keys move. (4) The micro-projects are my own. (5) Diagrams are original with invented values. (6) Nothing outside the supplied chapter was consulted.</p>
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
