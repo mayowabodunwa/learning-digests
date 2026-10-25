@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: IPv6 in a VPC and the Egress-Only Internet Gateway</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS VPC &middot; CONCEPT 7 DIGEST</p>
+  <h1>IPv6 in a VPC and the Egress-Only Internet Gateway</h1>
+  <p class="lead">How a VPC gets IPv6 addresses, why IPv6 changes the "public vs private" conversation, and how the egress-only internet gateway lets private instances call out over IPv6 without letting the internet call in.</p>
+
+  <h2>In one line</h2>
+  <p>You can add IPv6 to a VPC alongside IPv4 (dual-stack); because IPv6 addresses are globally unique and public by default, the thing that keeps a private subnet private is routing, and the egress-only internet gateway is the IPv6 equivalent of "outbound only".</p>
+
+  <h2>The big idea</h2>
+  <p>Up to now our private subnets reached the internet through a NAT gateway. NAT exists largely because IPv4 addresses are scarce: many private addresses hide behind one public one. IPv6 has so many addresses that every instance can have its own globally unique one, so there's nothing to translate. That sounds like a security problem, since a public address could be reached from anywhere, but reachability in a VPC is controlled by routes, security groups and network ACLs, not by the address format. If a subnet has no route to the internet for IPv6, its instances are unreachable from the internet no matter how global their addresses are. If you want outbound-only behavior, you add a route to an egress-only internet gateway. Everything in this digest is a variation on that idea.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">IPv6</span>: the newer IP address format. An address is 128 bits, written as 8 groups of 4 hex digits, and may be shortened by dropping leading zeros and replacing one run of all-zero groups with <code>::</code>. e.g. <code>2001:0db8:85a3:0000:0000:8a2e:0370:7334</code> can be written <code>2001:db8:85a3::8a2e:370:7334</code>.</li>
+    <li><span class="keyterm-term">Dual-stack</span>: a VPC or subnet that supports both IPv4 and IPv6, independently of each other.</li>
+    <li><span class="keyterm-term">IPv6-only subnet</span>: a subnet with IPv6 only. The docs say there is no migration path from an IPv4-only subnet to an IPv6-only one.</li>
+    <li><span class="keyterm-term">GUA</span>: global unicast address, the globally routable kind of IPv6 address.</li>
+    <li><span class="keyterm-term">ULA</span>: unique local address, the IPv6 private range (starts with <code>fc</code> or <code>fd</code>).</li>
+    <li><span class="keyterm-term">::/0</span>: the IPv6 "any destination" route, equivalent to <code>0.0.0.0/0</code> in IPv4.</li>
+    <li><span class="keyterm-term">Egress-only internet gateway (EIGW)</span>: a VPC component that allows outbound IPv6 communication to the internet and prevents the internet from initiating IPv6 connections to your instances.</li>
+    <li><span class="keyterm-term">Stateful</span>: remembers a connection so the reply is allowed back without a separate rule.</li>
+    <li><span class="keyterm-term">BYOIP</span>: bring your own IP addresses; you own the range, AWS advertises it.</li>
+    <li><span class="keyterm-term">IPAM</span>: Amazon VPC IP Address Manager, a tool to plan, track and allocate address ranges.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>Grounding: IPv4 recap and what's different in IPv6</h3>
+  <p>In IPv4 every VPC has a CIDR block (a range like <code>10.0.0.0/16</code>), mostly private ranges, and a public IPv4 address is mapped to a private one through NAT. In IPv6, the docs say the Amazon-provided addresses are "always advertised on the internet" and "globally unique, and therefore reachable over the internet", and you control actual reachability with routing, security groups and network ACLs. IPv4 can't be turned off in a VPC: the docs state you cannot disable IPv4 support for your VPC and subnets, since it is the default addressing system. IPv4 and IPv6 traffic are independent of each other.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="IPv4 uses NAT while IPv6 uses an egress-only gateway">
+      <rect x="10" y="10" width="300" height="200" rx="10" fill="none" stroke="#7A7A80" stroke-dasharray="5 4"/>
+      <text x="22" y="30" fill="#7A7A80" font-family="monospace" font-size="11">IPv4 PATH</text>
+      <rect x="30" y="80" width="90" height="50" rx="6" fill="#131316" stroke="#F2EFE9"/>
+      <text x="75" y="109" fill="#F2EFE9" font-family="monospace" font-size="10" text-anchor="middle">private inst.</text>
+      <rect x="160" y="80" width="70" height="50" rx="6" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="195" y="109" fill="#C8453A" font-family="monospace" font-size="10" text-anchor="middle">NAT GW</text>
+      <rect x="255" y="80" width="45" height="50" rx="6" fill="#0E0E10" stroke="#F2EFE9" stroke-opacity="0.5"/>
+      <text x="277" y="109" fill="#C9C7C1" font-family="monospace" font-size="10" text-anchor="middle">IGW</text>
+      <path d="M120 105 L160 105" stroke="#F2EFE9" fill="none"/>
+      <path d="M230 105 L255 105" stroke="#F2EFE9" fill="none"/>
+      <rect x="330" y="10" width="300" height="200" rx="10" fill="none" stroke="#7A7A80" stroke-dasharray="5 4"/>
+      <text x="342" y="30" fill="#7A7A80" font-family="monospace" font-size="11">IPv6 PATH</text>
+      <rect x="350" y="80" width="90" height="50" rx="6" fill="#131316" stroke="#F2EFE9"/>
+      <text x="395" y="109" fill="#F2EFE9" font-family="monospace" font-size="10" text-anchor="middle">private inst.</text>
+      <rect x="480" y="80" width="140" height="50" rx="6" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="550" y="102" fill="#6FCF97" font-family="monospace" font-size="10" text-anchor="middle">egress-only IGW</text>
+      <text x="550" y="118" fill="#C9C7C1" font-family="monospace" font-size="9" text-anchor="middle">no translation</text>
+      <path d="M440 105 L480 105" stroke="#6FCF97" fill="none"/>
+      <text x="320" y="190" fill="#7A7A80" font-family="monospace" font-size="10" text-anchor="middle">IPv4 hides behind NAT. IPv6 keeps its own address; the gateway only blocks inbound-initiated connections.</text>
+    </svg>
+    <figcaption>Two ways of being "outbound only". Simplified: real VPCs also need the matching route-table entries.</figcaption>
+  </figure>
+
+  <h3>1. Addressing: how IPv6 blocks are sized and chosen</h3>
+  <p><strong>Where the range comes from.</strong> A VPC must have an IPv4 CIDR block; IPv6 is optional. For IPv6 you can use an Amazon-provided block, a block allocated from an IPAM pool, or a range you bring (BYOIP). With the Amazon-provided option you can't choose the addresses yourself; the docs' example gets a <code>/56</code>, and you then carve a <code>/64</code> for each subnet (the Step 1 walkthrough says to associate a <code>/64</code> from that range with each subnet).</p>
+  <p><strong>Sizes.</strong> From the comparison table: IPv4 VPC CIDRs run from /16 to /28, up to 5 per VPC (adjustable). IPv6 VPC CIDRs run from /44 to /60 in increments of /4, also up to 5 (adjustable). The same table gives IPv6 subnet sizes as /44 to /64 in increments of /4, while the migration page says to give each subnet a /64. I'll flag that these two pages read differently and stick with "a /64 per subnet" as the practical example the docs walk through.</p>
+  <p><strong>Instance addresses.</strong> IPv6 addresses are assigned to instances from the subnet's IPv6 range, on the primary network interface. Elastic IPs aren't supported for IPv6; the docs say IPv6 addresses are static by default. All current generation instance types support IPv6 according to the migration page.</p>
+  <p><strong>Public vs private IPv6.</strong> The docs now describe both. Public means advertised on the internet from AWS. Private IPv6 addresses (ULA ranges, or GUA ranges you own and mark private) are not and cannot be advertised; they're only available through IPAM, and the docs say traffic from them is dropped at the internet gateway edge. This digest focuses on the public kind because that's where the egress-only gateway matters.</p>
+  <p><em>Simplification:</em> I say "IPv6 addresses are public by default". The docs say Amazon-provided addresses are globally unique and advertised, which is true for the standard setup; the private ULA/GUA option is the exception.</p>
+
+  <h3>2. Turning IPv6 on: the four steps</h3>
+  <p>The docs' sequence for an existing IPv4 VPC:</p>
+  <ol>
+    <li><strong>Associate a CIDR</strong> with the VPC, then a /64 with each subnet.</li>
+    <li><strong>Update route tables.</strong> AWS automatically adds an IPv6 local route when you associate the block. For a public subnet add <code>::/0</code> to the internet gateway. For a private subnet add <code>::/0</code> to an egress-only internet gateway.</li>
+    <li><strong>Update firewall rules.</strong> Security groups need IPv6 rules (for example <code>::/0</code> as the source for HTTP). The docs say an outbound allow-all IPv6 rule is added automatically unless you modified the original outbound rules. The default network ACL gets IPv6 rules automatically; a modified default or custom NACL needs IPv6 rules added by hand. (That's the earlier security group and NACL topic showing up again.)</li>
+    <li><strong>Assign IPv6 addresses</strong> to instances. If an address won't respond, the docs say to check your operating system's IPv6 configuration.</li>
+  </ol>
+  <p>Dual-stack means each step is done <em>in addition to</em> IPv4, not instead of it. A subtle trap: a route table cannot send <code>::/0</code> to an internet gateway and an egress-only gateway at the same time. The docs describe an error ("There are existing ipv6 routes with next hop as internet Gateway") that you resolve by removing the first route before adding the second.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Public and private subnet route tables for IPv6">
+      <rect x="20" y="20" width="290" height="190" rx="8" fill="#0E0E10" stroke="#F2EFE9" stroke-opacity="0.3"/>
+      <text x="36" y="44" fill="#7A7A80" font-family="monospace" font-size="11">PUBLIC SUBNET ROUTE TABLE</text>
+      <text x="36" y="78" fill="#C9C7C1" font-family="monospace" font-size="11">10.0.0.0/16        local</text>
+      <text x="36" y="102" fill="#C9C7C1" font-family="monospace" font-size="11">2001:db8:1234:1a00::/56  local</text>
+      <text x="36" y="126" fill="#C9C7C1" font-family="monospace" font-size="11">0.0.0.0/0          igw-xxxx</text>
+      <text x="36" y="150" fill="#6FCF97" font-family="monospace" font-size="11">::/0               igw-xxxx</text>
+      <text x="36" y="188" fill="#7A7A80" font-family="monospace" font-size="10">reachable inbound if SG/NACL allow</text>
+      <rect x="330" y="20" width="290" height="190" rx="8" fill="#0E0E10" stroke="#F2EFE9" stroke-opacity="0.3"/>
+      <text x="346" y="44" fill="#7A7A80" font-family="monospace" font-size="11">PRIVATE SUBNET ROUTE TABLE</text>
+      <text x="346" y="78" fill="#C9C7C1" font-family="monospace" font-size="11">10.0.0.0/16        local</text>
+      <text x="346" y="102" fill="#C9C7C1" font-family="monospace" font-size="11">2001:db8:1234:1a00::/56  local</text>
+      <text x="346" y="126" fill="#C9C7C1" font-family="monospace" font-size="11">0.0.0.0/0          nat-xxxx</text>
+      <text x="346" y="150" fill="#6FCF97" font-family="monospace" font-size="11">::/0               eigw-xxxx</text>
+      <text x="346" y="188" fill="#7A7A80" font-family="monospace" font-size="10">outbound only over IPv6</text>
+    </svg>
+    <figcaption>Illustrative tables with placeholder IDs. The docs' own example table shows a /64 local route for the subnet; I show the /56 VPC block here to keep the point clear.</figcaption>
+  </figure>
+
+  <h3>3. The egress-only internet gateway</h3>
+  <p><strong>What it does.</strong> Per the docs, it is "horizontally scaled, redundant, and highly available", allows outbound IPv6 from your instances to the internet, and prevents the internet from initiating an IPv6 connection with them. It is for IPv6 only; for outbound-only IPv4 the docs point you to a NAT gateway.</p>
+  <p><strong>How it behaves.</strong> It is stateful: it forwards traffic from instances to the internet or other AWS services, then sends the response back. You create one for your VPC and add a route <code>::/0</code> (or a narrower IPv6 range) to it in the route tables of the subnets you want to be outbound-only.</p>
+  <p><strong>What you can't do.</strong> You can't attach a security group to an egress-only gateway. You control traffic with network ACLs on the subnet and security groups on the instances. Pricing: the docs say no charge for the gateway itself, but data transfer charges apply to EC2 instances that use internet gateways.</p>
+  <p><strong>Why this is not "NAT for IPv6".</strong> A NAT gateway rewrites addresses. The egress-only gateway does not translate anything; the instance keeps its own global address. What it enforces is the direction in which connections may start. (The IPv4/IPv6 comparison page does list NAT64/DNS64 as a separate feature: a NAT gateway with NAT64 lets instances in IPv6-only subnets reach IPv4-only resources. That is a different thing from this gateway, and I haven't gone into it.)</p>
+  <p>CLI, both from the reference pages:</p>
+  <div class="card"><code>aws ec2 create-egress-only-internet-gateway --vpc-id vpc-0123456789abcdef0</code><br><br><code>aws ec2 create-route --route-table-id rtb-0123456789abcdef0 --destination-ipv6-cidr-block ::/0 --egress-only-internet-gateway-id eigw-0123456789abcdef0</code></div>
+  <p>(IDs are placeholders. The first page lists <code>--vpc-id</code> as the only required option; the second lists the IPv6 destination and EIGW options as shown.)</p>
+
+  <h3>4. IPv4 versus IPv6 side by side</h3>
+  <div class="card">
+    <ul>
+      <li><strong>Internet access:</strong> IPv4 needs an internet gateway. IPv6 needs an internet gateway too, with the outbound-only variant being the egress-only gateway.</li>
+      <li><strong>Outbound from private subnet:</strong> IPv4 uses a NAT gateway. IPv6 uses the egress-only gateway (the migration page says NAT gateways do not support IPv6 for this purpose; NAT64 is a separate case, see the flag in Sources).</li>
+      <li><strong>Static addresses:</strong> IPv4 uses Elastic IPs. IPv6 has no EIPs because the addresses are static by default.</li>
+      <li><strong>Mandatory?</strong> IPv4 is always there. IPv6 is optional in a VPC.</li>
+      <li><strong>Charges:</strong> the docs say AWS charges for all public IPv4 addresses, whether on running instances or Elastic IPs. I haven't compared this to IPv6 pricing and am not claiming a number.</li>
+    </ul>
+  </div>
+
+  <h2>Why it matters</h2>
+  <p>IPv6 is how you stop depending on scarce public IPv4 addresses and the per-address charges that come with them, and the egress-only gateway is what keeps database and application tiers unreachable from outside once they have globally unique addresses. It links back to route tables and the internet gateway (Concept 1), security groups and NACLs (Concept 3), and forward to peering and hybrid routing, where overlapping IPv4 ranges are a pain that IPv6 sidesteps.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Dual-stack: IPv4 stays on, IPv6 is added, and each needs its own routes and firewall rules.</li>
+      <li>Amazon-provided IPv6 addresses are globally unique and advertised; routing plus SG/NACL decides reachability.</li>
+      <li>Private IPv6 subnet that needs to call out: route <code>::/0</code> to an egress-only internet gateway.</li>
+      <li>EIGW is IPv6 only, stateful, and takes no security group; NACLs apply at the subnet.</li>
+      <li>The same destination <code>::/0</code> can't point at both an IGW and an EIGW in one route table.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Add IPv6 to a scratch VPC.</strong> Associate an Amazon-provided IPv6 block and a /64 per subnet. <em>Done when:</em> the console's CIDRs tab shows the IPv6 block as associated and each subnet has its own /64.</li>
+      <li><strong>Read the auto-added route.</strong> Open a route table and find the IPv6 local route. <em>Done when:</em> you can say which entry covers instance-to-instance IPv6 traffic.</li>
+      <li><strong>Public IPv6 path.</strong> Add <code>::/0</code> to the internet gateway in a public subnet, add an IPv6 security group rule for SSH or ICMP, and connect to a test instance by its IPv6 address. <em>Done when:</em> you reach it from an IPv6-capable network. (Your own ISP may not offer IPv6; I haven't verified your network.)</li>
+      <li><strong>Egress-only path.</strong> Create an EIGW, route <code>::/0</code> from a private subnet to it, and from that instance run <code>curl -6 https://example.com</code> (or any IPv6-reachable site). <em>Done when:</em> the request succeeds while an inbound IPv6 connection to that instance from outside fails.</li>
+      <li><strong>Hit the route conflict.</strong> Try adding <code>::/0</code> to an EIGW in a table that already has <code>::/0</code> to an IGW. <em>Done when:</em> you've seen the error and fixed it by removing the first route.</li>
+      <li><strong>Address practice.</strong> Write a small script that expands <code>2001:db8:85a3::8a2e:370:7334</code> to full form and compresses it back. <em>Done when:</em> it matches the docs' example in both directions.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Read the docs on NAT64/DNS64 for IPv6-only subnets, the IPAM guide on private IPv6 ranges, and the AWS services that support IPv6 list. Both the IPv6 pricing story and per-service dual-stack limitations are worth checking before a real migration.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the official documentation. Quotas, IPv6 service support and pricing change; verify anything you plan to rely on against the live pages below.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/vpc-ip-addressing.html" target="_blank" rel="noopener">IP addressing for your VPCs and subnets</a> (IPv6 formats, public and private IPv6)</li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/vpc-cidr-blocks.html" target="_blank" rel="noopener">VPC CIDR blocks</a> (IPv6 VPC CIDR blocks)</li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/ipv4-ipv6-comparison.html" target="_blank" rel="noopener">Compare IPv4 and IPv6</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/vpc-migrate-ipv6.html" target="_blank" rel="noopener">IPv6 support for your VPC</a> and <a href="https://docs.aws.amazon.com/vpc/latest/userguide/vpc-migrate-ipv6-add.html" target="_blank" rel="noopener">Add IPv6 support for your VPC</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/egress-only-internet-gateway.html" target="_blank" rel="noopener">Enable outbound IPv6 traffic using an egress-only internet gateway</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/create-egress-only-internet-gateway.html" target="_blank" rel="noopener">CLI reference: create-egress-only-internet-gateway</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/create-route.html" target="_blank" rel="noopener">CLI reference: create-route</a></li>
+  </ul>
+  <p class="src-note">Flagged: commands were checked against the CLI reference pages, not run in a live account. The comparison page (subnets /44 to /64) and the migration page (a /64 per subnet) read differently; I used the /64 example. The "NAT gateways do not support IPv6" phrasing comes from the migration page's routing step, while the comparison page says NAT gateways with NAT64 are supported for IPv6-only subnets reaching IPv4 resources, so treat "NAT and IPv6" as nuanced and read both pages. IPv6 pricing, the egress-only gateway's working-with page, and per-service IPv6 support were not read.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
