@@ -1,0 +1,293 @@
+# One-time backfill: produce the HTML digest for EVERY unit still outstanding in
+# TRACKER.md's focused scope, in one go.
+#
+# Deliberately different from Content (the normal twice-daily pipeline):
+#   - no completion gate (that is the point: it does not wait to be read)
+#   - no carousels at all (no render, no lint, no zip)
+#   - manual only, never on a schedule
+#
+# It is resumable. Each digest is committed and pushed the moment it is finished,
+# and every job skips units whose digest file already exists, so a timeout, a
+# rate limit, or a cancelled run costs you only the unit in flight. Re-running
+# the workflow picks up exactly where it stopped.
+#
+# Work is split by area so the tracks make progress independently and one bad
+# area cannot take the rest down with it. Producers only ever write
+# docs/digests/<slug>.html plus a docs/_entries/<slug>.json sidecar, which are
+# unique per unit and so never collide; the single "Collect" job afterwards
+# merges the sidecars, rebuilds the index, updates TRACKER.md and sends one email.
+name: Backfill digests (one-time)
+
+on:
+  workflow_dispatch:
+    inputs:
+      areas:
+        description: 'Areas to produce: "all", or a comma list of ddia,ai-eng,mysql,s3,ec2,vpc,cloudwatch'
+        default: all
+        type: string
+      limit_per_area:
+        description: 'Max units per area (0 = no limit). Set to 1 for a cheap smoke test first.'
+        default: '0'
+        type: string
+
+permissions:
+  contents: write
+
+# Never let two backfills run at once: they would both be pushing digests to main.
+concurrency:
+  group: backfill
+  cancel-in-progress: false
+
+jobs:
+  produce:
+    name: ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      # Throttled on purpose. All of this bills to one Claude subscription, and
+      # three concurrent agents is already a lot of tokens per minute.
+      max-parallel: 3
+      matrix:
+        include:
+          - area: ddia
+            label: DDIA
+            books: true
+            scope: the Designing Data-Intensive Applications track (its focused scope is Ch.4, Ch.10, Ch.11 only)
+          - area: ai-eng
+            label: AI Engineering
+            books: true
+            scope: the AI Engineering (Chip Huyen) track (its focused scope is Ch.5 onwards)
+          - area: mysql
+            label: High Performance MySQL
+            books: true
+            scope: the High Performance MySQL 4th ed. track (its focused scope is Ch.6, Ch.7, Ch.8 only)
+          - area: s3
+            label: AWS S3
+            books: false
+            scope: the AWS S3 area of Track B, every concept listed in its table
+          - area: ec2
+            label: AWS EC2
+            books: false
+            scope: the AWS EC2 area of Track B, every concept listed in its table
+          - area: vpc
+            label: AWS VPC
+            books: false
+            scope: the AWS VPC area of Track B, every concept listed in its table
+          - area: cloudwatch
+            label: AWS CloudWatch
+            books: false
+            scope: the AWS CloudWatch area of Track B, every concept listed in its table
+    env:
+      SKILL: .claude/skills/book-digest-carousels
+    if: ${{ inputs.areas == 'all' || contains(format(',{0},', inputs.areas), format(',{0},', matrix.area)) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+
+      - name: System deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2 libpango-1.0-0 fontconfig
+          pip install --quiet cairosvg pillow pypdf pyyaml anthropic
+
+      - name: Install bundled fonts
+        run: mkdir -p ~/.fonts && cp "$SKILL"/assets/fonts/*.ttf ~/.fonts/ && fc-cache -f
+
+      # Only the book tracks need the PDFs. The AWS areas are sourced from the
+      # live AWS docs over WebFetch, so they skip Drive entirely and start faster.
+      - name: Configure Google Drive (rclone, read-only)
+        if: matrix.books
+        run: |
+          sudo apt-get install -y rclone
+          echo "$GDRIVE_SA_JSON" > /tmp/sa.json
+          mkdir -p ~/.config/rclone
+          printf '[gdrive]\ntype = drive\nscope = drive.readonly\nservice_account_file = /tmp/sa.json\nroot_folder_id = %s\n' "${{ vars.GDRIVE_BOOKS_FOLDER_ID }}" > ~/.config/rclone/rclone.conf
+        env:
+          GDRIVE_SA_JSON: ${{ secrets.GDRIVE_SA_JSON }}
+
+      - name: Pull the books folder
+        if: matrix.books
+        run: |
+          rclone copy gdrive: ./books --fast-list
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Produce every outstanding digest for this area
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          SITE_BASE_URL: ${{ vars.SITE_BASE_URL }}
+        run: |
+          mkdir -p docs/_entries
+          cat > /tmp/prompt.txt <<'PROMPT'
+          Use the book-digest-carousels skill, and follow TRACKER.md's Content guardrails exactly.
+
+          YOUR SCOPE FOR THIS RUN: ${{ matrix.scope }}. Ignore every other track and area
+          completely; another job is handling those in parallel.
+
+          TASK: produce the HTML digest for EVERY unit still outstanding in your scope, oldest
+          first, until none are left. This is a deliberate one-time backfill, so do NOT stop
+          after one unit and do NOT wait for any completion gate.
+
+          HARD LIMIT: ${{ inputs.limit_per_area }} units this run. If that number is 0 there is
+          no limit, so keep going until the scope is exhausted.
+
+          NO CAROUSELS. Do not render any slides, do not write any deck.json, do not touch
+          build/carousels. Digests only, this run.
+
+          RESUMING: before each unit, check whether docs/digests/<slug>.html already exists, and
+          skip it if so. A previous run may have produced part of your scope already.
+
+          TRACKER.md's focused scope decides what is in scope and always wins: take only the
+          chapters and concepts it lists, in its order, and NEVER resume anything it marks
+          parked, however incomplete that chapter looks. Finish an in-progress unit before
+          starting a new one. Split a chapter into parts exactly as you normally would, at a
+          natural section boundary, rather than thinning a long chapter into one digest.
+
+          Carry each unit independently through the six stages in order: (1) Source - pin the
+          exact chapter pages or AWS docs sections and record citations; (2) Teaching -
+          beginner-friendly explanation, examples, caveats, recall questions; (3) Visual -
+          original schematics built from first principles; (4) Build - a small runnable
+          micro-project with clear completion criteria; (5) Verification - check every factual
+          claim, command, citation and link against the source, and fix or flag whatever
+          fails; (6) Delivery. Never bundle research for several units together.
+
+          Ground every claim in the source and invent nothing: no fabricated commands, APIs,
+          numbers, pricing or limits. Label every beginner simplification with its caveat.
+          Keep all wording and diagrams original. Bound your absolutes: before writing always,
+          never, only, every, must or guarantees, ask whether it is true generally or only in
+          one common setup, and name the boundary if it is the latter. END EVERY DIGEST WITH A
+          'Sources & verify' SECTION (book, chapter and pages; or the AWS doc links).
+
+          For each unit, in this exact order:
+            1. Write a THOROUGH, beginner-complete digest to docs/digests/<slug>.html following
+               references/digest-template.md exactly: a full 'How it works' opening with a
+               grounding section, one labelled sub-section per concept with inline-SVG
+               schematics, every term defined, and a 4-6 item 'Try it yourself'. Err long.
+               Do NOT thin it out because there are many units to get through; a short digest
+               is a failed digest.
+            2. Write the sidecar docs/_entries/<slug>.json containing exactly:
+               {"slug": "...", "book": "...", "ch": "...", "title": "...", "date": "YYYY-MM-DD"}
+               using today's UTC date. 'book' must be one of: Designing Data-Intensive
+               Applications, AI Engineering, High Performance MySQL, AWS - matching the
+               existing entries in docs/digests.json. 'ch' must NEVER promise a part total:
+               write 'Ch.10 (Part 3)', or 'Ch.10 (Part 4, final)' for the one that completes
+               the chapter, or plain 'Ch.8' when the chapter fits in a single unit, or
+               'Topic N' for AWS. Never 'Part 1 of 3' - that total goes stale and the library
+               then contradicts itself.
+            3. Run: bash .claude/skills/book-digest-carousels/scripts/publish_digest.sh <slug>
+               That commits and pushes just those two files. Do this after EVERY unit, before
+               starting the next one, so the run cannot lose finished work.
+
+          Do NOT edit docs/digests.json, docs/index.html or TRACKER.md at any point. Several
+          jobs are writing in parallel and those three are the only files that would collide;
+          a later step merges the sidecars and updates them once.
+          PROMPT
+          claude -p "$(cat /tmp/prompt.txt)" \
+            --permission-mode acceptEdits \
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebFetch"
+
+  collect:
+    name: Collect, index and send
+    needs: produce
+    # Runs even if some areas failed or hit their timeout, so a partial backfill
+    # still gets indexed and delivered instead of sitting unpublished.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    env:
+      SKILL: .claude/skills/book-digest-carousels
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+
+      - name: System deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2 libpango-1.0-0 fontconfig
+          pip install --quiet cairosvg pillow pyyaml
+
+      - name: Install bundled fonts
+        run: mkdir -p ~/.fonts && cp "$SKILL"/assets/fonts/*.ttf ~/.fonts/ && fc-cache -f
+
+      - name: What landed
+        id: landed
+        run: |
+          n=$(ls docs/_entries/*.json 2>/dev/null | wc -l | tr -d ' ')
+          echo "count=$n" >> "$GITHUB_OUTPUT"
+          echo "$n new digest(s) to index"
+
+      - name: Merge sidecars and rebuild the index
+        if: steps.landed.outputs.count != '0'
+        env:
+          SITE_BASE_URL: ${{ vars.SITE_BASE_URL }}
+        run: |
+          python "$SKILL"/scripts/merge_entries.py --docs docs
+          python "$SKILL"/scripts/build_index.py --docs docs
+          python "$SKILL"/scripts/build_email.py --docs docs --site-base-url "$SITE_BASE_URL" \
+            --logo "$SKILL"/assets/brand/logo.png --out build/email.html
+
+      - name: Install Claude Code
+        if: steps.landed.outputs.count != '0'
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Bring TRACKER.md up to date
+        if: steps.landed.outputs.count != '0'
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          cat > /tmp/tracker.txt <<'PROMPT'
+          A one-time backfill just produced a batch of digests. Read docs/digests.json and
+          docs/digests/, then bring TRACKER.md in line with what is now published:
+
+          1. In each per-track and per-AWS-area table, fill the Digested column with the
+             digest's date and the Notes column with a one-line summary, for every unit that
+             now has a digest. Mark a chapter Done once its final part is published, and keep
+             the '**Next <track> unit:**' pointer accurate. If a track's focused scope is now
+             fully published, say so in the pointer instead of naming a next unit.
+          2. REPLACE the 'Current batch' checklist with every unit this backfill produced,
+             all unchecked, so there is one reading checklist to work through.
+          3. Change nothing else: do not touch the focused scope, the parked list, or any row
+             that has no digest.
+
+          Be accurate rather than exhaustive: only record units that genuinely have a digest
+          file. Do not invent dates or summaries for anything that was not produced.
+          PROMPT
+          claude -p "$(cat /tmp/tracker.txt)" \
+            --permission-mode acceptEdits --allowedTools "Bash,Read,Write,Edit,Glob,Grep"
+
+      - name: Publish the index and tracker
+        if: steps.landed.outputs.count != '0'
+        run: |
+          git config user.name "content-bot"
+          git config user.email "content-bot@users.noreply.github.com"
+          git add docs/ TRACKER.md || true
+          git commit -m "Backfill $(date -u +%F): index ${{ steps.landed.outputs.count }} digest(s)" \
+            || { echo "nothing to commit"; exit 0; }
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase --autostash origin main || true
+            if git push origin main; then echo "pushed on attempt $attempt"; exit 0; fi
+            echo "push attempt $attempt rejected; retrying"; sleep 5
+          done
+          echo "::error::could not push the index after 5 attempts"; exit 1
+
+      - name: Wait for GitHub Pages to serve the new digests
+        if: steps.landed.outputs.count != '0'
+        continue-on-error: true
+        env:
+          SITE_BASE_URL: ${{ vars.SITE_BASE_URL }}
+        run: python "$SKILL"/scripts/wait_for_pages.py --docs docs --site-base-url "$SITE_BASE_URL"
+
+      # No carousels this run, so there is nothing to attach: the email is links only.
+      - name: Email the links
+        if: ${{ !cancelled() && steps.landed.outputs.count != '0' }}
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          DIGEST_TO: ${{ secrets.DIGEST_TO }}
+        run: python "$SKILL"/scripts/deliver_digest.py --file build/email.html
