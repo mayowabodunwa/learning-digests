@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: EC2 Placement Groups, Nitro, Dedicated Hosts vs. Dedicated Instances</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS EC2 &middot; CONCEPT 8 DIGEST</p>
+  <h1>Placement Groups, the Nitro System, and Dedicated Hosts vs. Dedicated Instances</h1>
+  <p class="lead">So far we've treated an instance as a virtual machine floating somewhere in an Availability Zone. This digest looks at "somewhere": how you can influence which physical hardware your instances land on (placement groups), what that hardware is built from (Nitro), and what it means to be the only customer on a physical server (Dedicated Hosts and Dedicated Instances).</p>
+
+  <h2>In one line</h2>
+  <p>Placement groups let you pack instances together for speed or spread them apart for resilience, the Nitro System is the AWS-built hardware and software foundation under modern instance types, and Dedicated Hosts and Dedicated Instances are two ways to run on single-tenant servers with different levels of visibility and control.</p>
+
+  <h2>The big idea</h2>
+  <p>Normally you don't choose hardware. The docs say that without a placement group EC2 tries to spread your instances across underlying hardware to minimise correlated failures (when one thing breaks, several of your instances break together). Placement groups are the knobs for when that default isn't what your workload needs.</p>
+  <p>Two directions pull against each other: <em>closeness</em> (lower network latency, higher throughput between instances) and <em>separation</em> (less chance that one hardware fault takes out several instances). Cluster groups pick closeness; spread and partition groups pick separation. Dedicated tenancy is a third, separate axis: <em>who else shares the hardware</em>.</p>
+  <p>I quote no prices; the docs say there's no charge for creating a placement group, and point to pricing pages for dedicated options. Dedicated Hosts are billed per host, Dedicated Instances per instance, per the docs' comparison table.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Placement group</span>: a logical grouping of instances that influences how EC2 places them on hardware.</li>
+    <li><span class="keyterm-term">Cluster / partition / spread</span>: the three main placement strategies (a fourth, precision time, is newer and mentioned briefly).</li>
+    <li><span class="keyterm-term">Rack</span>: a physical enclosure of servers; in the docs, each rack has its own network and power source.</li>
+    <li><span class="keyterm-term">Correlated failure</span>: a single fault (like a rack losing power) that takes down several instances at once.</li>
+    <li><span class="keyterm-term">Partition</span>: a logical segment of a placement group whose instances don't share racks with other partitions.</li>
+    <li><span class="keyterm-term">Nitro System</span>: a collection of AWS-built hardware and software components under many EC2 instance types.</li>
+    <li><span class="keyterm-term">Hypervisor</span>: software that divides a physical server's CPU and memory among virtual machines.</li>
+    <li><span class="keyterm-term">Bare metal instance</span>: an instance with direct access to the host's hardware, without a virtualization layer.</li>
+    <li><span class="keyterm-term">Tenancy</span>: whether your instance shares physical hardware with other accounts (default) or not.</li>
+    <li><span class="keyterm-term">Dedicated Host</span>: a physical server fully dedicated to you, with visibility into sockets and cores.</li>
+    <li><span class="keyterm-term">Dedicated Instance</span>: an instance on hardware dedicated to a single account, without host-level control.</li>
+    <li><span class="keyterm-term">Host affinity</span>: keeping an instance tied to the same specific host across stops and starts.</li>
+    <li><span class="keyterm-term">BYOL</span>: bring your own license, using software licenses you already own.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>0. Grounding: what are we placing?</h3>
+  <p>EC2 instances are slices of physical servers sitting in racks in a data center in an Availability Zone. An instance can be in only one placement group at a time; groups can't be merged. Some interactions the docs list: capacity reserved through On-Demand Capacity Reservations or zonal Reserved Instances is used automatically if a launch matches, even into a placement group; Dedicated Hosts can't be launched into placement groups; and a Spot Instance configured to stop or hibernate on interruption can't go in one.</p>
+
+  <h3>1. Cluster placement groups: close together, fast</h3>
+  <p>A cluster group packs instances close together inside a <em>single</em> Availability Zone (it can span peered VPCs in the same Region). Instances get a higher per-flow throughput limit and sit in the same high-bisection-bandwidth segment of the network. Intended for tightly coupled workloads such as HPC, or whenever most of the traffic is between group members.</p>
+  <ul>
+    <li><strong>Single-flow bandwidth:</strong> for instances with enhanced networking, up to 10 Gbps for a single flow inside a cluster group versus up to 5 Gbps outside one (docs numbers; both are ceilings, and the slower instance of a pair limits the pair).</li>
+    <li><strong>Capacity gotcha:</strong> the docs recommend launching all instances in one request and using the same instance type. Adding more later or mixing types raises the chance of an insufficient capacity error. If you hit one, the docs suggest stopping and starting all instances in the group and retrying, which might migrate them to hardware with room for all.</li>
+    <li>Stopped instances stay in the group; restarting can fail if capacity isn't there. Reserving capacity inside the group with an On-Demand Capacity Reservation is recommended; zonal Reserved Instances can't reserve capacity in a placement group.</li>
+    <li>Not supported for burstable (T2-style) instances among others; internet or Direct Connect traffic is limited to 5 Gbps for cluster groups.</li>
+  </ul>
+
+  <h3>2. Partition placement groups: separate failure domains for big distributed systems</h3>
+  <p>EC2 divides the group into <strong>partitions</strong>, each with its own set of racks (own network and power). No two partitions share racks, so a hardware failure is contained to one partition. Designed for large distributed and replicated systems such as HDFS, HBase, Cassandra (the docs' examples) and Kafka. Facts:</p>
+  <ul>
+    <li>Up to <strong>seven partitions per Availability Zone</strong>, and a group can have partitions in multiple AZs of a Region. The number of instances is limited only by your account limits.</li>
+    <li>EC2 <em>tries</em> to distribute instances evenly but doesn't guarantee an even split; you can also launch into a specific partition.</li>
+    <li>You can see which instance is in which partition, so topology-aware software can place replicas in different partitions.</li>
+    <li>If there isn't enough unique hardware, the request fails; trying later may work. With Dedicated Instances, a partition group is limited to two partitions. Capacity Reservations don't reserve capacity in one.</li>
+  </ul>
+
+  <h3>3. Spread placement groups: a few critical instances, each alone</h3>
+  <p>Each instance goes on distinct hardware (distinct racks, each with own network and power), for a small number of critical instances you want kept apart. They suit mixing instance types or launching over time. The key limit: a rack-level spread group supports <strong>at most seven running instances per Availability Zone</strong> (it can span AZs, so three AZs give you up to 21). Need more? Use multiple spread groups. Host-level spread is for AWS Outposts only. Not supported for Dedicated Instances, and Capacity Reservations don't reserve capacity in one.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 300" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">THREE STRATEGIES, ONE AVAILABILITY ZONE (illustrative)</text>
+      <g font-size="10.5">
+      <text x="105" y="48" fill="#C8453A" text-anchor="middle" font-weight="700">CLUSTER</text>
+      <rect x="20" y="58" width="170" height="130" rx="8" fill="#0E0E10" stroke="#7A7A80"/>
+      <rect x="35" y="73" width="140" height="100" rx="6" fill="#131316" stroke="#6FCF97"/>
+      <circle cx="65" cy="100" r="9" fill="#6FCF97"/><circle cx="105" cy="100" r="9" fill="#6FCF97"/><circle cx="145" cy="100" r="9" fill="#6FCF97"/><circle cx="85" cy="140" r="9" fill="#6FCF97"/><circle cx="125" cy="140" r="9" fill="#6FCF97"/>
+      <text x="105" y="205" fill="#C9C7C1" text-anchor="middle">packed: low latency</text>
+      <text x="105" y="221" fill="#7A7A80" text-anchor="middle" font-size="9.5">one big blast radius</text>
+      <text x="310" y="48" fill="#C8453A" text-anchor="middle" font-weight="700">PARTITION</text>
+      <rect x="225" y="58" width="170" height="130" rx="8" fill="#0E0E10" stroke="#7A7A80"/>
+      <rect x="235" y="68" width="48" height="110" rx="5" fill="#131316" stroke="#6FCF97"/><rect x="291" y="68" width="48" height="110" rx="5" fill="#131316" stroke="#6FCF97"/><rect x="347" y="68" width="40" height="110" rx="5" fill="#131316" stroke="#6FCF97"/>
+      <g fill="#6FCF97"><circle cx="259" cy="95" r="7"/><circle cx="259" cy="125" r="7"/><circle cx="259" cy="155" r="7"/><circle cx="315" cy="95" r="7"/><circle cx="315" cy="125" r="7"/><circle cx="367" cy="110" r="7"/><circle cx="367" cy="145" r="7"/></g>
+      <text x="310" y="205" fill="#C9C7C1" text-anchor="middle">groups on separate racks</text>
+      <text x="310" y="221" fill="#7A7A80" text-anchor="middle" font-size="9.5">max 7 partitions per AZ</text>
+      <text x="515" y="48" fill="#C8453A" text-anchor="middle" font-weight="700">SPREAD</text>
+      <rect x="430" y="58" width="170" height="130" rx="8" fill="#0E0E10" stroke="#7A7A80"/>
+      <rect x="440" y="75" width="36" height="96" rx="5" fill="#131316" stroke="#6FCF97"/><rect x="484" y="75" width="36" height="96" rx="5" fill="#131316" stroke="#6FCF97"/><rect x="528" y="75" width="36" height="96" rx="5" fill="#131316" stroke="#6FCF97"/>
+      <g fill="#6FCF97"><circle cx="458" cy="123" r="8"/><circle cx="502" cy="123" r="8"/><circle cx="546" cy="123" r="8"/></g>
+      <text x="515" y="205" fill="#C9C7C1" text-anchor="middle">each on its own rack</text>
+      <text x="515" y="221" fill="#7A7A80" text-anchor="middle" font-size="9.5">max 7 running per AZ</text>
+      </g>
+      <text x="310" y="270" fill="#7A7A80" font-size="10" text-anchor="middle">Simplification: real racks hold far more servers than drawn; the cluster group is "not isolated to a single rack" per the docs.</text>
+    </svg>
+    <figcaption>Original schematic comparing the three strategies.</figcaption>
+  </figure>
+
+  <h3>4. The Nitro System: what the hardware is made of</h3>
+  <p>The docs define the Nitro System as a collection of AWS-built hardware and software components for high performance, availability and security. Its parts:</p>
+  <ul>
+    <li><strong>Nitro cards</strong>: offload local NVMe storage, networking hardware support, management, monitoring and security.</li>
+    <li><strong>Nitro security chip</strong>, integrated into the motherboard.</li>
+    <li><strong>Nitro hypervisor</strong>: a lightweight hypervisor that manages memory and CPU allocation and, per the docs, delivers performance "indistinguishable from bare metal for most workloads". <em>For most workloads</em> is the docs' own bound.</li>
+  </ul>
+  <p>Nitro also enables <strong>bare metal instances</strong>, which suit workloads needing low-level hardware features or a non-virtualized environment for licensing or support. Cost of that: a bare metal instance may take up to 20 minutes or more from running to reachable because the server boots and verifies hardware and firmware.</p>
+  <p><strong>Why you've been seeing "Nitro" in earlier digests:</strong> the highest gp3/io2 IOPS need Nitro-based instances; the IPv6 metadata endpoint is Nitro-only; and Nitro instances retrieve only metadata categories available at launch. Requirements for Nitro instances per the docs: ENA for enhanced networking and storage exposed as NVMe devices, so you need the right drivers (current AWS AMIs generally handle this; check the docs for kernel and driver minimums). The docs also describe versions v2 to v6 with different network capabilities (for example, v6 reduces the default idle TCP timeout from 432,000 to 350 seconds and doesn't support Traffic Mirroring), which I'm only noting, not teaching in depth, since instance lists change often.</p>
+
+  <h3>5. Dedicated Hosts vs. Dedicated Instances</h3>
+  <p>By default, instances run on shared-tenancy hardware: multiple accounts may share a physical server. Two ways to avoid that:</p>
+  <div class="card">
+  <ul>
+    <li><strong>Dedicated Instance</strong>: runs on hardware dedicated to your single account (even separate accounts under one payer don't share). It may share that hardware with your own non-dedicated instances. No visibility or control over placement, no host affinity (stop and start may land on a different host), and only partial BYOL support (the docs name SQL Server with License Mobility and Windows VDA). Billed per instance. Supports Auto Scaling, automatic recovery, Reserved Instances, Capacity Reservations, Spot. You get it by launching with tenancy <code>dedicated</code>, or into a VPC whose instance tenancy is <code>dedicated</code>.</li>
+    <li><strong>Dedicated Host</strong>: a physical server with its capacity fully dedicated to you (optionally shared with other accounts you choose). You see sockets, physical cores and host ID, can target which host an instance goes on, and use host affinity. Comprehensive BYOL for per-socket, per-core or per-VM licenses. Billed per host. Capacity Reservations are not supported. Reservations (Dedicated Host Reservations) can discount billing; the docs state up to 70 percent compared with On-Demand Dedicated Host pricing, a ceiling and not a promise.</li>
+  </ul>
+  </div>
+  <p>The docs state there are no performance, security or physical differences between the two; the differences are visibility, control, licensing and billing. Dedicated Host restrictions include: RHEL and SUSE need your own AMIs (with a high-memory exception), quotas per instance family per Region, no placement groups, and you can't switch a host between virtualized and <code>.metal</code> types after allocation. A caveat on Dedicated Instances: EBS volumes attached to them don't run on single-tenant hardware.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 240" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">WHO SHARES THE SERVER?</text>
+      <g font-size="10.5">
+      <rect x="20" y="40" width="170" height="130" rx="8" fill="#0E0E10" stroke="#7A7A80"/><text x="105" y="60" fill="#7A7A80" text-anchor="middle">DEFAULT (shared)</text>
+      <rect x="35" y="75" width="60" height="30" rx="4" fill="#131316" stroke="#6FCF97"/><text x="65" y="94" fill="#6FCF97" text-anchor="middle">you</text>
+      <rect x="110" y="75" width="65" height="30" rx="4" fill="#131316" stroke="#C8453A"/><text x="142" y="94" fill="#C8453A" text-anchor="middle">other</text>
+      <rect x="35" y="115" width="60" height="30" rx="4" fill="#131316" stroke="#C8453A"/><text x="65" y="134" fill="#C8453A" text-anchor="middle">other</text>
+      <rect x="110" y="115" width="65" height="30" rx="4" fill="#131316" stroke="#6FCF97"/><text x="142" y="134" fill="#6FCF97" text-anchor="middle">you</text>
+      <rect x="225" y="40" width="170" height="130" rx="8" fill="#0E0E10" stroke="#6FCF97"/><text x="310" y="60" fill="#6FCF97" text-anchor="middle">DEDICATED INSTANCE</text>
+      <rect x="240" y="75" width="60" height="30" rx="4" fill="#131316" stroke="#6FCF97"/><text x="270" y="94" fill="#6FCF97" text-anchor="middle">you</text>
+      <rect x="315" y="75" width="65" height="30" rx="4" fill="#131316" stroke="#6FCF97"/><text x="347" y="94" fill="#6FCF97" text-anchor="middle">you</text>
+      <text x="310" y="140" fill="#7A7A80" text-anchor="middle" font-size="9.5">no host visibility, no affinity</text>
+      <rect x="430" y="40" width="170" height="130" rx="8" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.6"/><text x="515" y="60" fill="#6FCF97" text-anchor="middle">DEDICATED HOST</text>
+      <rect x="445" y="75" width="60" height="30" rx="4" fill="#131316" stroke="#6FCF97"/><text x="475" y="94" fill="#6FCF97" text-anchor="middle">you</text>
+      <rect x="520" y="75" width="65" height="30" rx="4" fill="#131316" stroke="#6FCF97"/><text x="552" y="94" fill="#6FCF97" text-anchor="middle">you</text>
+      <text x="515" y="130" fill="#C9C7C1" text-anchor="middle" font-size="9.5">sockets / cores visible</text>
+      <text x="515" y="146" fill="#C9C7C1" text-anchor="middle" font-size="9.5">target + affinity</text>
+      </g>
+      <text x="310" y="205" fill="#7A7A80" font-size="10" text-anchor="middle">Dedicated Instances may still share a server with your own non-dedicated instances.</text>
+    </svg>
+    <figcaption>Original schematic of tenancy options. A host can also share capacity with accounts you choose.</figcaption>
+  </figure>
+
+  <h2>Why it matters</h2>
+  <p>Placement groups are a performance tool (cluster) and a resilience tool (spread, partition); picking the wrong one either stalls an HPC job or leaves your three critical servers in one rack. Tenancy choices are mostly driven by licensing and compliance, and are easy to get expensive. And knowing "Nitro" means you can read instance docs: much of the fine print (EBS limits, ENA, metadata behaviour) is conditional on it.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Cluster = packed in one AZ for latency and throughput; partition = separate rack sets (max 7 per AZ); spread = distinct hardware (max 7 running per AZ per rack-level group).</li>
+      <li>For cluster groups, launch together with one instance type to avoid insufficient-capacity errors.</li>
+      <li>Nitro = Nitro cards + security chip + lightweight hypervisor; "indistinguishable from bare metal for most workloads"; bare metal exists too.</li>
+      <li>Dedicated Host: whole server, visible sockets and cores, affinity, per-host billing, full BYOL. Dedicated Instance: single-account hardware, no placement control, per-instance billing, partial BYOL.</li>
+      <li>Placement groups and Dedicated Hosts don't mix; one instance, one placement group.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <p style="font-size:14px;color:var(--muted);">Projects 1 to 3 run locally. Projects 4 and 5 touch AWS and may cost money (do not allocate a Dedicated Host for practice: it is billed per host); I did not run any AWS command here. The <code>create-placement-group</code> example is from the CLI reference page.</p>
+    <ol>
+      <li><strong>Blast-radius simulator (no AWS).</strong> Model racks as failure units. Place 9 instances using cluster (all one rack), spread (each own rack, max 7 per AZ) and partition (3 partitions). Randomly fail one rack many times. <em>Done when:</em> you can print the average number of instances lost per failure for each strategy and explain the trade-off with latency.</li>
+      <li><strong>Limit checker (no AWS).</strong> Write a function that validates a plan against the docs' limits (spread: 7 per AZ; partition: 7 partitions per AZ; Dedicated Instances: partition max 2, spread unsupported). <em>Done when:</em> it correctly rejects an 8th instance in one AZ for spread and explains the multi-group workaround.</li>
+      <li><strong>Choose-a-strategy flashcards (no AWS).</strong> Write 8 workloads (HPC job, 3-node quorum database, Cassandra ring, single-instance app) and map each to a strategy using only the docs' wording. <em>Done when:</em> every answer cites a sentence from the docs.</li>
+      <li><strong>Create and delete a group.</strong> Run <code>aws ec2 create-placement-group --group-name my-cluster --strategy cluster</code>, then <code>aws ec2 describe-placement-groups</code> (the second command is from my own knowledge, not verified), then delete it in the console. Creating a group has no charge per the docs. <em>Done when:</em> you can see it and have removed it.</li>
+      <li><strong>Observe tenancy.</strong> Launch a small instance and find its tenancy in the console details (default expected). Read the Dedicated Instance pricing page (don't launch one) and note which pricing items differ. <em>Done when:</em> you can state in one sentence why you'd pick a Dedicated Host over a Dedicated Instance for a per-socket-licensed product.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Next: precision time placement groups, placement groups on Outposts, On-Demand Capacity Reservations inside cluster groups, the Nitro security design (I only read the instance page), Elastic Fabric Adapter, host recovery and maintenance for Dedicated Hosts, host resource groups with License Manager, and moving instances between tenancies.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the official docs. Limits (like seven per AZ) and supported types change; verify against the live pages. Source accessed on 2026-10-25.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/placement-groups.html" target="_blank" rel="noopener">Placement groups for your Amazon EC2 instances</a> and <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/placement-strategies.html" target="_blank" rel="noopener">Placement strategies</a></li>
+    <li><a href="https://docs.aws.amazon.com/ec2/latest/instancetypes/ec2-nitro-instances.html" target="_blank" rel="noopener">Instances built on the AWS Nitro System</a></li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-hosts-overview.html" target="_blank" rel="noopener">Amazon EC2 Dedicated Hosts</a></li>
+    <li><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-instance.html" target="_blank" rel="noopener">Amazon EC2 Dedicated Instances</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/create-placement-group.html" target="_blank" rel="noopener">AWS CLI reference: ec2 create-placement-group</a></li>
+  </ul>
+  <p class="src-note">Flagged: (1) Not fetched: the AWS Nitro System product/security pages, host recovery and billing pages, placement groups on Outposts. (2) The descriptions of how a cluster group is wired physically are only what the docs state ("same high-bisection bandwidth segment"); the diagram is illustrative, not a network map. (3) <code>describe-placement-groups</code> in project 4 was not checked against the CLI reference. (4) The "up to 70 percent" Dedicated Host Reservation figure is the docs' ceiling at time of reading. (5) No prices quoted; no command was run against a live account.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
