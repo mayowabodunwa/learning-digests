@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S3 Presigned URLs, CORS and Static Website Hosting: Sharing S3 Content With Browsers and People</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+  pre { background: var(--panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 16px; }
+  pre code { background: none; padding: 0; font-size: 12.5px; line-height: 1.55; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS S3 &middot; CONCEPT 7 DIGEST</p>
+  <h1>S3 Presigned URLs, CORS and Static Website Hosting: Sharing S3 Content With Browsers and People</h1>
+  <p class="lead">So far everything in S3 has been private-by-default and accessed with credentials. This digest is about the three ways S3 content reaches people and web pages that don't have your credentials: a time-limited signed link, a browser permission slip called CORS, and a bucket acting as a basic website.</p>
+
+  <h2>In one line</h2>
+  <p>A presigned URL lends someone your permissions for one specific request for a limited time, CORS tells browsers which other websites' JavaScript may call your bucket, and static website hosting serves a bucket's public objects over a plain-HTTP website endpoint.</p>
+
+  <h2>The big idea</h2>
+  <p>These three features look unrelated, but they solve one problem: how do you let outside parties touch your data without handing over a key or making the whole bucket public?</p>
+  <ul>
+    <li>A <strong>presigned URL</strong> keeps the bucket private and gives one person a link that works for one operation, for a while.</li>
+    <li><strong>CORS</strong> is about browsers. Even when S3 would allow a request, a browser running JavaScript from one site won't let it call another site's server unless that server says it's okay. CORS is how a bucket says it's okay.</li>
+    <li><strong>Static website hosting</strong> is the opposite end: deliberately public content, served from a website address.</li>
+  </ul>
+  <p>The thread running through all three is the access control material from the previous digest: Block Public Access, bucket policies and IAM permissions still apply. None of these features is a bypass.</p>
+  <p>Simplification label: the docs now steer people toward AWS Amplify Hosting or CloudFront in front of S3 for real websites. I explain the raw S3 website feature because it shows the limits, not because it's the only choice. No prices are quoted.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Presigned URL</span>: a URL with a signature and expiry baked in, granting time-limited permission for a specific operation on a specific object.</li>
+    <li><span class="keyterm-term">Bearer token</span>: something that works for whoever holds it. The docs describe presigned URLs this way.</li>
+    <li><span class="keyterm-term">Origin</span>: the combination of scheme, host and port a web page was loaded from (for example <code>https://app.example.com</code>).</li>
+    <li><span class="keyterm-term">Same-origin policy</span>: the browser rule that scripts from one origin can't freely read responses from another.</li>
+    <li><span class="keyterm-term">CORS</span>: cross-origin resource sharing, the mechanism by which a server tells the browser which other origins may call it.</li>
+    <li><span class="keyterm-term">Preflight request</span>: an automatic <code>OPTIONS</code> check some browser requests send first, asking whether the real request is allowed.</li>
+    <li><span class="keyterm-term">Website endpoint</span>: the special S3 address that serves a bucket as a website, different from the REST API endpoint.</li>
+    <li><span class="keyterm-term">Index document</span>: the page served for the site root or a folder path (for example <code>index.html</code>).</li>
+    <li><span class="keyterm-term">Error document</span>: the custom page returned for errors.</li>
+    <li><span class="keyterm-term">Static website</span>: pages whose content is fixed files; they may include client-side scripts but no server-side code.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>0. Grounding: private by default, three ways to share</h3>
+  <p>The docs open the presigned URL topic with the baseline: by default all S3 objects are private and only the object owner can access them. The three tools below are three deliberate exceptions, each with a different blast radius:</p>
+  <ul>
+    <li>Presigned URL: one object, one operation, limited time, one grantor's permissions.</li>
+    <li>CORS: only affects what browsers will do; it doesn't grant S3 permissions (the docs state that ACLs and policies continue to apply).</li>
+    <li>Website hosting: everyone on the internet, for the objects you make public.</li>
+  </ul>
+
+  <h3>1. Presigned URLs</h3>
+  <p>To create one, you supply your credentials and specify a bucket, an object key, an HTTP method (<code>GET</code> to download, <code>PUT</code> to upload, <code>HEAD</code> for metadata, etc.), and an expiration interval. The result is an ordinary-looking link with a signature in the query string. Anyone holding the link can perform that one request until it expires, with the permissions of whoever signed it. It can be used multiple times until expiry.</p>
+  <p><strong>Uploads.</strong> A presigned <code>PUT</code> lets a third party upload without having AWS credentials. If an object with that key already exists, S3 replaces it, and after upload the bucket owner owns the object. The uploader must match what was signed: the docs' troubleshooting list says the content type in the upload must match what was used to generate the URL.</p>
+
+  <p><strong>How long does it last?</strong> This is the part people get wrong:</p>
+  <ul>
+    <li>Console: between 1 minute and 12 hours.</li>
+    <li>CLI or SDKs: up to 7 days, but only if signed by an IAM user's long-term credentials with Signature Version 4.</li>
+    <li>With temporary credentials (an IAM role, STS, or an EC2 instance role), the URL stops working when those credentials expire, even if you asked for longer. The docs give EC2 role credentials as typically around 6 hours and an AssumeRole session as 1 hour by default.</li>
+    <li>More generally, if the signing credential is revoked, deleted or deactivated, the URL dies.</li>
+    <li>Expiry is checked when the HTTP request is made. A download that starts before expiry continues; a resumed download after expiry fails.</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 620 270" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="e1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#7A7A80"/></marker></defs>
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">PRESIGNED URL: LENDING ONE REQUEST</text>
+      <rect x="20" y="60" width="140" height="64" rx="8" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="90" y="88" fill="#6FCF97" font-size="11" text-anchor="middle" font-weight="700">You (signer)</text>
+      <text x="90" y="106" fill="#7A7A80" font-size="9" text-anchor="middle">has s3:GetObject</text>
+      <rect x="240" y="60" width="140" height="64" rx="8" fill="#0E0E10" stroke="#F2EFE9"/>
+      <text x="310" y="88" fill="#F2EFE9" font-size="11" text-anchor="middle" font-weight="700">URL + signature</text>
+      <text x="310" y="106" fill="#7A7A80" font-size="9" text-anchor="middle">GET, key, expires</text>
+      <rect x="460" y="60" width="140" height="64" rx="8" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="530" y="88" fill="#F2EFE9" font-size="11" text-anchor="middle" font-weight="700">Anyone with it</text>
+      <text x="530" y="106" fill="#7A7A80" font-size="9" text-anchor="middle">no AWS credentials</text>
+      <line x1="162" y1="92" x2="238" y2="92" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#e1)"/>
+      <line x1="382" y1="92" x2="458" y2="92" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#e1)"/>
+      <rect x="170" y="160" width="280" height="62" rx="8" fill="#131316" stroke="#C8453A"/>
+      <text x="310" y="184" fill="#C8453A" font-size="10.5" text-anchor="middle">S3 checks: signature valid? not expired?</text>
+      <text x="310" y="202" fill="#C8453A" font-size="10.5" text-anchor="middle">does the signer have permission, no deny?</text>
+      <line x1="530" y1="126" x2="452" y2="170" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#e1)"/>
+      <text x="310" y="252" fill="#7A7A80" font-size="10" text-anchor="middle">a bearer token: whoever holds the link gets the access</text>
+    </svg>
+    <figcaption>Fig 1. The link carries your authority, within narrow limits.</figcaption>
+  </figure>
+
+  <p><strong>Making one with the CLI</strong> (the docs' example; note this CLI command is for downloads):</p>
+<pre><code>aws s3 presign s3://{bucket}/{key} --expires-in 604800</code></pre>
+  <p>The docs add that for Regions launched after March 20, 2019 you need to specify the region and endpoint URL with the request. 604800 seconds is 7 days.</p>
+
+  <p><strong>Limiting what a link can do.</strong> The docs call presigned URLs bearer tokens and suggest protecting them. Their examples: a bucket policy that denies presigned requests whose signature is older than a threshold using the <code>s3:signatureAge</code> condition (Signature Version 4 only), and network-path restrictions with <code>aws:SourceIp</code> (or <code>aws:SourceVpc</code> / <code>aws:SourceVpce</code> through VPC endpoints) in IAM or bucket policies.</p>
+  <p><strong>Common errors from the docs' FAQ:</strong> a 403 usually means the signer lacked the permission or a policy denies it; <code>SignatureDoesNotMatch</code> is often clock drift, a proxy changing the URL, or mismatched parameters; <code>ExpiredToken</code> means the signing credentials expired.</p>
+
+  <h3>2. CORS</h3>
+  <p>Picture a web page loaded from <code>https://app.example.com</code> whose JavaScript tries to <code>PUT</code> a file straight to your bucket's address. The browser's same-origin policy blocks it unless the bucket's server says that origin is allowed. The docs' two example scenarios: JavaScript on a website hosted from one bucket that needs to call the bucket's API endpoint, and hosting a web font that browsers insist on a CORS check for.</p>
+  <p>You configure CORS by attaching a configuration (the bucket's <code>cors</code> subresource) with up to 100 rules. In the console it must be JSON. Each rule has:</p>
+  <ul>
+    <li><code>AllowedOrigins</code>: which origins may call (one <code>*</code> wildcard allowed per string, e.g. <code>http://*.example.com</code>; or <code>*</code> alone for all).</li>
+    <li><code>AllowedMethods</code>: any of GET, PUT, POST, DELETE, HEAD.</li>
+    <li><code>AllowedHeaders</code>: request headers the preflight may ask for (each can contain one wildcard).</li>
+    <li><code>ExposeHeaders</code>: response headers the page's JavaScript is allowed to read (the docs' example exposes <code>x-amz-request-id</code> and similar).</li>
+    <li><code>MaxAgeSeconds</code>: how long the browser may cache a preflight answer.</li>
+  </ul>
+  <p>How S3 evaluates it: on a preflight request, S3 uses the <em>first</em> rule that matches the origin, method and requested headers. Remember: CORS doesn't give anyone S3 permissions. It only lets a browser proceed to a request that still has to pass IAM, bucket policy and Block Public Access. An example in the docs' JSON shape:</p>
+<pre><code>[
+  {
+    "AllowedOrigins": ["http://www.example.com"],
+    "AllowedMethods": ["PUT", "POST", "DELETE"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": ["x-amz-request-id"],
+    "MaxAgeSeconds": 3000
+  }
+]</code></pre>
+
+  <figure>
+    <svg viewBox="0 0 620 280" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="e2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#7A7A80"/></marker></defs>
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">CORS PREFLIGHT, STEP BY STEP</text>
+      <rect x="20" y="50" width="150" height="66" rx="8" fill="#0E0E10" stroke="#F2EFE9"/>
+      <text x="95" y="76" fill="#F2EFE9" font-size="11" text-anchor="middle" font-weight="700">Browser</text>
+      <text x="95" y="94" fill="#7A7A80" font-size="9" text-anchor="middle">page from app.example.com</text>
+      <rect x="450" y="50" width="150" height="66" rx="8" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="525" y="76" fill="#6FCF97" font-size="11" text-anchor="middle" font-weight="700">S3 bucket</text>
+      <text x="525" y="94" fill="#7A7A80" font-size="9" text-anchor="middle">CORS rules attached</text>
+      <line x1="172" y1="72" x2="448" y2="72" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#e2)"/>
+      <text x="310" y="64" fill="#C9C7C1" font-size="9.5" text-anchor="middle">1 OPTIONS: may origin X do PUT with these headers?</text>
+      <line x1="448" y1="100" x2="172" y2="100" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#e2)"/>
+      <text x="310" y="124" fill="#C9C7C1" font-size="9.5" text-anchor="middle">2 first matching rule says yes (or no match: blocked)</text>
+      <line x1="172" y1="156" x2="448" y2="156" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#e2)"/>
+      <text x="310" y="148" fill="#C9C7C1" font-size="9.5" text-anchor="middle">3 the real PUT request</text>
+      <rect x="170" y="190" width="280" height="56" rx="8" fill="#131316" stroke="#C8453A"/>
+      <text x="310" y="214" fill="#C8453A" font-size="10.5" text-anchor="middle">step 3 still needs permission</text>
+      <text x="310" y="232" fill="#C8453A" font-size="10.5" text-anchor="middle">(signature / policy / BPA unchanged)</text>
+      <text x="310" y="268" fill="#7A7A80" font-size="10" text-anchor="middle">simple GETs may skip step 1; I describe the common preflight case</text>
+    </svg>
+    <figcaption>Fig 2. CORS is a browser handshake, not an authorization system.</figcaption>
+  </figure>
+
+  <h3>3. Static website hosting</h3>
+  <p>A static website is one where pages are fixed files (possibly with client-side scripts). S3 can serve a bucket this way at a Region-specific website endpoint, in one of two formats depending on the Region: <code>http://bucket.s3-website-Region.amazonaws.com</code> or <code>http://bucket.s3-website.Region.amazonaws.com</code>. You configure an index document (and optionally a custom error document and redirects).</p>
+  <p>Know the differences between the website endpoint and the normal REST API endpoint (the docs give a table):</p>
+  <ul>
+    <li>Website endpoint serves only <strong>publicly readable</strong> content; REST supports public and private.</li>
+    <li>Website supports only <code>GET</code> and <code>HEAD</code> on objects.</li>
+    <li>Website endpoint <strong>does not support HTTPS</strong> (nor access points). For HTTPS, the docs recommend AWS Amplify Hosting or putting CloudFront in front.</li>
+    <li>The root URL returns the index document instead of a key listing; errors come back as HTML rather than XML; redirects are supported.</li>
+    <li>Requester Pays buckets can't be served through a website endpoint (403).</li>
+  </ul>
+  <p><strong>Making it public takes two deliberate steps</strong> (docs): turn off the relevant Block Public Access settings (bucket level, and account level if it's on, since the most restrictive wins), and add a bucket policy granting everyone <code>s3:GetObject</code> on the bucket's objects. If some objects aren't owned by the bucket owner, an object ACL may be needed, though with ACLs disabled (the default), you use policies only. The docs' warning applies: this really does make the content readable by anyone on the internet, and they recommend blocking public access generally.</p>
+  <p>An important caveat the docs state plainly: a missing object returns 404 and an existing-but-unreadable one returns 403, so visitors can infer which keys exist. If you don't want that, don't enable website support. Another: if the bucket uses SSE-KMS, the website endpoint won't work for anonymous users, so you'd serve through CloudFront with origin access control.</p>
+  <p>The docs' alternative for keeping Block Public Access on: put a CloudFront distribution in front and let that read the bucket.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">TWO ENDPOINTS, ONE BUCKET</text>
+      <rect x="20" y="44" width="280" height="170" rx="10" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="160" y="68" fill="#6FCF97" font-size="11" font-weight="700" text-anchor="middle">REST API endpoint</text>
+      <text x="160" y="94" fill="#C9C7C1" font-size="9.5" text-anchor="middle">all operations</text>
+      <text x="160" y="112" fill="#C9C7C1" font-size="9.5" text-anchor="middle">public or private content</text>
+      <text x="160" y="130" fill="#C9C7C1" font-size="9.5" text-anchor="middle">HTTPS supported</text>
+      <text x="160" y="148" fill="#C9C7C1" font-size="9.5" text-anchor="middle">root = key listing</text>
+      <text x="160" y="166" fill="#C9C7C1" font-size="9.5" text-anchor="middle">errors as XML</text>
+      <rect x="320" y="44" width="280" height="170" rx="10" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="460" y="68" fill="#C8453A" font-size="11" font-weight="700" text-anchor="middle">Website endpoint</text>
+      <text x="460" y="94" fill="#C9C7C1" font-size="9.5" text-anchor="middle">GET and HEAD on objects</text>
+      <text x="460" y="112" fill="#C9C7C1" font-size="9.5" text-anchor="middle">public content only</text>
+      <text x="460" y="130" fill="#C9C7C1" font-size="9.5" text-anchor="middle">no HTTPS</text>
+      <text x="460" y="148" fill="#C9C7C1" font-size="9.5" text-anchor="middle">root = index document</text>
+      <text x="460" y="166" fill="#C9C7C1" font-size="9.5" text-anchor="middle">errors as HTML, redirects</text>
+      <text x="310" y="238" fill="#7A7A80" font-size="10" text-anchor="middle">my condensed version of the docs' comparison table</text>
+    </svg>
+    <figcaption>Fig 3. Same data, different front doors with different rules.</figcaption>
+  </figure>
+
+  <h3>4. How the three fit together</h3>
+  <p>A typical modern pattern, as a mental model: a single-page app hosted from a static site (or CDN), whose JavaScript asks your backend for a presigned <code>PUT</code> URL and then uploads a file straight to a private bucket from the browser. For that browser upload to work, the bucket needs a CORS rule allowing your site's origin and the <code>PUT</code> method; the presigned URL supplies the permission; Block Public Access can stay fully on. This is a common pattern, not the only way to do uploads.</p>
+
+  <h2>Why it matters</h2>
+  <p>Two of the most common S3 security incidents (accidentally public buckets, and leaked links) come from this territory. Knowing that a presigned URL is a bearer token that dies with its credentials, that CORS is not a permission, and that a website endpoint genuinely requires public data, gives you the vocabulary to pick the right tool: signed links for private sharing, CORS for browser access, and CloudFront or Amplify for public sites.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>A presigned URL is a bearer token carrying the signer's permissions for one request until it expires or the signing credential dies, whichever is first.</li>
+      <li>Expiry limits: console 1 minute to 12 hours; CLI/SDK up to 7 days, but temporary credentials shorten it.</li>
+      <li>CORS only tells browsers which origins may call; IAM, policies and Block Public Access still decide the actual access.</li>
+      <li>The S3 website endpoint is HTTP-only, GET/HEAD-only and public-only; use CloudFront or Amplify for HTTPS.</li>
+      <li>Making a bucket a public website means turning off Block Public Access and granting <code>s3:GetObject</code> publicly, a deliberate choice.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <p style="font-size:14px;color:#7A7A80;margin-top:0">Projects 1 and 2 are offline. Projects 3 to 5 use the AWS CLI and a scratch bucket in your own account. The <code>aws s3 presign</code> command and the shape of the CORS JSON are from the docs; <code>put-bucket-cors</code>, <code>put-bucket-website</code> and the exact CLI JSON wrapper for CORS I did not verify, so confirm them in the CLI reference. Delete the scratch bucket afterwards and don't leave a bucket public.</p>
+    <ol>
+      <li><strong>Expiry calculator (offline, ~30 min).</strong> Given the signer type (IAM user, role session, EC2 role, console) and requested lifetime, return the effective lifetime using the rules above. <em>Done when</em> it returns the shorter of the two for temporary credentials and enforces the 12-hour console cap.</li>
+      <li><strong>CORS rule matcher (offline, ~1 hour).</strong> Implement "first matching rule wins" for origin (with one-wildcard patterns), method and requested headers. <em>Done when</em> your matcher correctly allows and blocks a handful of origins against the docs' three-rule example.</li>
+      <li><strong>Make and use a link.</strong> Upload a small file to a private bucket, run <code>aws s3 presign s3://BUCKET/KEY --expires-in 60</code>, fetch it with <code>curl</code> before and after 60 seconds. <em>Done when</em> the first works, the second fails, and you can name the error you saw.</li>
+      <li><strong>Prove it's a bearer token.</strong> Open the link from a different machine or an incognito window without any AWS credentials. <em>Done when</em> it works there, and you've written down one control from the docs (signature age or network restriction) that could narrow it.</li>
+      <li><strong>Static site, safely.</strong> Enable website hosting on a scratch bucket with an <code>index.html</code>, apply the docs' public-read policy only after adjusting Block Public Access for that bucket, load the HTTP website endpoint, then re-enable Block Public Access and confirm the page stops loading. <em>Done when</em> you've seen both states and noticed the 403 vs 404 behaviour for a missing file.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Read the docs' "Troubleshooting CORS" page and the CloudFront-with-S3 website walkthrough. Next in this track: event notifications and the EventBridge integration.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html">Download and upload objects with presigned URLs</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/ShareObjectPreSignedURL.html">Sharing objects with presigned URLs</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/PresignedUrlUploadObject.html">Uploading objects with presigned URLs</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/cors.html">Using cross-origin resource sharing (CORS)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/ManageCorsUsing.html">Elements of a CORS configuration</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/enabling-cors-examples.html">Configuring cross-origin resource sharing (CORS)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/WebsiteHosting.html">Hosting a static website using Amazon S3</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/WebsiteEndpoints.html">Website endpoints</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/WebsiteAccessPermissionsReqd.html">Setting permissions for website access</a></li>
+  </ul>
+  <p class="src-note">This is a teaching draft, not a substitute for the AWS documentation. Verify anything you rely on against the live docs. Notes on uncertainty: docs read in October 2026; no prices quoted; the <code>aws s3 presign</code> command is from the docs, the other CLI commands in the projects were not verified against the CLI reference and nothing was run against a live account; the CORS JSON is trimmed from the docs' example; I did not read the website redirect, index/error document, logging or custom-domain pages in full, nor the CORS troubleshooting page, and I describe the preflight flow in its common form only.</p>
+
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
