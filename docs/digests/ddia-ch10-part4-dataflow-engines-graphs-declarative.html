@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DDIA: Ch.10 Beyond MapReduce (Part 4, final)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+  pre { background:#0A0A0B; border:1px solid var(--hairline); border-radius:8px; padding:14px 16px; overflow-x:auto; font-family:"JetBrains Mono",monospace; font-size:11.5px; line-height:1.5; color:var(--body); margin:10px 0 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">SYSTEMS &middot; CH.10 DIGEST (PART 4, FINAL)</p>
+  <h1>Beyond MapReduce: Dataflow Engines, Graphs, and Declarative Batch</h1>
+  <p class="lead">Parts 1 to 3 built up MapReduce as a deliberately blunt tool. This final part is about what happened next. The same chapter says MapReduce is robust but sometimes orders of magnitude slower than alternatives, and it walks through why: writing every intermediate result to the distributed filesystem. Then come the replacements (dataflow engines), a special case MapReduce is bad at (graphs and iteration), and the move toward high-level, declarative APIs. It ends with the chapter's own Summary, which I use to tie the whole chapter together.</p>
+
+  <h2>In one line</h2>
+  <p>Dataflow engines treat a whole multi-step workflow as one job and pass intermediate data around in memory or on local disk, recomputing it after a failure instead of storing it durably; graph jobs need iteration, which has its own model; and high-level declarative APIs let the system choose the join algorithm for you.</p>
+
+  <h2>The big idea</h2>
+  <p>MapReduce's habit of fully writing each job's output to the distributed filesystem makes failures easy to recover from, but it forces waiting, redundant work and heavy replication. The newer engines keep the same basic recipe (functions applied record by record, work split by partitioning) while removing that forced bookkeeping. The cost is a different fault tolerance story: lost intermediate data must be recomputed, which only works smoothly if the computation is deterministic. Underneath all of it is the chapter's one durable insight: a batch job reads <em>bounded</em> input and produces derived output without modifying the input.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Materialization</span>: eagerly computing a result and writing it out (to files) rather than computing it on demand. Here, writing a job's intermediate output to the distributed filesystem.</li>
+    <li><span class="keyterm-term">Intermediate state</span>: data passed from one stage or job to the next, not meant as a final product.</li>
+    <li><span class="keyterm-term">Straggler</span>: a task that takes much longer than its peers; a following stage that must wait for all tasks is held up by it.</li>
+    <li><span class="keyterm-term">Dataflow engine</span>: an execution engine (Spark, Tez and Flink are the source's examples) that handles a whole workflow as one job and models the flow of data through stages.</li>
+    <li><span class="keyterm-term">Operator</span>: a generalization of map and reduce; a function in a dataflow job that can be wired to others in flexible ways.</li>
+    <li><span class="keyterm-term">DAG (directed acyclic graph)</span>: a set of nodes with one-way links and no loops. Dataflow engines arrange operators as a DAG; the data itself is typically relational-style tuples, which is <em>not</em> the same as graph processing.</li>
+    <li><span class="keyterm-term">RDD (resilient distributed dataset)</span>: Spark's abstraction for tracking the ancestry of data (which inputs and operators produced it).</li>
+    <li><span class="keyterm-term">Checkpoint</span>: periodically saving state to durable storage so work can resume from there.</li>
+    <li><span class="keyterm-term">Deterministic</span>: given the same input, always produces the same output.</li>
+    <li><span class="keyterm-term">Pipelined execution</span>: passing output to the next operator incrementally, without waiting for the input to be complete.</li>
+    <li><span class="keyterm-term">PageRank</span>: a graph algorithm estimating a web page's popularity from what links to it.</li>
+    <li><span class="keyterm-term">Pregel / BSP (bulk synchronous parallel)</span>: a model for graph batch processing in which vertices send messages to each other in rounds.</li>
+    <li><span class="keyterm-term">Superstep (iteration)</span>: one round in which every vertex processes the messages sent to it in the previous round.</li>
+    <li><span class="keyterm-term">Declarative</span>: saying <em>what</em> you want (a join) and letting the system decide <em>how</em>.</li>
+    <li><span class="keyterm-term">Cost-based query optimizer</span>: a component that estimates the cost of alternative execution plans and picks one, even reordering joins.</li>
+    <li><span class="keyterm-term">Vectorized execution</span>: processing data in a tight loop over batches, friendly to CPU caches and avoiding per-record function calls.</li>
+    <li><span class="keyterm-term">Bounded / unbounded input</span>: bounded means known, fixed size, so a job knows when it has read everything; unbounded means never-ending.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>Grounding first. The chapter opened with the remark that MapReduce is a learning tool: clear and simple as an abstraction over a distributed filesystem, "simple" meaning easy to <em>understand</em>, not easy to use. Writing a complex job in raw MapReduce is laborious (you'd implement joins yourself), which is why Pig, Hive, Cascading and Crunch were built on top. But layering abstractions doesn't fix problems with the execution model itself, and that's where this part starts.</p>
+
+  <h3>Materialization of intermediate state</h3>
+  <p>Every MapReduce job is independent. Its contact with the outside world is its input and output directories; to chain jobs, point the second job's input directory at the first job's output, and have an external scheduler start the second only after the first completes. That's sensible when the output is a dataset you want to publish by name and reuse widely (even by other teams). But often a job's output is only used by one other job, maintained by the same team. Then the files are just <strong>intermediate state</strong>, and a workflow of 50 to 100 jobs (the source's figure for recommendation systems) has a lot of it. Writing it out in full is called <em>materialization</em>.</p>
+  <p>Compare the Unix pipe from Part 1: it streams output to input with only a small in-memory buffer. The source lists three downsides of the MapReduce approach by comparison:</p>
+  <ul>
+    <li><strong>No overlap.</strong> A job can start only when every task of the preceding jobs has finished, whereas piped processes start together and consume output as it is produced. Stragglers (due to skew or uneven load) slow the whole workflow.</li>
+    <li><strong>Redundant mappers.</strong> Often a mapper just reads back the file a reducer just wrote and prepares it for partitioning and sorting. If the reducer output were already partitioned and sorted suitably, reducers could be chained directly.</li>
+    <li><strong>Overkill replication.</strong> Intermediate files on the distributed filesystem are replicated across nodes, which is often more than temporary data needs.</li>
+  </ul>
+
+  <h3>Dataflow engines</h3>
+  <p>Several engines were built to fix this; the best known are Spark, Tez and Flink. They differ in design but share one idea: handle an entire workflow as <em>one</em> job. Like MapReduce, they call a user-defined function on one record at a time on a single thread, parallelize by partitioning inputs, and copy one function's output over the network to become the next one's input. Unlike MapReduce, the functions (now called <strong>operators</strong>) needn't alternate strictly between map and reduce. The engine offers options for connecting operators:</p>
+  <ul>
+    <li>Repartition and sort by key, like the MapReduce shuffle. This supports sort-merge joins and grouping.</li>
+    <li>Partition several inputs the same way but skip the sorting. This suits partitioned hash joins, where partitioning matters but order doesn't (building a hash table randomizes order anyway).</li>
+    <li>Send the same output of one operator to all partitions of the next, which is what a broadcast hash join needs.</li>
+  </ul>
+  <p>The source lists advantages over MapReduce (this style is based on research systems like Dryad and Nephele):</p>
+  <ul>
+    <li>Sorting and other expensive work happens only where actually required, not by default between every map and reduce.</li>
+    <li>No unnecessary map tasks, since a mapper's work can often fold into the preceding reduce operator (a mapper doesn't change partitioning).</li>
+    <li>Because joins and data dependencies are declared explicitly, the scheduler sees what data is needed where and can optimize locality, for example placing a consumer on the same machine as its producer so data moves through a shared memory buffer, not the network.</li>
+    <li>Intermediate state usually only needs to live in memory or on local disk, which needs far less I/O than writing replicated copies to HDFS. (MapReduce already does this for mapper output; dataflow engines generalize it.)</li>
+    <li>Operators can start as soon as their input is ready.</li>
+    <li>Existing JVM processes can be reused, cutting startup cost (MapReduce launches a new JVM per task).</li>
+  </ul>
+  <p>The source says dataflow engines can implement the same computations and usually run significantly faster. Since operators generalize map and reduce, the same code can run on either: workflows written in Pig, Hive or Cascading can be switched from MapReduce to Tez or Spark by a configuration change, per the source. Tez is a fairly thin library relying on the YARN shuffle service to move data; Spark and Flink are big frameworks with their own network layer, scheduler and APIs.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 260" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">CHAINED JOBS vs ONE DATAFLOW JOB</text>
+      <text x="20" y="44" fill="#7A7A80" font-size="10">chained MapReduce: every hop goes through the filesystem</text>
+      <rect x="20" y="54" width="70" height="30" rx="5" fill="#0E0E10" stroke="#C9C7C1"/><text x="55" y="73" fill="#F2EFE9" font-size="9.5" text-anchor="middle">job 1</text>
+      <rect x="110" y="54" width="90" height="30" rx="5" fill="#0E0E10" stroke="#C8453A"/><text x="155" y="73" fill="#C8453A" font-size="9.5" text-anchor="middle">files (x3)</text>
+      <rect x="220" y="54" width="70" height="30" rx="5" fill="#0E0E10" stroke="#C9C7C1"/><text x="255" y="73" fill="#F2EFE9" font-size="9.5" text-anchor="middle">job 2</text>
+      <rect x="310" y="54" width="90" height="30" rx="5" fill="#0E0E10" stroke="#C8453A"/><text x="355" y="73" fill="#C8453A" font-size="9.5" text-anchor="middle">files (x3)</text>
+      <rect x="420" y="54" width="70" height="30" rx="5" fill="#0E0E10" stroke="#C9C7C1"/><text x="455" y="73" fill="#F2EFE9" font-size="9.5" text-anchor="middle">job 3</text>
+      <line x1="90" y1="69" x2="110" y2="69" stroke="#7A7A80"/><line x1="200" y1="69" x2="220" y2="69" stroke="#7A7A80"/><line x1="290" y1="69" x2="310" y2="69" stroke="#7A7A80"/><line x1="400" y1="69" x2="420" y2="69" stroke="#7A7A80"/>
+      <text x="505" y="73" fill="#7A7A80" font-size="9">each job waits for the last</text>
+      <text x="20" y="130" fill="#7A7A80" font-size="10">dataflow engine: one job, operators wired together</text>
+      <rect x="20" y="140" width="80" height="30" rx="5" fill="#0E0E10" stroke="#6FCF97"/><text x="60" y="159" fill="#F2EFE9" font-size="9.5" text-anchor="middle">operator A</text>
+      <rect x="140" y="140" width="80" height="30" rx="5" fill="#0E0E10" stroke="#6FCF97"/><text x="180" y="159" fill="#F2EFE9" font-size="9.5" text-anchor="middle">operator B</text>
+      <rect x="260" y="140" width="80" height="30" rx="5" fill="#0E0E10" stroke="#6FCF97"/><text x="300" y="159" fill="#F2EFE9" font-size="9.5" text-anchor="middle">operator C</text>
+      <rect x="380" y="140" width="80" height="30" rx="5" fill="#0E0E10" stroke="#6FCF97"/><text x="420" y="159" fill="#F2EFE9" font-size="9.5" text-anchor="middle">operator D</text>
+      <line x1="100" y1="155" x2="140" y2="155" stroke="#6FCF97"/><line x1="220" y1="155" x2="260" y2="155" stroke="#6FCF97"/><line x1="340" y1="155" x2="380" y2="155" stroke="#6FCF97"/>
+      <text x="120" y="188" fill="#7A7A80" font-size="9" text-anchor="middle">memory / local disk</text>
+      <text x="240" y="188" fill="#7A7A80" font-size="9" text-anchor="middle">sort only if needed</text>
+      <rect x="500" y="140" width="120" height="30" rx="5" fill="#0E0E10" stroke="#C9C7C1"/><text x="560" y="159" fill="#F2EFE9" font-size="9.5" text-anchor="middle">final output: DFS</text>
+      <line x1="460" y1="155" x2="500" y2="155" stroke="#6FCF97"/>
+      <text x="320" y="236" fill="#7A7A80" font-size="9.5" text-anchor="middle">"x3" = replication on a distributed filesystem (a typical setup, not a fixed rule)</text>
+    </svg>
+    <figcaption>Fig 1. The distributed filesystem is the input and the final output in both; only the middle changes. (My own sketch.)</figcaption>
+  </figure>
+
+  <h3>Fault tolerance without durable intermediate files</h3>
+  <p>MapReduce gets easy fault tolerance from the durable intermediate files: a failed task is restarted elsewhere and reads the same input again. Spark, Flink and Tez skip that, so when a machine dies and its intermediate state is lost, they <strong>recompute</strong> it from data still available (an earlier stage if possible, else the original input, normally on HDFS). To do that, the framework must remember how each piece was computed: which input partitions, which operators. Spark's RDD abstraction tracks that ancestry; Flink checkpoints operator state so a faulty operator can resume.</p>
+  <p>Here determinism matters. If a recomputed result differs from the lost one and some of the lost data had already gone downstream, downstream operators face contradictions. The usual solution for nondeterministic operators is to kill the downstream operators too and rerun them, which can cascade. So it's better to make operators deterministic, but nondeterminism sneaks in easily: many languages don't guarantee iteration order over a hash table, probabilistic algorithms use random numbers, and the system clock or external data sources vary. The source's suggested fix for the random one: pseudorandom numbers with a fixed seed.</p>
+  <p>And recomputation isn't always the right answer. If the intermediate data is much smaller than the source, or the computation is very CPU-heavy, it's probably cheaper to materialize it to files than recompute.</p>
+
+  <h3>Pipelining and what still gets materialized</h3>
+  <p>Using the Unix analogy: MapReduce is like writing each command's output to a temp file; dataflow engines look more like pipes, and Flink especially is built around pipelined execution. A <strong>sort</strong> is the exception: it can't produce output until it has consumed all input, since the last record read might belong first. So sorting operators must accumulate state, but many other parts of a workflow can pipeline. And inputs and final outputs still usually live on the distributed filesystem; inputs are immutable and the output is completely replaced, as with MapReduce. The saving is that intermediate state isn't written out as well.</p>
+
+  <h3>Graphs and iterative processing</h3>
+  <p>Chapter 2 treated graphs as a data model for OLTP-style queries (find a few vertices). In batch, you might process a whole graph offline: recommendation engines, ranking, and PageRank (estimating a page's popularity from what links to it, part of the formula that orders search results). Two naming traps. A dataflow engine's operators form a DAG, but that's the flow of data between operators; the data itself is typically relational-style tuples. In <em>graph processing</em> the data itself is a graph. The source calls this "another unfortunate naming confusion".</p>
+  <p>Many graph algorithms work edge by edge: join a vertex with its neighbour, propagate information, and repeat until a condition holds (no more edges to follow, or a metric converges). The chapter 2 example of finding all locations within North America (a transitive closure) was of this kind. You can store a graph in a distributed filesystem as lists of vertices and edges, but plain MapReduce does a single pass, so "repeat until done" has to be done by an external scheduler: run one step as a batch job, check the completion condition, and if not done, run another. It works, but MapReduce reads the entire input and writes a whole new output every round, even if only a small part of the graph changed.</p>
+  <h3>The Pregel (bulk synchronous parallel) model</h3>
+  <p>The popular optimization is BSP, known as Pregel after Google's paper; the source names Apache Giraph, Spark's GraphX and Flink's Gelly as implementations. The idea echoes the mapper-sends-messages picture: a vertex sends a message to another vertex, typically along an edge. In each iteration the framework calls a function for each vertex with the messages sent to it (like a reducer call). The difference: <strong>a vertex remembers its state in memory between iterations</strong>, so the function only processes new messages, and where no messages flow, no work is done.</p>
+  <p>The source compares it to the actor model, if each vertex is an actor, with two differences: vertex state and messages are fault-tolerant and durable, and communication happens in fixed rounds (all messages from the previous iteration are delivered in the next), which actors don't normally promise.</p>
+  <p><strong>Fault tolerance.</strong> Vertices can only communicate through messages, never by querying each other directly, so messages can be batched and there is less waiting; the only wait is between iterations (the previous one must finish and its messages be delivered). The source says Pregel implementations guarantee messages are processed exactly once at the destination vertex in the next iteration, even though the underlying network may drop, duplicate or delay them. This works through periodic checkpointing of all vertex state at the end of an iteration. If a node fails, the simplest recovery is rolling the whole computation back to the last checkpoint; with a deterministic algorithm and logged messages, you can recover only the lost partition.</p>
+  <p><strong>Parallel execution.</strong> A vertex doesn't know which machine it is on; it sends to a vertex ID, and the framework routes. Ideally vertices that talk a lot are colocated, but that's hard, so in practice graphs are often partitioned by arbitrary vertex ID. The result is a lot of cross-machine traffic, and intermediate state (messages) is often bigger than the original graph. The source's practical advice: if your graph fits in memory on one computer, a single-machine algorithm will quite likely beat a distributed one; if it fits on one machine's disks, single-machine tools like GraphChi are viable; only beyond that is a distributed approach such as Pregel "unavoidable".</p>
+
+  <figure>
+    <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">PREGEL-STYLE ROUNDS (spreading the smallest ID)</text>
+      <g font-size="10" text-anchor="middle">
+        <text x="60" y="48" fill="#7A7A80">round 0</text><text x="260" y="48" fill="#7A7A80">round 1</text><text x="460" y="48" fill="#7A7A80">round 2</text>
+      </g>
+      <g stroke="#7A7A80"><line x1="30" y1="110" x2="90" y2="110"/><line x1="90" y1="110" x2="150" y2="110"/><line x1="230" y1="110" x2="290" y2="110"/><line x1="290" y1="110" x2="350" y2="110"/><line x1="430" y1="110" x2="490" y2="110"/><line x1="490" y1="110" x2="550" y2="110"/></g>
+      <g font-size="10" text-anchor="middle" fill="#F2EFE9">
+        <circle cx="30" cy="110" r="14" fill="#0E0E10" stroke="#C9C7C1"/><text x="30" y="114">1</text>
+        <circle cx="90" cy="110" r="14" fill="#0E0E10" stroke="#C9C7C1"/><text x="90" y="114">2</text>
+        <circle cx="150" cy="110" r="14" fill="#0E0E10" stroke="#C9C7C1"/><text x="150" y="114">3</text>
+        <circle cx="230" cy="110" r="14" fill="#0E0E10" stroke="#C9C7C1"/><text x="230" y="114">1</text>
+        <circle cx="290" cy="110" r="14" fill="#0E0E10" stroke="#6FCF97"/><text x="290" y="114">1</text>
+        <circle cx="350" cy="110" r="14" fill="#0E0E10" stroke="#C9C7C1"/><text x="350" y="114">3</text>
+        <circle cx="430" cy="110" r="14" fill="#0E0E10" stroke="#C9C7C1"/><text x="430" y="114">1</text>
+        <circle cx="490" cy="110" r="14" fill="#0E0E10" stroke="#C9C7C1"/><text x="490" y="114">1</text>
+        <circle cx="550" cy="110" r="14" fill="#0E0E10" stroke="#6FCF97"/><text x="550" y="114">1</text>
+      </g>
+      <text x="320" y="170" fill="#C9C7C1" font-size="10" text-anchor="middle">each vertex keeps its label in memory; only vertices that receive a</text>
+      <text x="320" y="186" fill="#C9C7C1" font-size="10" text-anchor="middle">smaller label update and send new messages. Green = just changed.</text>
+      <text x="320" y="214" fill="#7A7A80" font-size="9.5" text-anchor="middle">a toy example of mine, not a figure from the source</text>
+    </svg>
+    <figcaption>Fig 2. State stays put; messages carry the changes; quiet parts of the graph do no work.</figcaption>
+  </figure>
+
+  <h3>High-level APIs and languages</h3>
+  <p>The source says execution engines have matured so much that the physical operation of batch jobs is "more or less solved" (petabytes of data on clusters of over 10,000 machines), so attention moved to the programming model, efficiency, and the range of problems solved. High-level languages (Hive, Pig, Cascading, Crunch) exist because hand-written MapReduce is laborious, and could move to Tez without a rewrite; Spark and Flink have their own dataflow APIs, inspired by FlumeJava. These use relational-style building blocks (join, group, filter, aggregate), implemented internally with the algorithms from Part 3. Benefits: less code, and interactive use, where you write analysis incrementally in a shell and run it often, which is handy for exploring data and reminiscent of the Unix philosophy.</p>
+  <h3>The move toward declarative query languages</h3>
+  <p>If you state a join as a relational operator instead of coding it, the framework can inspect the inputs and choose the join algorithm itself. The source says Hive, Spark and Flink have cost-based optimizers that do this, even reordering joins to minimize intermediate state. That's convenient given how much the algorithm choice matters and how many there are to remember.</p>
+  <p>But the batch world is not fully declarative like SQL. MapReduce is built on <strong>callbacks</strong> to user-defined functions that may run arbitrary code, which lets you draw on a large ecosystem of libraries (parsing, language analysis, image analysis, statistics). The source says that freedom has long distinguished the MapReduce lineage from MPP databases, whose user-defined functions tend to be cumbersome and poorly integrated with package managers. Dataflow engines found value in adding declarative features beyond joins: a callback that merely filters or picks fields has per-record call overhead, whereas a declarative form lets the optimizer read only the needed columns from column-oriented storage and use vectorized execution (the source names Hive, Spark DataFrames and Impala; Spark generates JVM bytecode and Impala uses LLVM for native inner loops). The result, per the source: batch frameworks begin to look like MPP databases and achieve comparable performance, while keeping flexibility for arbitrary code and formats.</p>
+  <h3>Specialization for different domains</h3>
+  <p>Standard patterns repeat, so reusable building blocks emerge. MPP databases traditionally served business-intelligence reporting, but batch is used more widely: statistical and numerical algorithms for machine learning (the source names Mahout on MapReduce, Spark and Flink, and MADlib inside an MPP database) and spatial algorithms like k-nearest neighbours (finding items close to a given one in a multi-dimensional space), plus approximate string search for genome analysis. The closing observation: as batch systems gain declarative operators and MPP databases become more programmable, the two look more alike, "all just systems for storing and processing data".</p>
+
+  <h3>The chapter in review (its Summary)</h3>
+  <p>Using my own words on the chapter's summary:</p>
+  <ul>
+    <li><strong>Design philosophy carried over from Unix:</strong> immutable inputs, outputs that feed unknown future programs, and complex problems solved by composing small tools. In Unix the uniform interface is files and pipes; in MapReduce it is a distributed filesystem. Dataflow engines add pipe-like transport, but initial input and final output are still usually on the distributed filesystem.</li>
+    <li><strong>Two main problems for batch frameworks.</strong> <em>Partitioning</em>: mappers are split by input blocks, their output is repartitioned, sorted and merged into a configurable number of reducer partitions so related data meets; post-MapReduce engines avoid sorting unless required. <em>Fault tolerance</em>: MapReduce writes to disk often (easy task recovery, slower when nothing fails); dataflow engines keep more in memory and recompute more after a failure, which deterministic operators keep small.</li>
+    <li><strong>Joins</strong> recap: sort-merge, broadcast hash and partitioned hash. They are mostly used inside MPP databases and dataflow engines too.</li>
+    <li><strong>A deliberately restricted model:</strong> callbacks are assumed stateless with no externally visible side effects beyond their output. That lets the framework retry safely and discard failed attempts' output (if several attempts at a partition succeed, only one becomes visible). The framework can then make the final output the same as if no faults happened, semantics the source calls much stronger than what online services get when they write to databases as a side effect.</li>
+    <li><strong>The defining feature:</strong> input is <em>bounded</em> (known fixed size, such as a set of log files or a database snapshot at one moment), so the job knows when it's done and eventually completes. The next chapter handles unbounded streams, where a job never completes.</li>
+  </ul>
+
+  <h2>Why it matters</h2>
+  <p>If you meet Spark, Flink or a SQL-on-Hadoop tool, you now know why they exist: they remove the per-step disk writes and forced sorts of MapReduce, and let an optimizer choose join algorithms. The determinism rule explains why seeded randomness and clock-free logic matter in data pipelines. And the "bounded versus unbounded" idea is the doorway to stream processing.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>MapReduce materializes every intermediate result on the distributed filesystem: easy recovery, but waiting for whole stages, redundant mappers, and heavy replication.</li>
+      <li>Dataflow engines (Spark, Tez, Flink) run a whole workflow as one job with flexible operators, keep intermediate state in memory or local disk, and sort only when needed.</li>
+      <li>Without durable intermediates they recompute lost data, so deterministic operators matter. Recompute is not always cheaper than materializing.</li>
+      <li>Iterative graph work fits the Pregel model: per-vertex state kept across rounds, messages along edges, checkpoints at round ends. If the graph fits on one machine, single-machine code may well be faster.</li>
+      <li>Declarative APIs let optimizers choose joins and read only needed columns, while arbitrary-code callbacks remain the batch world's flexibility. And batch input is bounded.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Materialize vs pipeline.</strong> Build the same three-step transform (parse, filter, count by key) two ways in a language you like: each step writing a full temp file for the next, and as chained generators. Measure time and peak memory on a large generated file. Done when you can explain which cost differences you saw, noting that one machine is not a cluster.</li>
+      <li><strong>Determinism check.</strong> Write a step that assigns a random bucket to each record. Run it twice and diff the output; then seed the generator and diff again. Add a second nondeterministic leak (iterate a set, or read the clock) and find it. Done when two runs produce identical output.</li>
+      <li><strong>Recompute from lineage.</strong> Represent a pipeline as a list of named steps, each with its input name. Delete an intermediate result and write a function that rebuilds it from the nearest surviving ancestor. Done when deleting any middle result gives back identical data.</li>
+      <li><strong>Mini Pregel.</strong> Implement rounds where each vertex keeps a label, receives messages, and forwards the smaller label to its neighbours only when it changes, to find connected components of a small graph. Done when it halts by itself (no messages left) and matches a plain graph search.</li>
+      <li><strong>Let the optimizer choose.</strong> Write a function <code>join(a, b)</code> that picks a broadcast hash join when one side has fewer than N records and a sort-merge join otherwise. Done when both paths agree on the same test data. Treat the threshold as yours; the source gives no number.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Reread the Summary and ask, for each design choice, what changes when the input is unbounded. That's the question Chapter 11 starts from.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, written to help you build a mental model quickly. It is not a substitute for the source; verify anything you plan to rely on against the original before using it for real.</p>
+  <ul class="src-list">
+    <li>Martin Kleppmann, <em>Designing Data-Intensive Applications</em> (O'Reilly, 2017), Chapter 10, "Batch Processing." This part covers "Beyond MapReduce" (materialization of intermediate state, dataflow engines, graphs and iterative processing, the Pregel model, high-level APIs and languages, specialization for different domains) and the chapter's "Summary": printed pages 419 to 431 (PDF pages 441 to 452 of the supplied file). The page range ends before the chapter's reference list.</li>
+  </ul>
+  <p class="src-note">Flagged for accuracy: (1) Statements about specific engines and their capabilities (Spark, Tez, Flink, Giraph, GraphX, Gelly, Hive, Impala, Mahout, MADlib, YARN, Mesos, Kubernetes) are the book's, as of 2017, and not checked against current versions. (2) The "50 to 100 jobs" and "over 10,000 machines, many petabytes" figures are the book's. (3) "Replicated three times" in Fig 1 is my illustration of a typical setup, not a figure from the source. (4) The Pregel toy example, determinism snippet and projects are my own; I ran the label-spreading and seeded-random snippets on tiny data and they behaved as described. (5) The diagrams are original with invented values. (6) Nothing outside the supplied chapter was consulted.</p>
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
