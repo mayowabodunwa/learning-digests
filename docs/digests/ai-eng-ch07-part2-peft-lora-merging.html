@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Engineering: Finetuning (Part 2): PEFT, LoRA, Model Merging and Practical Tactics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+  pre { background: #0A0A0B; border: 1px solid var(--hairline); border-radius: 8px; padding: 12px 14px; overflow-x: auto; margin: 10px 0; }
+  pre code { background: none; padding: 0; font-size: 12px; line-height: 1.55; display: block; white-space: pre; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AI &middot; CH.7 DIGEST (PART 2, FINAL)</p>
+  <h1>Finetuning: PEFT, LoRA, Model Merging and Practical Tactics</h1>
+  <p class="lead">Part 1 ended on a number: fully finetuning a model means paying memory for gradients and optimizer states on every single parameter. This part is the answer to that bill. We'll go from full finetuning to parameter-efficient finetuning (PEFT), take LoRA apart piece by piece, see how QLoRA stacks quantization on top, then look at model merging (combining models instead of training one), and finish with the practical choices: base model, method, framework and the handful of hyperparameters that matter. The chapter's own Summary closes things out. The author calls model merging "exciting but more experimental", and I've flagged where the ground is still shifting.</p>
+
+  <h2>In one line</h2>
+  <p>Instead of updating every weight, you train a tiny add-on (like LoRA's two small matrices) while the big model stays frozen, optionally squeeze the frozen part to 4 bits, and optionally blend several finetuned models into one.</p>
+
+  <h2>The big idea</h2>
+  <p>Memory scales with <em>trainable</em> parameters, so the whole field of efficient finetuning is a hunt for ways to get close to full-finetuning quality while training far fewer numbers. Adapter methods add small trainable modules; soft prompt methods add trainable tokens; LoRA does the adapter trick in a form that can be folded back into the original weights so it costs nothing extra at inference. Because the add-ons are small and separate from the base model, they're also modular: you can keep one base model and swap or combine many adapters. Model merging pushes that modularity further by combining whole models. The rest is operational: pick a base model, pick a method, pick a framework, set a few hyperparameters.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Full finetuning</span>: updating every parameter; trainable parameters equal total parameters.</li>
+    <li><span class="keyterm-term">Partial finetuning</span>: updating only some parameters, such as freezing the early layers and training the last one.</li>
+    <li><span class="keyterm-term">PEFT</span>: parameter-efficient finetuning. Getting close to full-finetuning performance with far fewer trainable parameters.</li>
+    <li><span class="keyterm-term">Adapter (additive method)</span>: a small extra module added to a model; only the adapter is trained.</li>
+    <li><span class="keyterm-term">Soft prompt</span>: trainable, non-human-readable vectors fed to the model alongside the real input tokens. Contrast with a <span class="keyterm-term">hard prompt</span>, the readable text you write.</li>
+    <li><span class="keyterm-term">LoRA</span>: Low-Rank Adaptation. Represents the weight change as the product of two small matrices.</li>
+    <li><span class="keyterm-term">Rank (r)</span>: the shared inner size of LoRA's two small matrices. Smaller r means fewer trainable parameters.</li>
+    <li><span class="keyterm-term">Alpha (&alpha;)</span>: a LoRA setting controlling how strongly the learned change is mixed into the original matrix.</li>
+    <li><span class="keyterm-term">Low-rank factorization</span>: approximating a big matrix as the product of two smaller ones. Lossy.</li>
+    <li><span class="keyterm-term">Multi-LoRA serving</span>: serving several LoRA-finetuned models that share one base model.</li>
+    <li><span class="keyterm-term">QLoRA / NF4</span>: LoRA with the frozen base weights stored in 4 bits (NormalFloat-4 format).</li>
+    <li><span class="keyterm-term">Model merging</span>: combining the parameters of multiple models into one new model.</li>
+    <li><span class="keyterm-term">Ensembling</span>: combining the <em>outputs</em> of several models, each left intact.</li>
+    <li><span class="keyterm-term">Catastrophic forgetting</span>: a network losing an old skill when trained on a new task.</li>
+    <li><span class="keyterm-term">Task vector (delta parameters)</span>: finetuned weights minus base weights; the "essence" of what the finetune changed.</li>
+    <li><span class="keyterm-term">SLERP</span>: spherical linear interpolation, a way to blend two models along the shortest arc between them rather than a straight line.</li>
+    <li><span class="keyterm-term">Layer stacking (passthrough, frankenmerging)</span>: building a model by stacking layers taken from different models.</li>
+    <li><span class="keyterm-term">Hyperparameter</span>: a training setting you choose (learning rate, batch size, epochs) rather than something the model learns.</li>
+    <li><span class="keyterm-term">Learning rate, batch size, epoch, gradient accumulation</span>: defined in the tactics section below.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>Grounding: why we can't just finetune everything</h3>
+  <p>Early on, models were small enough that you just finetuned the whole thing. That's <strong>full finetuning</strong>: it looks like training, except it starts from already-trained weights instead of random ones. The problem is arithmetic you already know from Part 1. The chapter's worked example is a 7B model in a 16-bit format: 14 GB for the weights, plus 7B x 3 x 2 bytes = 42 GB for gradients and Adam's two states, so 56 GB, and that is before counting activations. Most consumer GPUs have 12 to 24 GB, with high-end ones reaching 48 GB (the chapter's figures, which will date). Full finetuning for supervised and preference tuning also wants a lot of high-quality labeled data that most people can't afford.</p>
+  <p>You can attack the memory problem two ways: shrink the footprint (quantization, fewer trainable parameters) or use the hardware's memory better. An example of the second is CPU offloading, where excess memory spills to the CPU, as DeepSpeed does. This part concentrates on the first.</p>
+
+  <h3>From partial finetuning to PEFT</h3>
+  <p>The first idea was <strong>partial finetuning</strong>: freeze most layers and train a few. With ten layers you might freeze nine and train the last (commonly the layers nearest the output, since they tend to be more task-specific and earlier ones more general). That cuts trainable parameters to 10%. But it's <em>parameter-inefficient</em>: the chapter cites a study showing BERT large needed to update about 25% of its parameters to match full finetuning on the GLUE benchmark.</p>
+  <p>The question became: how do you get near-full performance with <em>several orders of magnitude</em> fewer trainable parameters? Techniques that do are called parameter-efficient (the chapter notes there's no hard threshold). The idea, introduced by Houlsby et al. (2019), was to <strong>insert small adapter modules</strong> into the model (two per transformer block for BERT), freeze everything original, and train only the adapters. They reached performance within 0.4% of full finetuning on GLUE with only about 3% of the trainable parameters. The downside: adapters are extra layers, so every forward pass does more work and inference gets slower.</p>
+  <p>PEFT methods tend to be sample-efficient too. The chapter says full finetuning may need tens of thousands to millions of examples for notable gains, while some PEFT methods can do well with a few thousand. <em>Caveat:</em> these are broad ranges that vary with model and task.</p>
+
+  <h3>Two families of PEFT</h3>
+  <ul>
+    <li><strong>Adapter-based (additive) methods</strong> add parameters or modules to the model. LoRA is by far the most popular. Others named: BitFit, IA3 (attractive for multi-task finetuning, reported to beat LoRA and even full finetuning in some cases), and LongLoRA (a LoRA variant for longer context).</li>
+    <li><strong>Soft prompt methods</strong> leave the model alone and add trainable tokens to the input. Unlike a hard prompt (readable discrete tokens like "write" or "a"), a soft prompt is a set of continuous vectors resembling embeddings, not readable, and it can be tuned by backpropagation. Some call it a crossover between prompt engineering and finetuning. Names you'll meet (prefix tuning, P-Tuning, prompt tuning) differ mainly in <em>where</em> the soft tokens go: prefix tuning puts them at every transformer layer, while prompt tuning puts them only on the embedded input. PEFT frameworks usually implement them for you.</li>
+  </ul>
+  <p>To gauge what people actually use, the author counted over 1,000 open issues on the Hugging Face <code>peft</code> GitHub repository in October 2024 as a popularity proxy. LoRA dominated, soft prompts were less common but growing. That's a rough proxy by one analysis, not a market survey.</p>
+
+  <h3>LoRA, step by step</h3>
+  <p>LoRA's trick: it adds trainable parameters in a way that can be <em>merged back</em> into the original weights, so after training there are no extra layers and no extra inference latency. It works on individual weight matrices.</p>
+  <p>Take a weight matrix <code>W</code> of size n x m. LoRA:</p>
+  <ol>
+    <li>Picks a small number <code>r</code> (the <strong>rank</strong>) and creates two matrices, <code>A</code> (n x r) and <code>B</code> (r x m). Their product <code>A x B</code> has the same shape as W.</li>
+    <li>Builds the new matrix <code>W' = W + (alpha / r) x A x B</code>, where alpha controls how much of the learned change gets mixed in.</li>
+    <li>During finetuning updates only A and B. W stays frozen.</li>
+  </ol>
+  <p>Why does this save parameters? Low-rank factorization. A 9 x 9 matrix has 81 numbers, but it can be approximated as a 9 x 1 times a 1 x 9, which is only 18 numbers. The catch (label this clearly): the approximation is <strong>lossy</strong>, and a higher rank preserves more information. A real example with numbers I computed: a 4096 x 4096 matrix has 16,777,216 parameters, but with r = 8 the pair A and B has 4096 x 8 x 2 = 65,536.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 260" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs>
+        <marker id="l1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7A7A80"/></marker>
+      </defs>
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">LoRA ON ONE WEIGHT MATRIX</text>
+      <rect x="30" y="50" width="130" height="130" rx="4" fill="#131316" stroke="#7A7A80"/>
+      <text x="95" y="108" fill="#F2EFE9" font-size="14" font-weight="700" text-anchor="middle">W</text>
+      <text x="95" y="126" fill="#7A7A80" font-size="9" text-anchor="middle">n x m, FROZEN</text>
+      <text x="180" y="120" fill="#F2EFE9" font-size="18" text-anchor="middle">+</text>
+      <rect x="200" y="50" width="30" height="130" rx="3" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="215" y="118" fill="#C8453A" font-size="13" font-weight="700" text-anchor="middle">A</text>
+      <text x="215" y="196" fill="#C9C7C1" font-size="9" text-anchor="middle">n x r</text>
+      <text x="245" y="120" fill="#F2EFE9" font-size="14" text-anchor="middle">x</text>
+      <rect x="260" y="95" width="130" height="30" rx="3" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="325" y="115" fill="#C8453A" font-size="13" font-weight="700" text-anchor="middle">B</text>
+      <text x="325" y="145" fill="#C9C7C1" font-size="9" text-anchor="middle">r x m</text>
+      <text x="230" y="215" fill="#C8453A" font-size="9.5" text-anchor="middle">only A and B are trained</text>
+      <line x1="400" y1="115" x2="440" y2="115" stroke="#7A7A80" marker-end="url(#l1)"/>
+      <rect x="450" y="50" width="130" height="130" rx="4" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="515" y="108" fill="#6FCF97" font-size="14" font-weight="700" text-anchor="middle">W'</text>
+      <text x="515" y="126" fill="#C9C7C1" font-size="9" text-anchor="middle">same shape as W</text>
+      <text x="515" y="198" fill="#6FCF97" font-size="9.5" text-anchor="middle">merge after training:</text>
+      <text x="515" y="212" fill="#6FCF97" font-size="9.5" text-anchor="middle">no extra layers</text>
+      <text x="310" y="248" fill="#7A7A80" font-size="9" text-anchor="middle">Shapes not to scale. r is tiny compared with n and m.</text>
+    </svg>
+    <figcaption>My own sketch: the frozen matrix plus a small learned correction built from two thin matrices</figcaption>
+  </figure>
+
+  <p><strong>Results the chapter reports.</strong> In the LoRA paper, GPT-3 finetuned with LoRA matched or beat full finetuning on several tasks using about 4.7M trainable parameters, which is 0.0027% of full finetuning. Those are the paper's numbers for those tasks.</p>
+
+  <h3>Why does LoRA work at all?</h3>
+  <p>A fair puzzle: if a model needs billions of parameters and examples to <em>learn</em> a behavior, why can a few thousand examples and a sliver of parameters <em>change</em> it? The chapter points to research arguing that large models have a very low <strong>intrinsic dimension</strong>: pre-training seems to compress what matters for downstream tasks, and bigger models tend to compress further. So the better pre-trained the model, the easier it is to adapt with few parameters and little data. This is an argument from several papers, not a settled proof.</p>
+  <p>Why not use LoRA to pre-train too? People tried low-rank training for years, with real successes at small scale (the chapter cites SqueezeNet reaching AlexNet-level accuracy with 50 times fewer parameters) and recent LLM attempts (ReLoRA up to 1.3B parameters; GaLore comparable to full-rank at 1B and promising at 7B). It has not been shown at hundreds of billions of parameters, and if the compression argument is right, full-rank pre-training may still be needed first. Treat that as an open question.</p>
+
+  <h3>Configuring LoRA</h3>
+  <p><strong>Which matrices?</strong> LoRA is mostly used on transformers, most commonly on the four attention matrices: query (Wq), key (Wk), value (Wv) and output projection (Wo), applied uniformly to all matrices of that type. With a fixed budget, what should you pick? The LoRA authors had an 18M trainable-parameter budget on GPT-3 175B (0.01% of the model) and compared spending it on one matrix at rank 8, two at rank 4, or all four at rank 2. All four at rank 2 did best on the two benchmarks they tested (WikiSQL and MultiNLI); if you can only choose two, query and value generally did best. I checked their arithmetic: (12,288 x 2 x 2) x 4 = 196,608 per layer, times 96 layers = 18,874,368. Later reports (Databricks, and others) found applying LoRA to the feedforward layers can help even more, though attention-based LoRA tends to give more per unit of memory.</p>
+  <p><strong>Which rank?</strong> A small r, often between 4 and 64, is usually enough for many use cases. Surprisingly, raising r doesn't reliably improve results, and some argue a high r can overfit, though one reported experiment found r = 256 best on its tasks. So: usually small, but test.</p>
+  <p><strong>Which alpha?</strong> The chapter says that in practice the alpha-to-rank ratio is often between 1:8 and 8:1, with small r wanting larger alpha and the reverse. The best combination comes from experiments.</p>
+
+  <h3>Serving LoRA: merge, or keep separate</h3>
+  <p>There are two ways to serve a LoRA model:</p>
+  <ol>
+    <li><strong>Merge</strong> A and B into W before serving. No extra computation at inference, so no added latency. Generally best if you serve one LoRA model.</li>
+    <li><strong>Keep W, A, B separate</strong> and combine at inference. Slightly slower, but excellent for <strong>multi-LoRA serving</strong>, where many finetuned models share one base.</li>
+  </ol>
+  <p>The storage math is striking. The chapter's scenario: a finetuned model per customer, 100 customers, W of size 4096 x 4096 (about 16.8M parameters), rank 8. Merging gives 100 full copies, about 1.68B parameters. Keeping adapters separate gives one W plus 100 small (A, B) pairs: 16.8M + 65,536 x 100, about 23.3M. I reproduced both numbers in code. Switching from one customer to another also means loading only a small adapter. The chapter notes Apple used multiple LoRA adapters on one roughly 3B-parameter base for different on-device features, with quantization to fit. LoRA adapters can also be shared publicly, for example on Hugging Face or AdapterHub.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">100 CUSTOMERS, ONE 4096 x 4096 MATRIX, RANK 8</text>
+      <text x="20" y="60" fill="#C9C7C1" font-size="10">Merge each</text>
+      <text x="20" y="73" fill="#C9C7C1" font-size="10">(100 copies)</text>
+      <rect x="130" y="46" width="440" height="28" fill="#C8453A"/>
+      <text x="350" y="65" fill="#F2EFE9" font-size="10" text-anchor="middle">1,677,721,600 parameters</text>
+      <text x="20" y="130" fill="#C9C7C1" font-size="10">Shared W +</text>
+      <text x="20" y="143" fill="#C9C7C1" font-size="10">100 adapters</text>
+      <rect x="130" y="116" width="6" height="28" fill="#6FCF97"/>
+      <text x="148" y="135" fill="#6FCF97" font-size="10">23,330,816 parameters (about 1.4% as many)</text>
+      <text x="310" y="200" fill="#C9C7C1" font-size="10" text-anchor="middle">Trade-off: separate adapters add a little latency per request,</text>
+      <text x="310" y="215" fill="#C9C7C1" font-size="10" text-anchor="middle">but store far less and swap tasks faster.</text>
+      <text x="310" y="238" fill="#7A7A80" font-size="9" text-anchor="middle">One matrix only; a full model has many. Bars to scale on the same axis.</text>
+    </svg>
+    <figcaption>Why keeping adapters separate wins on storage</figcaption>
+  </figure>
+
+  <p><strong>The catch with LoRA.</strong> Its performance generally doesn't match full finetuning, and it's harder to implement because it modifies the model, so it needs an understanding of the architecture. That's mostly an issue for less popular base models; frameworks like Hugging Face PEFT, Axolotl, unsloth and LitGPT support LoRA for popular models out of the box.</p>
+
+  <h3>QLoRA: quantize the frozen part</h3>
+  <p>Further shrinking LoRA's few parameters barely helps: the chapter's table shows LoRA adapter memory is tiny next to the weights (for example, about 37.7 MB for GPT-3 175B's adapters versus 350 GB for its 16-bit weights, in its example configuration). The bigger win is quantizing the base. <strong>QLoRA</strong> stores the frozen weights in 4 bits and dequantizes them to BF16 when computing the forward and backward passes. Its 4-bit format, NF4 (NormalFloat-4), is designed around the observation that pre-trained weights usually follow a roughly normal distribution centered at zero. It also uses <em>paged optimizers</em> that shuttle data between CPU and GPU when the GPU runs out of memory. Together these let a 65B model be finetuned on a single 48 GB GPU, per the paper. The resulting Guanaco models were competitive in the authors' evaluation: in the chapter's table (May 2023, GPT-4 as judge) Guanaco 65B didn't beat GPT-4 but was often preferred to ChatGPT. <em>Caveat:</em> that evaluation is one setup with an LLM judge. And the limitation: NF4 quantization and dequantization are expensive, so QLoRA can lower memory but increase training time.</p>
+
+  <h3>Model merging and multi-task finetuning</h3>
+  <p>If finetuning customizes one model, <strong>model merging</strong> customizes by combining several, and you can finetune the pieces first or after. Merging without further finetuning needs no GPUs, which appeals to people with little compute. The chapter's motivations:</p>
+  <ul>
+    <li><strong>Better performance.</strong> Two models good at different things on one task might combine into something better than either. (The chapter's illustration: one answers the first 60% of questions, another the last 60%, together maybe 80%.)</li>
+    <li><strong>Smaller footprint.</strong> Two single-task models merged into one multi-task model with fewer parameters; two adapters on the same base can become one adapter.</li>
+    <li><strong>Multi-task finetuning.</strong> The usual options are <em>simultaneous</em> (mix all tasks in one dataset; typically needs more data and training) or <em>sequential</em> (one task after another; risks <strong>catastrophic forgetting</strong>). Merging offers a third: finetune per task in parallel, then merge, which lets each task be learned well and avoids sequential forgetting.</li>
+    <li><strong>On-device deployment.</strong> Phones, laptops, cars and robots have limited memory, so one merged model beats several. On-device matters when data can't leave the device (often privacy), when connectivity is poor, or to cut inference costs.</li>
+    <li><strong>Federated learning.</strong> Copies of one model learn separately on different devices' data, then get merged into a new base.</li>
+  </ul>
+  <p><strong>Ensembling vs. merging.</strong> Ensembling (an older idea) keeps each model intact and combines their <em>outputs</em> (for example by majority vote), which usually helps but multiplies inference cost because every request calls several models. Merging mixes the <em>parameters</em> and yields one model. The chapter notes many top Open LLM Leaderboard entries were merged models. It also warns many merging techniques are experimental and may become outdated, so it focuses on three high-level approaches.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 260" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs>
+        <marker id="m1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#7A7A80"/></marker>
+      </defs>
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">ENSEMBLE vs. MERGE</text>
+      <text x="150" y="48" fill="#C8453A" font-size="11" font-weight="700" text-anchor="middle">ENSEMBLE (outputs combined)</text>
+      <rect x="20" y="62" width="70" height="28" rx="5" fill="#0E0E10" stroke="#7A7A80"/><text x="55" y="80" fill="#C9C7C1" font-size="9.5" text-anchor="middle">model 1</text>
+      <rect x="20" y="100" width="70" height="28" rx="5" fill="#0E0E10" stroke="#7A7A80"/><text x="55" y="118" fill="#C9C7C1" font-size="9.5" text-anchor="middle">model 2</text>
+      <rect x="20" y="138" width="70" height="28" rx="5" fill="#0E0E10" stroke="#7A7A80"/><text x="55" y="156" fill="#C9C7C1" font-size="9.5" text-anchor="middle">model 3</text>
+      <rect x="170" y="100" width="100" height="28" rx="5" fill="#131316" stroke="#C8453A"/><text x="220" y="118" fill="#C8453A" font-size="9.5" text-anchor="middle">vote / combine</text>
+      <line x1="90" y1="76" x2="168" y2="108" stroke="#7A7A80" marker-end="url(#m1)"/>
+      <line x1="90" y1="114" x2="168" y2="114" stroke="#7A7A80" marker-end="url(#m1)"/>
+      <line x1="90" y1="152" x2="168" y2="122" stroke="#7A7A80" marker-end="url(#m1)"/>
+      <text x="150" y="200" fill="#C9C7C1" font-size="9.5" text-anchor="middle">3 inference calls per request</text>
+      <text x="460" y="48" fill="#6FCF97" font-size="11" font-weight="700" text-anchor="middle">MERGE (weights combined)</text>
+      <rect x="340" y="62" width="70" height="28" rx="5" fill="#0E0E10" stroke="#7A7A80"/><text x="375" y="80" fill="#C9C7C1" font-size="9.5" text-anchor="middle">model 1</text>
+      <rect x="340" y="100" width="70" height="28" rx="5" fill="#0E0E10" stroke="#7A7A80"/><text x="375" y="118" fill="#C9C7C1" font-size="9.5" text-anchor="middle">model 2</text>
+      <rect x="340" y="138" width="70" height="28" rx="5" fill="#0E0E10" stroke="#7A7A80"/><text x="375" y="156" fill="#C9C7C1" font-size="9.5" text-anchor="middle">model 3</text>
+      <rect x="490" y="100" width="100" height="28" rx="5" fill="#131316" stroke="#6FCF97"/><text x="540" y="118" fill="#6FCF97" font-size="9.5" text-anchor="middle">one new model</text>
+      <line x1="410" y1="76" x2="488" y2="108" stroke="#7A7A80" marker-end="url(#m1)"/>
+      <line x1="410" y1="114" x2="488" y2="114" stroke="#7A7A80" marker-end="url(#m1)"/>
+      <line x1="410" y1="152" x2="488" y2="122" stroke="#7A7A80" marker-end="url(#m1)"/>
+      <text x="460" y="200" fill="#C9C7C1" font-size="9.5" text-anchor="middle">1 inference call per request</text>
+      <text x="310" y="245" fill="#7A7A80" font-size="9" text-anchor="middle">Simplified: real merging works layer by layer and may need further finetuning.</text>
+    </svg>
+    <figcaption>Ensembling blends answers; merging blends weights</figcaption>
+  </figure>
+
+  <h3>Merging approach 1: summing</h3>
+  <p>Add the constituent models' weights together, after rescaling if their value ranges differ widely.</p>
+  <ul>
+    <li><strong>Linear combination</strong> (a plain or weighted average). Surprisingly effective for something so simple, studied since the early 1990s. "Model soups" averaged whole finetuned models to improve accuracy without slowing inference, but it's more common to combine specific parts, such as adapters. It works best for models finetuned from the <em>same base</em>, and this connects to <strong>task vectors</strong>: subtract the base from a finetuned model and what's left captures what the finetune added (for LoRA, you can build it from the LoRA weights). That enables <em>task arithmetic</em>: add two task vectors to combine abilities, or subtract one to reduce an unwanted behavior. Different architectures or sizes can still be combined by projecting to a common dimension, and some proposals align parameters first, but that's harder and less common.</li>
+    <li><strong>SLERP.</strong> Think of each model's vector as a point on a sphere. Rather than a straight line between them, you travel along the shortest arc on the surface (like the shortest flight path between two cities) and stop at a point set by an interpolation factor between 0 and 1: 0.5 is the midpoint, and smaller values stay closer to the first. SLERP is defined for two vectors, so for more you merge sequentially. Tools implement the math for you.</li>
+    <li><strong>Pruning redundant task-specific parameters.</strong> Most finetuning changes are tiny and don't matter for the task. TIES-Merging and DARE reset many of those to their base values (zeroing the task vector entries) before merging; the TIES result the chapter shows is that keeping only the top 20% of task-vector parameters performed comparably to keeping all. The reasoning: redundant changes may be harmless in one model but interfere in a merged one, and the more models you merge, the more this matters. The point of pruning here is quality of the merge, not a smaller or faster model.</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">TASK VECTORS AS ARITHMETIC (TOY: 4 WEIGHTS)</text>
+      <g font-size="10" fill="#C9C7C1">
+        <text x="20" y="60">base</text>
+        <text x="20" y="90">tuned for A</text>
+        <text x="20" y="120">tuned for B</text>
+        <text x="20" y="160">A - base</text>
+        <text x="20" y="190">B - base</text>
+      </g>
+      <g font-size="11" fill="#F2EFE9" text-anchor="middle">
+        <text x="200" y="60">1.0   2.0   3.0   4.0</text>
+        <text x="200" y="90">1.5   2.0   3.0   4.1</text>
+        <text x="200" y="120">1.0   2.0   3.8   4.0</text>
+      </g>
+      <g font-size="11" text-anchor="middle">
+        <text x="200" y="160" fill="#C8453A">+0.5   0     0   +0.1</text>
+        <text x="200" y="190" fill="#C8453A">0     0   +0.8   0</text>
+      </g>
+      <rect x="340" y="50" width="260" height="150" rx="8" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="470" y="74" fill="#6FCF97" font-size="11" font-weight="700" text-anchor="middle">base + (A-base) + (B-base)</text>
+      <text x="470" y="102" fill="#F2EFE9" font-size="11" text-anchor="middle">1.5   2.0   3.8   4.1</text>
+      <text x="470" y="130" fill="#C9C7C1" font-size="9.5" text-anchor="middle">both skills' changes kept,</text>
+      <text x="470" y="145" fill="#C9C7C1" font-size="9.5" text-anchor="middle">because they touch different weights</text>
+      <text x="470" y="180" fill="#7A7A80" font-size="9" text-anchor="middle">(plain average would halve each change)</text>
+      <text x="310" y="220" fill="#7A7A80" font-size="9" text-anchor="middle">Invented numbers. Real changes overlap, which is why pruning and sign tricks (TIES, DARE) exist.</text>
+    </svg>
+    <figcaption>My toy illustration of task-vector addition, with the arithmetic checked by script</figcaption>
+  </figure>
+
+  <h3>Merging approach 2: layer stacking</h3>
+  <p>Take layers from one or more models and stack them (also called passthrough or <em>frankenmerging</em>). It can produce unusual architectures and parameter counts, and unlike summing it usually needs more finetuning afterward. Examples from the chapter:</p>
+  <ul>
+    <li><strong>Goliath-120B</strong>: assembled from two finetuned Llama 2-70B models, taking 72 of 80 layers from each.</li>
+    <li><strong>Mixture-of-experts from a dense model</strong> ("sparse upcycling"): copy certain layers several times, add a router that sends each input to the best copy, and keep training. The paper reports this can beat an MoE trained from scratch. Together AI's Mixture-of-Agents, built by combining six weaker open models, reportedly matched GPT-4o on some benchmarks.</li>
+    <li><strong>Model upscaling</strong> by depthwise scaling: copy a 32-layer model, sum some layers and stack the rest, then train further. SOLAR 10.7B was made this way, summing 16 layers so the result has 32 x 2 - 16 = 48 layers. Use case: you now have an 80 GB GPU where the old model was sized for 40 GB.</li>
+  </ul>
+
+  <h3>Merging approach 3: concatenation</h3>
+  <p>Concatenate parameters, so the merged component has the sum of the parts. Merge two LoRA adapters of ranks r1 and r2 and you get rank r1 + r2. The chapter doesn't recommend it: there's no memory saving compared with serving the models separately, and the extra performance may not justify the parameters. It's included for completeness.</p>
+
+  <h3>Finetuning tactics</h3>
+  <p>The chapter's reassurance: much around finetuning is hard (deciding whether to, getting data, maintaining it) but the process itself is more straightforward. You choose three things.</p>
+  <p><strong>Base model.</strong> Early in a project, start with the most powerful model you can afford: if it can't do the task, weaker ones likely can't. If it can, explore cheaper ones against it as a benchmark. Two paths from OpenAI's best-practices guidance as the chapter describes them:</p>
+  <ul>
+    <li><em>Progression path</em>: (1) test your finetuning code on the cheapest, fastest model; (2) test your data on a middling model (if the training loss doesn't go down with more data, something may be wrong); (3) push performance with the best model; (4) train all models to map the price/performance frontier and choose.</li>
+    <li><em>Distillation path</em>: (1) finetune the strongest affordable model on a small dataset; (2) use it to generate more training data; (3) train a cheaper model on that.</li>
+  </ul>
+  <p><strong>Method.</strong> If you're new, try something like LoRA first and consider full finetuning later. Full finetuning typically needs at least thousands of examples (often many more), while PEFT can do well with far fewer; with a few hundred examples, full finetuning might not beat LoRA. Also think about serving: LoRA lets several finetuned models share one base.</p>
+  <p><strong>Framework.</strong> The easiest route is a finetuning API (upload data, pick a base model, get a model back), offered by model providers, cloud providers and third parties. Limits: only the supported base models, and not every knob exposed. Alternatively use a framework such as LLaMA-Factory, unsloth, PEFT, Axolotl or LitGPT, which gives flexibility but means provisioning compute. The chapter says adapter-based finetuning can often run on a mid-tier GPU, and multi-machine training needs distributed tooling like DeepSpeed, PyTorch Distributed or ColossalAI.</p>
+
+  <h3>Key hyperparameters</h3>
+  <ul>
+    <li><strong>Learning rate</strong>: the step size of each update. Too small and training crawls; too big and it overshoots and may never converge. There's no universal best. The chapter says to experiment, typically in the range 1e-7 to 1e-3, and a common practice is to take the learning rate at the end of pre-training and multiply by a constant between 0.1 and 1. A loss curve that jumps around suggests too large; one that's stable but slow suggests too small. A <em>learning rate schedule</em> can change it during training, typically larger early and smaller later.</li>
+    <li><strong>Batch size</strong>: how many examples per update. Very small batches (the chapter says fewer than eight) can give unstable training; bigger batches give steadier updates and faster passes through data but need more memory. When memory forces small batches, <strong>gradient accumulation</strong> sums gradients over several batches before updating the weights once.</li>
+    <li><strong>Number of epochs</strong>: passes over the training data. For millions of examples, 1 to 2 may be enough; for thousands, 4 to 10 may still help. Compare training loss with validation loss: both falling means more epochs (or data) could help; training falling while validation rises means overfitting, so try fewer epochs.</li>
+    <li><strong>Prompt loss weight</strong>: in instruction finetuning each example has a prompt and a response, and both can contribute to the loss. Since at inference the model mostly generates responses, prompts usually get less weight. At 100% prompts count as much as responses; at 0% the model learns only from responses; a default of about 10% is typical.</li>
+  </ul>
+  <p><em>Simplification:</em> the numeric ranges above are the chapter's rules of thumb, not guarantees. Check your base model's and framework's documentation for its recommended settings.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">READING LOSS CURVES (SCHEMATIC)</text>
+      <rect x="20" y="36" width="270" height="160" rx="8" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="155" y="54" fill="#C8453A" font-size="10" font-weight="700" text-anchor="middle">LEARNING RATE TOO BIG</text>
+      <polyline points="40,150 70,90 100,160 130,80 160,150 190,95 220,140 250,100" fill="none" stroke="#C8453A" stroke-width="1.8"/>
+      <text x="155" y="186" fill="#C9C7C1" font-size="9" text-anchor="middle">loss bounces; may never settle</text>
+      <rect x="330" y="36" width="270" height="160" rx="8" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="465" y="54" fill="#F2EFE9" font-size="10" font-weight="700" text-anchor="middle">OVERFITTING (EPOCHS)</text>
+      <polyline points="350,150 390,120 430,100 470,90 510,84 550,80 580,78" fill="none" stroke="#6FCF97" stroke-width="1.8"/>
+      <polyline points="350,150 390,125 430,108 470,106 510,114 550,126 580,136" fill="none" stroke="#C8453A" stroke-width="1.8"/>
+      <text x="580" y="74" fill="#6FCF97" font-size="8.5" text-anchor="end">training: falls</text>
+      <text x="580" y="154" fill="#C8453A" font-size="8.5" text-anchor="end">validation: rises</text>
+      <text x="465" y="186" fill="#C9C7C1" font-size="9" text-anchor="middle">fewer epochs may help</text>
+      <text x="310" y="218" fill="#7A7A80" font-size="9" text-anchor="middle">Hand-drawn shapes, not real runs. Plotted as "loss" (lower is better) with the vertical axis flipped for the right panel.</text>
+    </svg>
+    <figcaption>Two symptoms the chapter says to watch for</figcaption>
+  </figure>
+
+  <h3>The chapter's own wrap-up</h3>
+  <p>The Summary reinforces the shape of the chapter: finetuning itself is not hard (frameworks handle much and suggest sensible defaults), but the surrounding context is: whether to finetune at all, and data. Full finetuning became impractical as models grew, so techniques arose to cut memory: PEFT reduces the number of trainable parameters, quantized training reduces the bits per value. LoRA is popular because it's parameter-efficient, data-efficient and modular. Model merging combines models, with uses from on-device deployment to upscaling. And the practitioner refrain: finetuning is easy, getting good data is hard, which is what Chapter 8 tackles.</p>
+
+  <h2>Why it matters</h2>
+  <p>This is the practical menu. When someone says "we finetuned it on a single GPU," this part tells you what that probably meant: a frozen, possibly 4-bit base with small LoRA matrices on the attention layers. When someone says "we serve a model per customer," it tells you how that stays affordable. And the merging section is a map of a fast-moving area, so you can read new merging releases and know whether they're summing, stacking or concatenating.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>PEFT trains a small number of added or reparameterized weights; LoRA does it with two thin matrices (W' = W + alpha/r x AB) that can be merged back for zero extra inference latency.</li>
+      <li>LoRA's rank is usually small (the chapter says often 4 to 64), applied to attention matrices first; its factorization is lossy, and it usually doesn't quite match full finetuning.</li>
+      <li>Keeping adapters separate costs a little latency but makes serving many task-specific or customer-specific models cheap.</li>
+      <li>QLoRA keeps the frozen base in 4 bits (NF4) so big models fit on one GPU, trading some training speed.</li>
+      <li>Merging combines weights (summing, stacking, concatenating) into one model; ensembling combines outputs. Merging methods are still experimental.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>LoRA parameter counter (under an hour).</strong> Write <code>lora_params(n, m, r)</code> returning <code>n*r + r*m</code>, and a loop printing the saving for several ranks on a 4096 x 4096 matrix. Done when it prints 65,536 for r = 8 against 16,777,216 for the full matrix, and your 100-customer storage comparison gives 1,677,721,600 vs. 23,330,816 parameters (my run matched both). Then reproduce the chapter's GPT-3 count: 96 layers, dimension 12,288, rank 2, four matrices gives 18,874,368.</li>
+      <li><strong>Low-rank approximation demo.</strong> Build a matrix that is truly low-rank (multiply a random 8 x 1 by a random 1 x 8, then add a little noise) and approximate it with a rank-1 factorization, using any linear algebra library's SVD if you have one. Done when you can print the reconstruction error for ranks 1, 2 and 3 and see that error drops as rank rises. This shows the "lossy, but good enough" idea only; real LoRA learns A and B by training, not by SVD.</li>
+      <li><strong>Learning-rate playground.</strong> Minimize <code>(w - 3)^2</code> by gradient descent from w = 0 with learning rates 0.01, 0.1, 0.9 and 1.1. Done when you've seen slow crawling, smooth convergence, oscillation, and divergence. (I ran it: 0.1 got to about 2.97 in 20 steps, 0.01 only to about 1.0, and 1.1 blew up to about -112.)</li>
+      <li><strong>Toy model merger.</strong> Represent three "models" as short lists of numbers sharing a base. Compute task vectors, then build merged models by averaging, by adding task vectors, by subtracting one task vector, and by keeping only the largest entry of each task vector before adding. Done when you can explain, for your numbers, why adding beat averaging and when pruning would change the result. Add a SLERP function for two 2-D vectors and confirm the 0.5 midpoint of (1,0) and (0,1) lands at about (0.707, 0.707) rather than (0.5, 0.5). Toy data only, nothing here touches a real model.</li>
+      <li><strong>Gradient accumulation loop.</strong> Extend the one-weight training loop from Part 1 to compute gradients on mini-batches of 2 examples but apply the update only every 4 mini-batches (average the accumulated gradients). Done when you can show it behaves like a batch of 8 while holding only 2 examples at a time.</li>
+      <li><strong>Finetuning plan one-pager.</strong> For a task you care about, write which base model, which method (full, LoRA, QLoRA), what framework or API, learning rate range, epochs, and how you'd tell overfitting from under-training. Done when each choice has a one-sentence reason tied to this chapter.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Reread the LoRA section and pick one question to chase: why rank barely matters past a point, or how task arithmetic subtracts a behavior. Then continue to Chapter 8, because every technique here assumes you have good data.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, written to help you build a mental model quickly. It is not a substitute for the source text; verify anything you plan to rely on, especially specific research results, vendor features and any figure you intend to quote, against the original source or current documentation.</p>
+  <ul class="src-list">
+    <li><em>AI Engineering</em> by Chip Huyen (O'Reilly), Chapter 7, "Finetuning." This digest (Part 2, final) covers printed pages 332-362 (PDF pages 356-386): Finetuning Techniques (parameter-efficient finetuning, PEFT techniques, LoRA including why it works, configurations, serving and quantized LoRA/QLoRA), Model Merging and Multi-Task Finetuning (summing, layer stacking, concatenation), Finetuning Tactics (base models, methods, frameworks, hyperparameters) and the chapter Summary. Part 1 covered printed pages 307-332. The next chapter in the book is Chapter 8, Dataset Engineering.</li>
+    <li>Papers named in the chapter that I did not read directly: Houlsby et al. 2019 (adapters), Hu et al. 2021 (LoRA), Dettmers et al. 2023 (QLoRA), Yadav et al. 2023 (TIES), Yu et al. 2023 (DARE), Ilharco et al. 2022 (task arithmetic), Wortsman et al. 2022 (model soups), Komatsuzaki et al. 2022 (sparse upcycling), Kim et al. 2023 (SOLAR), Aghajanyan et al. 2020 (intrinsic dimension). Everything here about them is as the chapter reports it.</li>
+  </ul>
+  <p class="src-note">Flagged for accuracy: (1) The chapter calls model merging experimental and says specific techniques may become outdated. (2) The ranges for rank (4 to 64), alpha:rank ratio (1:8 to 8:1), learning rate (1e-7 to 1e-3), epochs and the "fewer than eight" batch-size remark are the chapter's rules of thumb or reports, not guarantees; the author notes the optimal values vary. (3) The GPU memory sizes (12 to 48 GB) and the 56 GB example are as stated in the chapter and will date. (4) I computed the 65,536; 1.68B vs. 23.3M; and 18,874,368 figures myself in Python and they match the chapter. (5) The LoRA formula's scaling term is written alpha/r as I read the chapter's typeset equation; confirm the exact convention in the LoRA paper or your framework before relying on it. (6) The popularity analysis of GitHub issues is the author's own proxy, from October 2024. (7) Benchmark and Elo results (Houlsby, LoRA, Guanaco, TIES, Mixture-of-Agents) are reported for specific models and setups. (8) My toy task-vector, learning-rate and merging examples use invented numbers and plain Python, with no real model or library; they were run locally with Python 3.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
