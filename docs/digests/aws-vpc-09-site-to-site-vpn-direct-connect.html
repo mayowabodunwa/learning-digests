@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: Site-to-Site VPN, Direct Connect, and Hybrid Routing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS VPC &middot; CONCEPT 9 DIGEST</p>
+  <h1>Site-to-Site VPN, Direct Connect, and Hybrid Routing</h1>
+  <p class="lead">How a VPC gets a private path to your office or data center: an encrypted tunnel over the internet, a dedicated physical link, or both, and how routes decide which path traffic takes.</p>
+
+  <h2>In one line</h2>
+  <p>Site-to-Site VPN builds IPsec tunnels (in the usual setup, over the internet) between AWS and your on-premises device; Direct Connect gives you a private physical connection into AWS; and in both cases the real work is routing, meaning which prefixes each side knows about and which path wins when there are several.</p>
+
+  <h2>The big idea</h2>
+  <p>So far every network in this series has lived inside AWS. "Hybrid" means one side is somewhere else: an office, a data center, a colocation cage. By default, per the VPN docs, an instance in a VPC can't talk to a remote device on your network, so you have to build the bridge on purpose. AWS gives you two main bridges. The VPN one is quick to set up and rides your normal internet connection, wrapped in encryption. The Direct Connect one is a dedicated link, which takes longer to arrange but bypasses internet service providers on the path. You can run them together. After the bridge exists, the question that fills real-world troubleshooting is routing: both sides need routes pointing across, and when multiple routes could match, AWS has a specific order for choosing.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Site-to-Site VPN connection</span>: a secure connection between your on-premises equipment and your VPCs.</li>
+    <li><span class="keyterm-term">IPsec</span>: the protocol suite the VPN uses to encrypt traffic. The docs say the service supports IPsec VPN connections.</li>
+    <li><span class="keyterm-term">VPN tunnel</span>: an encrypted link between AWS and your network. Each VPN connection includes two tunnels you can use at the same time for high availability.</li>
+    <li><span class="keyterm-term">Virtual private gateway (VGW)</span>: the AWS-side VPN endpoint that attaches to a single VPC.</li>
+    <li><span class="keyterm-term">Transit gateway</span>: the hub from Concept 2, which can also be the AWS-side VPN endpoint.</li>
+    <li><span class="keyterm-term">Customer gateway (CGW)</span>: an AWS resource that tells AWS about your device. The <span class="keyterm-term">customer gateway device</span> is the real router, firewall or software on your side.</li>
+    <li><span class="keyterm-term">BGP</span>: Border Gateway Protocol, a routing protocol where each side advertises the networks it can reach. Called "dynamic" routing in the VPN docs.</li>
+    <li><span class="keyterm-term">Static routing</span>: you type in the on-premises prefixes yourself.</li>
+    <li><span class="keyterm-term">ASN</span>: autonomous system number, the identifier BGP uses for a network.</li>
+    <li><span class="keyterm-term">Direct Connect (DX)</span>: a service that links your network to a Direct Connect location over a standard Ethernet fiber-optic cable.</li>
+    <li><span class="keyterm-term">Virtual interface (VIF)</span>: a logical interface on a DX connection. Types: private, public, transit.</li>
+    <li><span class="keyterm-term">Direct Connect gateway</span>: a globally available resource that lets one DX connection reach VPCs across Regions.</li>
+    <li><span class="keyterm-term">Route propagation</span>: letting a gateway automatically add learned routes into a VPC route table.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>Grounding: the shape of a hybrid connection</h3>
+  <p>Picture your office network on the left and your VPC on the right. Something has to sit at the edge of each. On the AWS side that is a gateway (a virtual private gateway attached to one VPC, or a transit gateway shared by many). On your side it is a device that speaks the same language. Between them is a path: encrypted tunnels over the public internet (VPN), a dedicated circuit (Direct Connect), or a VPN running on top of a dedicated circuit.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hybrid connectivity with VPN and Direct Connect">
+      <rect x="10" y="20" width="170" height="210" rx="10" fill="none" stroke="#7A7A80" stroke-dasharray="5 4"/>
+      <text x="22" y="40" fill="#7A7A80" font-family="monospace" font-size="11">YOUR NETWORK</text>
+      <rect x="30" y="85" width="130" height="60" rx="8" fill="#131316" stroke="#F2EFE9"/>
+      <text x="95" y="111" fill="#F2EFE9" font-family="monospace" font-size="10" text-anchor="middle">customer gateway</text>
+      <text x="95" y="127" fill="#F2EFE9" font-family="monospace" font-size="10" text-anchor="middle">device / router</text>
+      <rect x="460" y="20" width="170" height="210" rx="10" fill="none" stroke="#7A7A80" stroke-dasharray="5 4"/>
+      <text x="472" y="40" fill="#7A7A80" font-family="monospace" font-size="11">AWS</text>
+      <rect x="480" y="85" width="130" height="60" rx="8" fill="#131316" stroke="#F2EFE9"/>
+      <text x="545" y="111" fill="#F2EFE9" font-family="monospace" font-size="10" text-anchor="middle">VGW or transit</text>
+      <text x="545" y="127" fill="#F2EFE9" font-family="monospace" font-size="10" text-anchor="middle">gateway -> VPC</text>
+      <path d="M160 100 C260 50 380 50 480 100" stroke="#6FCF97" stroke-width="2" fill="none"/>
+      <path d="M160 108 C260 70 380 70 480 108" stroke="#6FCF97" stroke-width="2" fill="none"/>
+      <text x="320" y="52" fill="#6FCF97" font-family="monospace" font-size="10" text-anchor="middle">VPN: two IPsec tunnels over the internet</text>
+      <path d="M160 130 C260 190 380 190 480 130" stroke="#C8453A" stroke-width="3" fill="none"/>
+      <text x="320" y="200" fill="#C8453A" font-family="monospace" font-size="10" text-anchor="middle">Direct Connect: dedicated link via a DX location</text>
+    </svg>
+    <figcaption>Two kinds of bridge between the same two sides. The two green lines are the two tunnels of one VPN connection.</figcaption>
+  </figure>
+
+  <h3>1. Site-to-Site VPN: the pieces</h3>
+  <p><strong>The components.</strong> A VPN connection needs a target gateway on the AWS side (virtual private gateway or transit gateway), a customer gateway resource describing your device, and the physical or software device itself. The connection offers two tunnels between the AWS-side gateway and your customer gateway. The docs say you can use both simultaneously for high availability, and that you should configure both.</p>
+  <p><strong>Who starts the tunnel.</strong> By default your device brings up the tunnels by generating traffic and initiating the IKE negotiation (IKE is the key-exchange step). You can configure the connection so AWS initiates instead.</p>
+  <p><strong>Virtual private gateway versus transit gateway.</strong> A virtual private gateway attaches to a single VPC. A transit gateway can serve many VPCs plus on-premises. A few feature differences from the docs: IPv6 traffic isn't supported on virtual private gateway VPN connections (use a transit gateway or Cloud WAN), and a single VPN connection can't carry both IPv4 and IPv6 at the same time. The docs also describe a "Large Bandwidth Tunnel" supporting up to 5 Gbps per tunnel versus the standard 1.25 Gbps, available for connections attached to a transit gateway or Cloud WAN. You can change the target gateway of an existing connection from a virtual private gateway to a transit gateway.</p>
+  <p><strong>Cost shape.</strong> You pay per VPN connection hour while it's provisioned and available, plus data transfer out from EC2 to the internet. I'm not quoting rates.</p>
+  <p><strong>Other limitations noted by the docs.</strong> No Path MTU Discovery; you can't modify an existing IPv4 VPN connection to use IPv6 (delete and recreate); and when joining multiple VPCs to a common on-premises network, use non-overlapping CIDRs (same lesson as peering).</p>
+  <p>Representative CLI from the reference page (IDs are placeholders): </p>
+  <div class="card"><code>aws ec2 create-vpn-connection --type ipsec.1 --customer-gateway-id cgw-001122334455aabbc --vpn-gateway-id vgw-1a1a1a1a1a1a2b2b2</code><br><span style="color:#7A7A80">add <code>--options "{\"StaticRoutesOnly\":true}"</code> if your device doesn't support BGP; <code>--type</code> only accepts <code>ipsec.1</code>; pass either a VGW or a transit gateway ID, not both</span></div>
+
+  <h3>2. Static vs. dynamic routing on the VPN</h3>
+  <p>You choose when creating the connection. If your device supports BGP, pick dynamic: the device advertises its routes to AWS and you don't enter static routes (the docs say that if you use BGP you cannot also specify static routes). If it doesn't, pick static and enter the prefixes yourself. The docs recommend BGP-capable devices because BGP's liveness checks help traffic fail over to the second tunnel when the first goes down.</p>
+  <p>On the VPC side you must also update the route table so traffic for your remote network targets the virtual private gateway; the docs note you can enable route propagation so the routes are added automatically. And one more constraint from the docs: only prefixes known to the virtual private gateway, through BGP or static entries, can receive traffic from your VPC; the gateway doesn't route anything else outside its attached VPC's CIDR.</p>
+
+  <h3>3. Direct Connect: the dedicated link</h3>
+  <p><strong>What it is.</strong> You connect your router to an AWS Direct Connect router at a Direct Connect location using a fiber cable. On top of that physical connection you create virtual interfaces that reach either AWS public services (like S3) or your VPCs, "bypassing internet service providers in your network path". Requirements include being colocated at a DX location or working with a partner or service provider, supporting 802.1Q VLANs and BGP with MD5 authentication, and using single-mode fiber with specific optics for 1, 10, 100 or 400 Gigabit Ethernet.</p>
+  <p><strong>Three VIF types.</strong></p>
+  <ul>
+    <li><strong>Private VIF</strong>: reach a VPC with private IPs. Connect to one VPC directly, or to a Direct Connect gateway to reach multiple virtual private gateways across accounts and Regions (not the China Regions).</li>
+    <li><strong>Public VIF</strong>: reach AWS public services using public IP addresses.</li>
+    <li><strong>Transit VIF</strong>: reach one or more transit gateways associated with a Direct Connect gateway.</li>
+  </ul>
+  <p><strong>Direct Connect gateway.</strong> A globally available resource that acts as a distributed set of BGP route reflectors and sits outside the data path, so it is not a single point of failure. You associate it with a transit gateway, a virtual private gateway, or a Cloud WAN core network. Important limit: gateway associations on the same Direct Connect gateway can't send traffic to each other by default (VPC to VPC through it), with a documented exception when a supernet that overlaps the VPCs is advertised on the same virtual interface. That exception is a real source of surprise; the docs list ways to block it.</p>
+  <p><strong>Encryption.</strong> The docs are explicit: Direct Connect does not encrypt traffic in transit by default. Options: run an IPsec VPN over it (the docs describe combining DX dedicated connections with the VPC VPN for an IPsec-encrypted private connection) or use MACsec on supporting connections, which encrypts between your data center and the Direct Connect location.</p>
+  <p><strong>Cost shape.</strong> Two billing elements: port hours (depending on capacity and dedicated vs hosted connection) and outbound data transfer.</p>
+  <p><em>Simplification:</em> I describe DX as "a private link". It is private in the sense of bypassing the public internet path, but, as above, private is not the same as encrypted.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Direct Connect virtual interface types">
+      <rect x="20" y="85" width="120" height="50" rx="8" fill="#131316" stroke="#F2EFE9"/>
+      <text x="80" y="115" fill="#F2EFE9" font-family="monospace" font-size="11" text-anchor="middle">your router</text>
+      <rect x="190" y="85" width="120" height="50" rx="8" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="250" y="108" fill="#C8453A" font-family="monospace" font-size="10" text-anchor="middle">DX connection</text>
+      <text x="250" y="124" fill="#7A7A80" font-family="monospace" font-size="9" text-anchor="middle">at DX location</text>
+      <path d="M140 110 L190 110" stroke="#F2EFE9" fill="none"/>
+      <rect x="400" y="15" width="220" height="40" rx="6" fill="#131316" stroke="#6FCF97"/>
+      <text x="510" y="40" fill="#6FCF97" font-family="monospace" font-size="10" text-anchor="middle">private VIF -> VPC / DX gateway -> VGWs</text>
+      <rect x="400" y="85" width="220" height="40" rx="6" fill="#131316" stroke="#6FCF97"/>
+      <text x="510" y="110" fill="#6FCF97" font-family="monospace" font-size="10" text-anchor="middle">transit VIF -> DX gateway -> transit GW</text>
+      <rect x="400" y="155" width="220" height="40" rx="6" fill="#131316" stroke="#6FCF97"/>
+      <text x="510" y="180" fill="#6FCF97" font-family="monospace" font-size="10" text-anchor="middle">public VIF -> AWS public services</text>
+      <path d="M310 100 L400 35" stroke="#6FCF97" fill="none"/>
+      <path d="M310 110 L400 105" stroke="#6FCF97" fill="none"/>
+      <path d="M310 120 L400 175" stroke="#6FCF97" fill="none"/>
+    </svg>
+    <figcaption>One physical connection can carry several virtual interfaces, each with a different destination type.</figcaption>
+  </figure>
+
+  <h3>4. Hybrid routing: which route wins?</h3>
+  <p>This is the part most worth memorising, straight from the VPN route-priority page.</p>
+  <p><strong>In the VPC route table.</strong> The most specific matching route wins (longest prefix match), with two special cases. If propagated routes from a VPN or Direct Connect overlap with the VPC's local route, the local route is preferred even if the propagated routes are more specific. And if a propagated route has exactly the same destination as a static route (so longest prefix can't decide), the static route is prioritised when its target is an internet gateway, virtual private gateway, network interface, instance, peering connection, NAT gateway, transit gateway or gateway endpoint. The docs' example: a static route to an internet gateway beats a propagated virtual private gateway route for the same <code>172.31.0.0/24</code>.</p>
+  <p><strong>Inside the virtual private gateway.</strong> Longest prefix match applies when all endpoints are healthy, and tunnel health takes precedence over other attributes. For equal prefixes, from most to least preferred:</p>
+  <ol>
+    <li>BGP-propagated routes from a Direct Connect connection</li>
+    <li>Manually added static routes for a VPN connection</li>
+    <li>BGP-propagated routes from a VPN connection</li>
+    <li>Among BGP VPN routes, the shortest AS PATH; then, if equal, the lowest MED.</li>
+  </ol>
+  <p>The practical reading: Direct Connect is preferred over VPN for the same prefix, which is why people use VPN as the backup for DX. Other points from that page: AWS picks one of the two tunnels as the primary egress path and that choice may change, so configure both and allow asymmetric routing; a virtual private gateway uses one tunnel across all connections on it; ECMP (using multiple tunnels at once) is supported for VPN on a transit gateway but not on a virtual private gateway. The docs recommend advertising more specific BGP routes to influence path choice.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Route preference ladder for equal prefixes on a virtual private gateway">
+      <rect x="60" y="20" width="520" height="38" rx="6" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="320" y="44" fill="#6FCF97" font-family="monospace" font-size="12" text-anchor="middle">1. BGP route learned over Direct Connect</text>
+      <rect x="60" y="68" width="520" height="38" rx="6" fill="#0E0E10" stroke="#F2EFE9" stroke-opacity="0.5"/>
+      <text x="320" y="92" fill="#C9C7C1" font-family="monospace" font-size="12" text-anchor="middle">2. static route on a VPN connection</text>
+      <rect x="60" y="116" width="520" height="38" rx="6" fill="#0E0E10" stroke="#F2EFE9" stroke-opacity="0.5"/>
+      <text x="320" y="140" fill="#C9C7C1" font-family="monospace" font-size="12" text-anchor="middle">3. BGP route learned over VPN (shorter AS PATH, then lower MED)</text>
+      <text x="320" y="185" fill="#7A7A80" font-family="monospace" font-size="10" text-anchor="middle">only applies when prefixes are identical and tunnels are healthy; otherwise the longer prefix and tunnel health come first</text>
+    </svg>
+    <figcaption>A memory aid for the docs' tie-break order on a virtual private gateway. It does not cover transit gateway route tables, which have their own rules.</figcaption>
+  </figure>
+
+  <h3>Choosing, at a glance</h3>
+  <div class="card">
+    <ul>
+      <li><strong>Path:</strong> VPN = encrypted tunnels over your internet connection. DX = dedicated link bypassing ISPs on the path.</li>
+      <li><strong>Encryption:</strong> VPN = IPsec. DX = not encrypted by default; add VPN or MACsec.</li>
+      <li><strong>Setup:</strong> VPN = create resources and configure your device. DX = needs presence at a DX location or a partner.</li>
+      <li><strong>Redundancy built in:</strong> VPN = two tunnels per connection. For DX, the docs have separate resiliency guidance that I haven't read, so I'm not making claims here.</li>
+      <li><strong>Together:</strong> DX as primary with VPN as a backup is a common pattern; the route order above is why it works. "Common pattern" is my wording, not a docs guarantee.</li>
+    </ul>
+  </div>
+
+  <h2>Why it matters</h2>
+  <p>Almost every company that isn't cloud-only needs this: databases that stay on-prem, offices that need access to private subnets, migrations that run for months. It also ties the whole series together: the VPC route tables (Concept 1), transit gateways (Concept 2), hybrid DNS over these links (Concept 5), and the lesson that peered VPCs can't borrow a neighbour's VPN or Direct Connect (Concept 8).</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>A VPN connection = two IPsec tunnels between a VGW or transit gateway and your customer gateway; configure both.</li>
+      <li>Pick BGP (dynamic) if your device supports it, static otherwise; you can't mix static routes with BGP on one connection.</li>
+      <li>Direct Connect bypasses ISPs on the path but is not encrypted by default.</li>
+      <li>VIF types: private (VPC), public (AWS public services), transit (transit gateways via a DX gateway).</li>
+      <li>For identical prefixes, a virtual private gateway prefers DX-learned BGP, then VPN static, then VPN BGP.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Paper design first.</strong> Draw your office (192.168.0.0/16 is a fine example), a VPC, a virtual private gateway, a customer gateway and the two tunnels. <em>Done when:</em> you can label every route table entry on both sides.</li>
+      <li><strong>Create the AWS-side resources.</strong> Create a virtual private gateway, attach it to a scratch VPC, and create a customer gateway using a documentation IP such as <code>203.0.113.12</code> and a private ASN. Then create a VPN connection with <code>create-vpn-connection</code>. <em>Done when:</em> <code>describe-vpn-connections</code> lists it with two tunnels. The tunnels will show down since no real device exists; a VPN connection is billed per hour, so delete it right after. I haven't run this for you.</li>
+      <li><strong>Download the sample configuration.</strong> In the console choose the connection's download-configuration action for a vendor of your choice. <em>Done when:</em> you can find the tunnel outside IPs, inside CIDRs and pre-shared keys in it and explain what each is for. Treat the file as sensitive (the CLI reference warns the response contains sensitive cryptographic information).</li>
+      <li><strong>Enable route propagation.</strong> Turn on propagation on a scratch route table and add a static VPN route. <em>Done when:</em> you can show which routes are marked propagated and which are static.</li>
+      <li><strong>Route preference quiz.</strong> Write a small function that takes a list of candidate routes (prefix, source: DX-BGP, VPN-static, VPN-BGP, AS PATH length, MED) and returns the winner using the order in this digest. <em>Done when:</em> it passes tests for longer-prefix wins, DX beats VPN on equal prefixes, and shortest AS PATH breaks a VPN-BGP tie.</li>
+      <li><strong>Read, don't buy.</strong> Open the Direct Connect docs and the locations list, and write a one-page note on what you'd need to arrange (location or partner, port, cross-connect, VIF) to get a private VIF. <em>Done when:</em> you've listed the prerequisites without ordering anything.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Read the Direct Connect resiliency recommendations, the VPN tunnel-options page (IKE settings, tunnel maintenance), and the transit gateway VPN attachment docs. They were out of scope here but matter for production designs.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the official documentation. Speeds, quotas, pricing and supported features change; verify anything you plan to rely on against the live pages below.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/vpn/latest/s2svpn/VPC_VPN.html" target="_blank" rel="noopener">What is AWS Site-to-Site VPN?</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpn/latest/s2svpn/how_it_works.html" target="_blank" rel="noopener">How AWS Site-to-Site VPN works</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpn/latest/s2svpn/VPNRoutingTypes.html" target="_blank" rel="noopener">Site-to-Site VPN routing options</a>, <a href="https://docs.aws.amazon.com/vpn/latest/s2svpn/vpn-static-dynamic.html" target="_blank" rel="noopener">static and dynamic routing</a> and <a href="https://docs.aws.amazon.com/vpn/latest/s2svpn/vpn-route-priority.html" target="_blank" rel="noopener">route priority</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/create-vpn-connection.html" target="_blank" rel="noopener">CLI reference: create-vpn-connection</a></li>
+    <li><a href="https://docs.aws.amazon.com/directconnect/latest/UserGuide/Welcome.html" target="_blank" rel="noopener">What is Direct Connect?</a></li>
+    <li><a href="https://docs.aws.amazon.com/directconnect/latest/UserGuide/direct-connect-gateways-intro.html" target="_blank" rel="noopener">Direct Connect gateways</a></li>
+    <li><a href="https://docs.aws.amazon.com/directconnect/latest/UserGuide/encryption-in-transit.html" target="_blank" rel="noopener">Encryption in Direct Connect</a></li>
+  </ul>
+  <p class="src-note">Flagged: commands were checked against the CLI reference page, not run in a live account. The VPN tunnel-options page returned no usable text when fetched, so tunnel options, IKE settings, tunnel maintenance and dead peer detection are deliberately not covered. Direct Connect resiliency guidance, dedicated vs hosted connection details, port speeds by location, quotas and all pricing figures were not read. The route-preference ladder applies to virtual private gateways as described on the route-priority page; transit gateway route evaluation is a separate topic (see the next concept for route evaluation order in the VPC).</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
