@@ -39,8 +39,38 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  plan:
+    name: Pick areas
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.pick.outputs.matrix }}
+      count: ${{ steps.pick.outputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Filter the area table to the requested areas
+        id: pick
+        env:
+          AREAS: ${{ inputs.areas }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          areas = json.load(open(".github/backfill-areas.json"))
+          want = (os.environ.get("AREAS") or "all").strip()
+          if want and want != "all":
+              keep = {a.strip() for a in want.split(",") if a.strip()}
+              unknown = keep - {a["area"] for a in areas}
+              if unknown:
+                  raise SystemExit(f"::error::unknown area(s): {', '.join(sorted(unknown))}")
+              areas = [a for a in areas if a["area"] in keep]
+          print("matrix=" + json.dumps(areas))
+          print("count=" + str(len(areas)))
+          PY
+          sed -n 's/^count=/selected /p' "$GITHUB_OUTPUT" | tail -1 | sed 's/$/ area(s) for this run/'
+
   produce:
     name: ${{ matrix.label }}
+    needs: plan
+    if: ${{ needs.plan.outputs.count != '0' }}
     runs-on: ubuntu-latest
     timeout-minutes: 330
     strategy:
@@ -49,38 +79,9 @@ jobs:
       # three concurrent agents is already a lot of tokens per minute.
       max-parallel: 3
       matrix:
-        include:
-          - area: ddia
-            label: DDIA
-            books: true
-            scope: the Designing Data-Intensive Applications track (its focused scope is Ch.4, Ch.10, Ch.11 only)
-          - area: ai-eng
-            label: AI Engineering
-            books: true
-            scope: the AI Engineering (Chip Huyen) track (its focused scope is Ch.5 onwards)
-          - area: mysql
-            label: High Performance MySQL
-            books: true
-            scope: the High Performance MySQL 4th ed. track (its focused scope is Ch.6, Ch.7, Ch.8 only)
-          - area: s3
-            label: AWS S3
-            books: false
-            scope: the AWS S3 area of Track B, every concept listed in its table
-          - area: ec2
-            label: AWS EC2
-            books: false
-            scope: the AWS EC2 area of Track B, every concept listed in its table
-          - area: vpc
-            label: AWS VPC
-            books: false
-            scope: the AWS VPC area of Track B, every concept listed in its table
-          - area: cloudwatch
-            label: AWS CloudWatch
-            books: false
-            scope: the AWS CloudWatch area of Track B, every concept listed in its table
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
     env:
       SKILL: .claude/skills/book-digest-carousels
-    if: ${{ inputs.areas == 'all' || contains(format(',{0},', inputs.areas), format(',{0},', matrix.area)) }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -191,7 +192,7 @@ jobs:
 
   collect:
     name: Collect, index and send
-    needs: produce
+    needs: [plan, produce]
     # Runs even if some areas failed or hit their timeout, so a partial backfill
     # still gets indexed and delivered instead of sitting unpublished.
     if: ${{ !cancelled() }}
