@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: VPC Peering in Depth: Limits, CIDR Overlap, Cross-Account and Cross-Region</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS VPC &middot; CONCEPT 8 DIGEST</p>
+  <h1>VPC Peering in Depth: Limits, CIDR Overlap, Cross-Account and Cross-Region</h1>
+  <p class="lead">How two VPCs get a private, direct link, what has to be true before the link can exist, and the list of things peering will not do for you (which is where most of the surprises live).</p>
+
+  <h2>In one line</h2>
+  <p>A peering connection links exactly two VPCs so they can route to each other by private IP, across accounts and Regions if needed, but only if their address ranges don't overlap, only for the two VPCs themselves (no passing traffic along to a third), and only after both sides add routes.</p>
+
+  <h2>The big idea</h2>
+  <p>In the Transit Gateway topic we saw a hub that many VPCs plug into. Peering is the opposite shape: a direct line between a pair. The docs describe it as using the existing infrastructure of a VPC; it is neither a gateway nor a VPN and doesn't rely on separate physical hardware, with no single point of failure or bandwidth bottleneck. That simplicity is the appeal, and also the catch: because it's pair-by-pair, you need a connection for every pair that must talk, and the connection itself doesn't do anything until both owners add routes. The topic is mostly about learning the rules (who requests, who accepts, what can't overlap, what isn't carried across) so a "pending" connection or a missing route doesn't stump you.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">VPC peering connection</span>: a networking connection between two VPCs that lets you route traffic between them using private IPv4 or IPv6 addresses. Its ID starts with <code>pcx-</code>.</li>
+    <li><span class="keyterm-term">Requester VPC / accepter VPC</span>: the VPC that asks for the connection and the VPC that must accept it. The accepter can be in your account or another.</li>
+    <li><span class="keyterm-term">Inter-Region peering</span>: peering between VPCs in different Regions.</li>
+    <li><span class="keyterm-term">CIDR overlap</span>: two address ranges sharing any addresses. e.g. <code>10.0.0.0/16</code> and <code>10.0.5.0/24</code> overlap because the second sits inside the first.</li>
+    <li><span class="keyterm-term">Transitive routing</span>: A reaching C by going through B. Peering does not support this.</li>
+    <li><span class="keyterm-term">Full mesh</span>: every VPC peered directly with every other VPC.</li>
+    <li><span class="keyterm-term">Stale security group rule</span>: a rule that references a security group that no longer exists, or in a peer VPC after the peering was deleted.</li>
+    <li><span class="keyterm-term">MTU</span>: maximum transmission unit, the largest packet size on a link.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>Grounding: what a peering connection actually gives you</h3>
+  <p>Imagine VPC A (an accounting system) and VPC B (a data platform) and you want an instance in A to reach a database in B at its private address. Without peering, you'd go out through a gateway and over the internet or a VPN. With peering, instances in either VPC "can communicate with each other as if they are within the same network", with traffic staying on private addresses. The docs add that for inter-Region peering the traffic stays on the global AWS backbone, never traverses the public internet, and is encrypted before leaving AWS facilities.</p>
+  <p>Pricing facts from the peering page: no charge to create a connection; data transfer that stays within an Availability Zone is free, even across accounts; charges apply to transfer that crosses Availability Zones or Regions. I'm not quoting rates; check the EC2 pricing page.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Two VPCs with a peering connection and routes on each side">
+      <rect x="10" y="20" width="240" height="170" rx="10" fill="none" stroke="#7A7A80" stroke-dasharray="5 4"/>
+      <text x="22" y="40" fill="#7A7A80" font-family="monospace" font-size="11">VPC A 10.0.0.0/16</text>
+      <rect x="30" y="60" width="200" height="50" rx="6" fill="#0E0E10" stroke="#F2EFE9" stroke-opacity="0.4"/>
+      <text x="40" y="80" fill="#C9C7C1" font-family="monospace" font-size="10">route: 10.1.0.0/16 -> pcx-1</text>
+      <text x="40" y="98" fill="#7A7A80" font-family="monospace" font-size="10">route: 10.0.0.0/16 -> local</text>
+      <rect x="30" y="125" width="90" height="45" rx="6" fill="#131316" stroke="#F2EFE9"/>
+      <text x="75" y="152" fill="#F2EFE9" font-family="monospace" font-size="10" text-anchor="middle">instance</text>
+      <rect x="390" y="20" width="240" height="170" rx="10" fill="none" stroke="#7A7A80" stroke-dasharray="5 4"/>
+      <text x="402" y="40" fill="#7A7A80" font-family="monospace" font-size="11">VPC B 10.1.0.0/16</text>
+      <rect x="410" y="60" width="200" height="50" rx="6" fill="#0E0E10" stroke="#F2EFE9" stroke-opacity="0.4"/>
+      <text x="420" y="80" fill="#C9C7C1" font-family="monospace" font-size="10">route: 10.0.0.0/16 -> pcx-1</text>
+      <text x="420" y="98" fill="#7A7A80" font-family="monospace" font-size="10">route: 10.1.0.0/16 -> local</text>
+      <rect x="520" y="125" width="90" height="45" rx="6" fill="#131316" stroke="#F2EFE9"/>
+      <text x="565" y="152" fill="#F2EFE9" font-family="monospace" font-size="10" text-anchor="middle">database</text>
+      <path d="M250 100 L390 100" stroke="#6FCF97" stroke-width="2" fill="none"/>
+      <text x="320" y="92" fill="#6FCF97" font-family="monospace" font-size="11" text-anchor="middle">pcx-1</text>
+      <text x="320" y="120" fill="#7A7A80" font-family="monospace" font-size="10" text-anchor="middle">both sides add a route</text>
+    </svg>
+    <figcaption>The connection is the link; each VPC's route table is what actually sends traffic over it. CIDRs and IDs are examples I chose.</figcaption>
+  </figure>
+
+  <h3>1. The handshake and the lifecycle</h3>
+  <p>The docs' process: the requester VPC's owner sends a request; the accepter VPC's owner accepts it (this is how the connection becomes active, even if both VPCs are yours); then each owner adds routes; then you adjust security groups if needed; then optionally enable DNS resolution.</p>
+  <p>Statuses to recognise:</p>
+  <ul>
+    <li><code>initiating-request</code>, then <code>pending-acceptance</code> (the requester can delete it; the accepter can accept or reject). If nobody acts, it expires after 7 days. The quotas page says this expiry is 1 week (168 hours) and not adjustable.</li>
+    <li><code>provisioning</code>, then <code>active</code>: traffic can flow, provided security groups and route tables allow it. Either owner can delete an active connection but can't reject it.</li>
+    <li><code>failed</code>, <code>expired</code>, <code>rejected</code>, <code>deleted</code>: terminal states that remain visible for hours or days (the docs give 2 hours or 2 days depending on the state and who you are).</li>
+  </ul>
+  <p>A useful detail from the docs: if an event in a Region prevents traffic flow, the connection's status stays <code>Active</code>. So "active" is a statement about the connection object, not a health check.</p>
+  <p>CLI shapes from the reference pages:</p>
+  <div class="card"><code>aws ec2 create-vpc-peering-connection --vpc-id vpc-1a2b3c4d --peer-vpc-id vpc-11122233</code><br>
+  <span style="color:#7A7A80">add <code>--peer-owner-id &lt;account&gt;</code> for another account and <code>--peer-region &lt;region&gt;</code> for another Region</span><br><br>
+  <code>aws ec2 accept-vpc-peering-connection --vpc-peering-connection-id pcx-1a2b3c4d</code></div>
+  <p>For an inter-Region request, the docs say you must accept it in the Region of the accepter VPC, so run the accept command against that Region.</p>
+
+  <h3>2. CIDR overlap: the hard rule</h3>
+  <p>You cannot peer VPCs with matching or overlapping IPv4 or IPv6 CIDR blocks. A detail that catches people: if a VPC has several IPv4 CIDR blocks, none of them may overlap with the other VPC's blocks, even if you only intend to use the non-overlapping ones, and even if you only want IPv6. If you try anyway, the connection status becomes <code>failed</code>.</p>
+  <p>Why it makes sense: a route table sends traffic by destination range. If both VPCs claim <code>10.0.0.0/16</code>, "send 10.0.1.5 to the peer" collides with "10.0.1.5 is local". Longest-prefix matching can't rescue you when both sides hold the same range.</p>
+  <p>Practical consequence: plan address space before building. This is exactly what IPAM (mentioned in the IPv6 topic) helps with. If a CIDR is added later to a VPC that is already peered, the docs have extra rules: with an active connection you can add a block as long as it doesn't overlap the peer; with a pending connection the requester can't add any block at all, and an accepter's overlapping secondary block makes the request fail.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 170" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Overlapping CIDRs versus distinct CIDRs">
+      <rect x="20" y="20" width="290" height="130" rx="8" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="165" y="44" fill="#C8453A" font-family="monospace" font-size="11" text-anchor="middle">cannot peer</text>
+      <text x="165" y="76" fill="#C9C7C1" font-family="monospace" font-size="11" text-anchor="middle">VPC A 10.0.0.0/16</text>
+      <text x="165" y="96" fill="#C9C7C1" font-family="monospace" font-size="11" text-anchor="middle">VPC B 10.0.5.0/24 (inside A)</text>
+      <text x="165" y="126" fill="#7A7A80" font-family="monospace" font-size="10" text-anchor="middle">ranges share addresses</text>
+      <rect x="330" y="20" width="290" height="130" rx="8" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="475" y="44" fill="#6FCF97" font-family="monospace" font-size="11" text-anchor="middle">can peer</text>
+      <text x="475" y="76" fill="#C9C7C1" font-family="monospace" font-size="11" text-anchor="middle">VPC A 10.0.0.0/16</text>
+      <text x="475" y="96" fill="#C9C7C1" font-family="monospace" font-size="11" text-anchor="middle">VPC B 10.1.0.0/16</text>
+      <text x="475" y="126" fill="#7A7A80" font-family="monospace" font-size="10" text-anchor="middle">no shared addresses</text>
+    </svg>
+    <figcaption>The test is "do the ranges share any address". Example ranges are mine.</figcaption>
+  </figure>
+
+  <h3>3. Not transitive, and no borrowing of gateways</h3>
+  <p>A peering connection is a one-to-one relationship. If A peers with B and A peers with C, B cannot reach C through A. To connect B and C you need a separate connection between them. A star of peerings gives each spoke access to the hub only.</p>
+  <p>The docs also list "edge to edge" limits. If VPC A has an internet gateway, a NAT device, a VPN connection, a Direct Connect connection or a gateway endpoint to S3, resources in VPC B cannot use those through the peering. So you can't build a shared egress or shared on-premises link by peering to the VPC that owns it. (Transit Gateway, from the earlier topic, is the usual answer to this need; the peering page itself notes that a transit gateway attachment can sometimes replace peering.)</p>
+  <p>Other limits from the same page: only one peering connection between any two VPCs at a time; you can't connect to or query the Amazon DNS server in a peer VPC; unicast reverse path forwarding is not supported; tags you set on a connection apply only in the account or Region where you created them; and only VPC owners can work with peering connections, not participants of a shared VPC.</p>
+  <p><strong>The mesh math.</strong> With full mesh, N VPCs need N times (N minus 1) divided by 2 connections. That's my arithmetic, consistent with the docs' seven-VPC example, which lists 21 connections. At 7 VPCs it's tolerable; at 30 it's 435 connections, each with two route entries to maintain. That growth is the usual reason people move to a transit gateway. Quotas: per the docs, 50 active peering connections per VPC by default (adjustable up to 125), and 25 outstanding requests by default.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Non-transitive peering">
+      <circle cx="320" cy="55" r="32" fill="#131316" stroke="#F2EFE9"/>
+      <text x="320" y="59" fill="#F2EFE9" font-family="monospace" font-size="12" text-anchor="middle">A</text>
+      <circle cx="170" cy="150" r="32" fill="#131316" stroke="#F2EFE9"/>
+      <text x="170" y="154" fill="#F2EFE9" font-family="monospace" font-size="12" text-anchor="middle">B</text>
+      <circle cx="470" cy="150" r="32" fill="#131316" stroke="#F2EFE9"/>
+      <text x="470" y="154" fill="#F2EFE9" font-family="monospace" font-size="12" text-anchor="middle">C</text>
+      <path d="M297 77 L190 126" stroke="#6FCF97" stroke-width="2" fill="none"/>
+      <path d="M343 77 L450 126" stroke="#6FCF97" stroke-width="2" fill="none"/>
+      <path d="M202 150 L438 150" stroke="#C8453A" stroke-dasharray="6 5" stroke-width="2" fill="none"/>
+      <text x="320" y="176" fill="#C8453A" font-family="monospace" font-size="11" text-anchor="middle">B to C through A: not supported</text>
+      <text x="215" y="80" fill="#6FCF97" font-family="monospace" font-size="10">pcx A-B</text>
+      <text x="405" y="80" fill="#6FCF97" font-family="monospace" font-size="10">pcx A-C</text>
+    </svg>
+    <figcaption>Two peerings do not make a third. To connect B and C you create a peering between them.</figcaption>
+  </figure>
+
+  <h3>4. Cross-account and cross-Region details</h3>
+  <ul>
+    <li><strong>Cross-account.</strong> Same steps, but the accepter's owner is a different person, so the request genuinely waits for them. To reference a security group of a peer VPC in the same Region but a different account, write <code>account-id/sg-id</code> (the docs' example is <code>123456789012/sg-1a2b3c4d</code>). The peer's groups don't appear in the console picker.</li>
+    <li><strong>Cross-Region.</strong> You can't reference a peer VPC's security group across Regions; use the peer VPC's CIDR block in the rule instead. The MTU for jumbo frames is 9001 bytes between peered VPCs in the same Region and 8500 bytes for inter-Region peering. DNS resolution support must be enabled for private DNS hostnames of the peer to resolve to private IPs, even in RFC 1918 ranges.</li>
+    <li><strong>Security groups.</strong> The connection must be <code>active</code> before you can reference a peer's security group. If the connection or the referenced group is deleted, the rule becomes stale and isn't removed automatically; the docs point to the console's "Manage stale rules" and the CLI <code>describe-stale-security-groups</code>. If you recreate a peering between the same VPCs, the rule is no longer marked stale.</li>
+    <li><strong>IPv6.</strong> Works if both VPCs have IPv6 CIDRs, instances are IPv6-enabled, and each side routes the peer's IPv6 range to the connection. The docs' three-VPC example shows a VPC without IPv6 simply having no IPv6 communication with the others.</li>
+  </ul>
+
+  <h3>5. Routes and DNS: the two things people forget</h3>
+  <p><strong>Routes.</strong> Each owner adds, to the route tables of the subnets that need it, an entry whose destination is the peer's CIDR and whose target is the <code>pcx-</code> ID. With several CIDRs or IPv6, you add an entry per range. Narrow the destination if you only want some subnets reachable; this works through the same longest-prefix logic as the other routes you've seen.</p>
+  <p><strong>DNS.</strong> By default, if an instance in one VPC uses the <em>public</em> DNS hostname of an instance in the peer, it resolves to the public IP. Enabling DNS resolution on the connection makes it resolve to the private IP. Requirements: both VPCs have DNS hostnames and DNS resolution enabled (the two attributes from Concept 5), the connection is <code>active</code> (you can't enable it at creation), the requester's owner changes the requester options and the accepter's owner changes the accepter options (same-account owners can do both at once). CLI: <code>modify-vpc-peering-connection-options</code>.</p>
+  <p>Also from the docs: if a VPC's IPv4 range is outside the RFC 1918 private ranges, private DNS hostnames of that VPC can't resolve to private IPs unless you enable DNS resolution on the connection.</p>
+
+  <h3>Peering vs. Transit Gateway at a glance</h3>
+  <div class="card">
+    <ul>
+      <li><strong>Shape:</strong> peering = pair by pair. Transit Gateway = hub with attachments (see Concept 2).</li>
+      <li><strong>Transitive?</strong> peering = no. A transit gateway routes between its attachments according to its route tables.</li>
+      <li><strong>Sharing a gateway:</strong> peering = no sharing of IGW, NAT, VPN, Direct Connect or gateway endpoints. A transit gateway is the usual alternative when you want that.</li>
+      <li><strong>Charges:</strong> peering = no charge to create, data transfer charged across AZs and Regions. For the transit gateway side, see its own pricing page; I haven't compared figures here.</li>
+    </ul>
+  </div>
+
+  <h2>Why it matters</h2>
+  <p>Peering is one of the oldest and simplest ways to join networks, and many real environments still use it for a handful of VPCs. Knowing the rules saves hours: a "pending-acceptance" that nobody noticed, a failed connection caused by a forgotten secondary CIDR, a missing return route on the accepter side, or a B-to-C path that was assumed to exist. It also sets up the next concepts, since Site-to-Site VPN and Direct Connect are exactly the kind of connection you cannot share through a peer.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Request, accept, then add routes on both sides. The connection alone moves no traffic.</li>
+      <li>Overlapping CIDRs (IPv4 or IPv6, any block) mean no peering.</li>
+      <li>Peering is one-to-one and not transitive; a peer's gateways, NAT, VPN and endpoints can't be borrowed.</li>
+      <li>Security group references work same-Region only; across Regions use CIDRs.</li>
+      <li>Defaults from the docs: 50 active peerings per VPC (adjustable to 125), unaccepted requests expire after 7 days.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Peer two scratch VPCs.</strong> Create two VPCs with non-overlapping CIDRs (for example <code>10.0.0.0/16</code> and <code>10.1.0.0/16</code>), then run <code>create-vpc-peering-connection</code> and <code>accept-vpc-peering-connection</code>. <em>Done when:</em> <code>describe-vpc-peering-connections</code> shows <code>active</code>.</li>
+      <li><strong>Route it.</strong> Add a route in each VPC's route table to the other's CIDR via the <code>pcx-</code> ID, put a small instance in each, allow ICMP in the security groups, and ping private IP to private IP. <em>Done when:</em> pings succeed in both directions. (Needs a live account and costs a little; delete the instances after.)</li>
+      <li><strong>Provoke a failure.</strong> Try to peer two VPCs whose ranges overlap. <em>Done when:</em> you've seen the <code>failed</code> status and can state in one sentence why.</li>
+      <li><strong>Prove non-transitivity.</strong> Peer VPC A with B and A with C, add routes only for those pairs, and try B to C. <em>Done when:</em> it fails, then succeeds after you add a B-to-C peering with its routes.</li>
+      <li><strong>Security group reference.</strong> Replace a CIDR-based inbound rule with a reference to the peer's security group ID. <em>Done when:</em> traffic still flows. Then delete the peering and use <code>describe-stale-security-groups</code> to find the stale rule.</li>
+      <li><strong>Mesh calculator.</strong> Write a tiny script that, for N VPCs, prints the number of connections and the route-table entries needed (one per peer per route table). <em>Done when:</em> N=7 gives 21 connections, matching the docs' example.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Read the peering scenarios in the docs (partial access, peering to a specific subnet or to a single instance) and the routing page on response-traffic routing. Then compare with the Transit Gateway digest from earlier in this series.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the official documentation. Quotas, pricing and supported features change; verify anything you plan to rely on against the live pages below.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/peering/what-is-vpc-peering.html" target="_blank" rel="noopener">What is VPC peering?</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-basics.html" target="_blank" rel="noopener">How VPC peering connections work</a> (lifecycle, limitations)</li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-connection-quotas.html" target="_blank" rel="noopener">VPC peering connection quotas for an account</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/peering/peering-configurations-full-access.html" target="_blank" rel="noopener">VPC peering configurations with routes to an entire VPC</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-security-groups.html" target="_blank" rel="noopener">Update your security groups to reference peer security groups</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-dns.html" target="_blank" rel="noopener">Enable DNS resolution for a VPC peering connection</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/create-vpc-peering-connection.html" target="_blank" rel="noopener">CLI reference: create-vpc-peering-connection</a> and <a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/accept-vpc-peering-connection.html" target="_blank" rel="noopener">accept-vpc-peering-connection</a></li>
+  </ul>
+  <p class="src-note">Flagged: commands were checked against the CLI reference pages, not run in a live account. The 30-VPC figure and the N(N-1)/2 formula are my own arithmetic, not statements from the docs. The accept command's use of <code>--region</code> for the inter-Region case follows the reference page's rule in prose; its example shows no <code>--region</code> flag. The peering scenarios pages (partial access, response-traffic routing), the full VPC quotas page and the <code>modify-vpc-peering-connection-options</code> syntax were not read for this digest.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
