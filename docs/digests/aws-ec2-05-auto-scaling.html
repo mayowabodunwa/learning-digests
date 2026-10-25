@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: EC2 Auto Scaling in Depth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS EC2 &middot; CONCEPT 5 DIGEST</p>
+  <h1>Auto Scaling in Depth: Launch Templates, Scaling Policies, Lifecycle Hooks and Warm Pools</h1>
+  <p class="lead">A load balancer spreads traffic across servers. Auto Scaling decides how many servers exist, replaces broken ones, and adds or removes capacity as demand moves. This digest goes through the pieces: the group, the launch template it copies from, the policies that change its size, hooks that pause an instance mid-launch, and warm pools for slow-booting apps.</p>
+
+  <h2>In one line</h2>
+  <p>An EC2 Auto Scaling group keeps a fleet of instances between a minimum and maximum size, built from a launch template, resized by scaling policies, and customised at launch and termination with lifecycle hooks and optionally pre-warmed instances.</p>
+
+  <h2>The big idea</h2>
+  <p>The thing that finally clicked for me: an Auto Scaling group is a <em>desired-state</em> system. You tell it three numbers (minimum, desired, maximum) and what an instance looks like, and it works to make reality match. If an instance dies, the count is below desired, so it launches another. Scaling policies are simply things that change the <em>desired</em> number.</p>
+  <p>The docs also point out that Auto Scaling isn't only about growth: it's "also useful for maintaining a steady number of servers". There are no extra fees for Auto Scaling itself; you pay for the resources it uses (instances, EBS volumes, CloudWatch alarms). I quote no prices.</p>
+  <p>This digest extends the earlier EC2 digest (which covered ASG and ELB at pairing level) and the load balancing digest.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Auto Scaling group (ASG)</span>: a collection of EC2 instances managed as a logical unit for scaling and management.</li>
+    <li><span class="keyterm-term">Minimum / desired / maximum capacity</span>: the floor, the target and the ceiling for the number of instances.</li>
+    <li><span class="keyterm-term">Launch template</span>: a saved set of instance settings (AMI ID, instance type, key pair, security groups and more) the group uses to launch instances.</li>
+    <li><span class="keyterm-term">Scale out / scale in</span>: adding / removing instances.</li>
+    <li><span class="keyterm-term">Scaling policy</span>: a rule that adjusts capacity in response to a metric or alarm.</li>
+    <li><span class="keyterm-term">Target tracking</span>: a policy type where you pick a metric and a target value, and the group works to hold the metric near it.</li>
+    <li><span class="keyterm-term">Step / simple scaling</span>: alarm-driven policy types that add or remove capacity by defined amounts.</li>
+    <li><span class="keyterm-term">Instance warmup</span>: time a new instance takes to start contributing to metrics; until it ends, it isn't counted in the group's aggregated metrics.</li>
+    <li><span class="keyterm-term">Cooldown</span>: a pause after a scaling activity before simple scaling can act again.</li>
+    <li><span class="keyterm-term">Health check grace period</span>: time after an instance enters service before the group starts checking its health.</li>
+    <li><span class="keyterm-term">Lifecycle hook</span>: a pause point (wait state) during launch or termination where you can run custom actions.</li>
+    <li><span class="keyterm-term">Warm pool</span>: pre-initialised instances sitting beside the group, ready for a quick scale-out.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>0. Grounding: the group and its three numbers</h3>
+  <p>The docs' example: a group with minimum 4, desired 6 and maximum 12. Auto Scaling keeps the group from going below 4 or above 12, and tries to hold it at 6 unless policies move the desired number within those bounds.</p>
+  <p>Built-in features the docs list: health monitoring with replacement of impaired instances; custom health checks; balancing instances evenly across multiple AZs; multiple instance types and purchase options (Spot and On-Demand) in one group; automated replacement of interrupted Spot Instances (including Capacity Rebalancing); automatic registration and deregistration with load balancers; instance refresh for rolling updates; lifecycle hooks; and scale-in protection and custom termination policies for stateful or long-running work.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 220" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">MIN / DESIRED / MAX (the docs' example numbers)</text>
+      <line x1="40" y1="110" x2="580" y2="110" stroke="#7A7A80"/>
+      <g stroke="#7A7A80"><line x1="40" y1="100" x2="40" y2="120"/><line x1="580" y1="100" x2="580" y2="120"/></g>
+      <rect x="170" y="92" width="410" height="36" fill="#6FCF97" fill-opacity="0.07" stroke="none"/>
+      <circle cx="170" cy="110" r="7" fill="#C8453A"/><text x="170" y="145" fill="#C8453A" font-size="11" text-anchor="middle" font-weight="700">min 4</text><text x="170" y="160" fill="#7A7A80" font-size="9.5" text-anchor="middle">never below</text>
+      <circle cx="260" cy="110" r="7" fill="#6FCF97"/><text x="260" y="80" fill="#6FCF97" font-size="11" text-anchor="middle" font-weight="700">desired 6</text><text x="260" y="66" fill="#7A7A80" font-size="9.5" text-anchor="middle">the target now</text>
+      <circle cx="580" cy="110" r="7" fill="#C8453A"/><text x="580" y="145" fill="#C8453A" font-size="11" text-anchor="middle" font-weight="700">max 12</text><text x="580" y="160" fill="#7A7A80" font-size="9.5" text-anchor="middle">never above</text>
+      <text x="400" y="110" fill="#C9C7C1" font-size="10" text-anchor="middle">policies move desired inside this range</text>
+      <text x="310" y="200" fill="#7A7A80" font-size="10" text-anchor="middle">an instance dies: actual 5 &lt; desired 6, so the group launches a replacement</text>
+    </svg>
+    <figcaption>Original schematic of the three capacity numbers.</figcaption>
+  </figure>
+
+  <h3>1. Launch templates: the blueprint</h3>
+  <p>A launch template holds the AMI ID, instance type, key pair, security groups and other parameters. Compared with the older launch configuration, templates are <strong>versioned</strong>: you can keep a base configuration and create new versions (for example one with a new AMI and user data for testing). The docs recommend launch templates, and some features need them: you can't create a group that mixes Spot and On-Demand, or uses multiple instance types, with a launch configuration. Templates also support newer EC2 features the docs list, such as Systems Manager parameters in place of AMI IDs, io2 volumes, Capacity Reservations and Dedicated Hosts.</p>
+  <p>Detail worth noting: every parameter in a launch template is optional when creating it, but if the template has no AMI you can't add one when creating the group; if it has an AMI but no instance type, you can add one or more types at group creation. When settings change, new instances use the new template, existing ones aren't touched; <em>instance refresh</em> is the rolling-replacement tool for that. Health replacement likewise launches using the group's current settings.</p>
+  <p>Connecting threads: the AMI inside the template is what the first digest covered; the purchase options (Spot/On-Demand mix) are from Concept 2; the security groups are what Concept 9 will go deeper on.</p>
+
+  <h3>2. Scaling methods and the four policy flavours</h3>
+  <p>The docs' scaling overview lists: set scaling limits, a default instance warmup, <strong>manual</strong> scaling, <strong>scheduled</strong> scaling, <strong>dynamic</strong> scaling, <strong>predictive</strong> scaling, plus controlling termination and suspending processes. I fetched the dynamic and predictive pages but not the dedicated scheduled scaling page, so I describe scheduled scaling only as "change capacity at set times" (a name-level description, flagged below).</p>
+
+  <h3>3. Target tracking: the thermostat</h3>
+  <p>You pick a metric and a target value; Auto Scaling creates and manages the CloudWatch alarms for you (don't edit or delete them yourself, per the docs). The docs' analogy is a thermostat. Example: target 50% average CPU. Above it, scale out; below, scale in.</p>
+  <p><strong>Predefined metrics:</strong> <code>ASGAverageCPUUtilization</code>, <code>ASGAverageNetworkIn</code>, <code>ASGAverageNetworkOut</code>, <code>ALBRequestCountPerTarget</code> (needs a <code>ResourceLabel</code> to name the target group).</p>
+  <p><strong>Metric rule:</strong> it must be a utilization-style metric that moves in proportion to the number of instances. The docs say these do <em>not</em> work: the load balancer's total <code>RequestCount</code> (doesn't change with group size), <code>Latency</code>, and raw SQS <code>ApproximateNumberOfMessagesVisible</code>; a custom "messages per instance" metric can work instead.</p>
+  <p><strong>Details:</strong> use metrics at one-minute or finer intervals (EC2 metrics default to five-minute unless detailed monitoring is on); scale-in is deliberately more gradual; it rounds conservatively (scale out 1.5 instances' worth by adding 2); multiple target tracking policies are allowed if each uses a different metric, and the group scales out if <em>any</em> says out but in only if <em>all</em> say in; and it can't scale out for a metric <em>below</em> target. If a metric has no data its alarm goes to <code>INSUFFICIENT_DATA</code> and the group can't scale until data returns (this connects to the CloudWatch alarm digest).</p>
+
+  <figure>
+    <svg viewBox="0 0 620 240" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">TARGET TRACKING, THE THERMOSTAT LOOP</text>
+      <defs><marker id="ar5" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#C9C7C1"/></marker></defs>
+      <rect x="30" y="60" width="130" height="50" rx="8" fill="#131316" stroke="#7A7A80"/><text x="95" y="82" fill="#F2EFE9" font-size="11" text-anchor="middle">metric</text><text x="95" y="98" fill="#C9C7C1" font-size="10" text-anchor="middle">avg CPU = 70%</text>
+      <rect x="245" y="60" width="130" height="50" rx="8" fill="#131316" stroke="#C8453A"/><text x="310" y="82" fill="#C8453A" font-size="11" text-anchor="middle">target = 50%</text><text x="310" y="98" fill="#C9C7C1" font-size="10" text-anchor="middle">managed alarm</text>
+      <rect x="460" y="60" width="130" height="50" rx="8" fill="#131316" stroke="#6FCF97"/><text x="525" y="82" fill="#6FCF97" font-size="11" text-anchor="middle">desired +N</text><text x="525" y="98" fill="#C9C7C1" font-size="10" text-anchor="middle">scale out</text>
+      <path d="M160 85 L245 85" stroke="#C9C7C1" marker-end="url(#ar5)"/><path d="M375 85 L460 85" stroke="#C9C7C1" marker-end="url(#ar5)"/>
+      <path d="M525 110 L525 170 L95 170 L95 112" stroke="#7A7A80" stroke-dasharray="4 3" fill="none" marker-end="url(#ar5)"/>
+      <text x="310" y="190" fill="#7A7A80" font-size="10" text-anchor="middle">more instances share the load, so average CPU falls toward the target</text>
+      <text x="310" y="220" fill="#7A7A80" font-size="10" text-anchor="middle">(new instances warm up first: they aren't counted in the average until warmup ends)</text>
+    </svg>
+    <figcaption>Original schematic of the feedback loop.</figcaption>
+  </figure>
+
+  <h3>4. Step and simple scaling: you own the alarm</h3>
+  <p>With step or simple scaling, you create the CloudWatch alarm and the policy. <strong>Step</strong> policies define bands relative to the threshold, with a different adjustment per band (bigger breach, bigger response). <strong>Simple</strong> policies apply one adjustment and then wait out a cooldown. The docs "strongly recommend" target tracking where the metric rises and falls with capacity, and say as a best practice not to use simple scaling and cooldowns.</p>
+  <p><strong>Adjustment types:</strong> <code>ChangeInCapacity</code> (+/- N), <code>ExactCapacity</code> (set to N), <code>PercentChangeInCapacity</code> (rounding: values above 1 round down; between 0 and 1 round to 1; mirrored for negatives; <code>MinAdjustmentMagnitude</code> sets a floor).</p>
+  <p><strong>The docs' worked example</strong> (scale out +10% at 60, +30% at 70; scale in -10% at 40, -30% at 30; start at 10): metric hits 60, +1 to 11; metric hits 70, +30% of 11 = 3.3 rounds down to 3, so 14. Metric hits 40, -10% of 14 = 1.4 rounds down to 1, so 13. Metric hits 30, -30% of 13 = 3.9 rounds down to 3, so 10. I re-did that arithmetic and it matches.</p>
+  <p><strong>Warmup vs. cooldown.</strong> Warmup (target tracking and step) excludes new instances from group metrics and avoids over-reacting; scale-in is blocked while a scale-out is warming up. Cooldown (simple scaling only) defaults to 300 seconds, and the docs list exceptions: target tracking, step and scheduled actions can act without waiting, and an unhealthy instance is replaced without waiting. Also: leave a wide margin between scale-out and scale-in thresholds to avoid <em>flapping</em>.</p>
+
+  <h3>5. Predictive scaling: scale before the rush</h3>
+  <p>Predictive scaling analyses historical load to find daily or weekly patterns, forecasts demand, and adds capacity ahead of time. The docs say it suits cyclical traffic (business hours), recurring on/off workloads (batch, testing), and apps that take long to initialise. Dynamic scaling is reactive; predictive is proactive. I read only the overview page, so details such as minimum history, forecast-only mode and how it combines with dynamic policies are not covered here.</p>
+
+  <h3>6. Health checks and replacement</h3>
+  <p>Instances start as healthy; Auto Scaling replaces an <code>InService</code> instance when it's notified of a problem from EC2 status checks, Elastic Load Balancing, VPC Lattice, EBS, or your own custom check. Unexpected terminations (Spot interruption, manual) lead to a replacement too. The health check <em>grace period</em> begins when an instance enters service. I did not fetch the grace-period page, so its default value is not stated here.</p>
+
+  <h3>7. Lifecycle hooks: pause and do something</h3>
+  <p>A hook puts an instance in a wait state at a transition so you can run a custom action (install software, register in a system, copy logs, etc.). The documented flow:</p>
+  <ol>
+    <li>Scale-out starts a launch; the hook moves the instance to <code>Pending:Wait</code> and runs your action.</li>
+    <li>It stays there until you <strong>complete the lifecycle action</strong> or the timeout ends. The timeout is <strong>one hour by default</strong>, after which the launch continues (<code>Pending:Proceed</code>). Record a <strong>heartbeat</strong> to restart the timeout if you need longer.</li>
+    <li>The instance goes <code>InService</code> and the health check grace period starts (and with a load balancer it's registered first).</li>
+    <li>On scale-in, a load-balanced instance is first deregistered (draining connections if enabled). The hook then holds it in <code>Terminating:Wait</code>, again up to one hour by default, then <code>Terminating:Proceed</code> and terminate.</li>
+  </ol>
+  <p>The docs also note that lifecycle hooks extend cooldowns, since a cooldown begins after the action completes or the timeout ends. I did not fetch the page on default result (continue vs. abandon) so I won't state it.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 160" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="ar6" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#C9C7C1"/></marker></defs>
+      <text x="310" y="18" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">LIFECYCLE HOOKS (scale-out then scale-in)</text>
+      <g font-size="10"><rect x="15" y="50" width="90" height="36" rx="6" fill="#131316" stroke="#7A7A80"/><text x="60" y="72" fill="#C9C7C1" text-anchor="middle">Pending</text>
+      <rect x="130" y="50" width="100" height="36" rx="6" fill="#131316" stroke="#C8453A"/><text x="180" y="72" fill="#C8453A" text-anchor="middle">Pending:Wait</text>
+      <rect x="255" y="50" width="100" height="36" rx="6" fill="#131316" stroke="#6FCF97"/><text x="305" y="72" fill="#6FCF97" text-anchor="middle">InService</text>
+      <rect x="380" y="50" width="110" height="36" rx="6" fill="#131316" stroke="#C8453A"/><text x="435" y="72" fill="#C8453A" text-anchor="middle">Terminating:Wait</text>
+      <rect x="515" y="50" width="90" height="36" rx="6" fill="#131316" stroke="#7A7A80"/><text x="560" y="72" fill="#C9C7C1" text-anchor="middle">Terminated</text></g>
+      <path d="M105 68 L130 68" stroke="#C9C7C1" marker-end="url(#ar6)"/><path d="M230 68 L255 68" stroke="#C9C7C1" marker-end="url(#ar6)"/><path d="M355 68 L380 68" stroke="#C9C7C1" marker-end="url(#ar6)"/><path d="M490 68 L515 68" stroke="#C9C7C1" marker-end="url(#ar6)"/>
+      <text x="180" y="108" fill="#7A7A80" font-size="9.5" text-anchor="middle">your custom action</text>
+      <text x="435" y="108" fill="#7A7A80" font-size="9.5" text-anchor="middle">your custom action</text>
+      <text x="310" y="140" fill="#7A7A80" font-size="10" text-anchor="middle">wait ends on "complete lifecycle action" or timeout (1 hour by default); heartbeat extends it</text>
+    </svg>
+    <figcaption>Original sketch of the two wait states described in the docs.</figcaption>
+  </figure>
+
+  <h3>8. Warm pools: skip the slow boot</h3>
+  <p>For apps with exceptionally long boot times, a warm pool is a set of pre-initialised instances beside the group. On scale-out, instances leave the pool and count toward desired capacity (a <em>warm start</em>). If the pool is empty you get a <em>cold start</em>, launching straight into the group.</p>
+  <ul>
+    <li><strong>Pool size</strong> default: maximum capacity minus desired capacity (desired 6, max 10 gives a pool of 4). Override with <code>MaxGroupPreparedCapacity</code>; set <code>MinSize</code> for a static floor.</li>
+    <li><strong>Instance state</strong> in the pool: <code>Stopped</code> (pay only for volumes and Elastic IPs), <code>Hibernated</code> (RAM saved to the EBS root volume; pay for EBS incl. RAM storage), or <code>Running</code> (highly discouraged due to charges).</li>
+    <li><strong>Lifecycle hooks</strong> matter here: without one, a slow-initialising instance could be stopped or put in service before it's ready.</li>
+    <li><strong>Instance reuse policy</strong> returns scaled-in instances to the pool instead of terminating them.</li>
+    <li><strong>Limitations</strong> from the docs: root device must be EBS to stop or hibernate; no weighted mixed-instance groups; no Spot in mixed-instance groups when using warm pools; the stop/hibernate doesn't wait for user data, so long user data can be interrupted.</li>
+  </ul>
+  <p><strong>Caution from the docs:</strong> a warm pool you don't need creates unnecessary cost; if first boot isn't noticeably slow, you probably don't need one. This ties back to Concept 3: Stopped instances still keep their EBS volumes.</p>
+
+  <h2>Why it matters</h2>
+  <p>Auto Scaling is what makes "replace, don't repair" practical, and it's the usual bridge between a load balancer and a cost-aware fleet. Choosing between target tracking and step scaling, handling warmup, and knowing the hook timeouts is where real incidents (flapping, premature traffic to unready instances) come from.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>An ASG maintains a desired count between min and max; policies change desired, health replacement restores it.</li>
+      <li>Launch templates are versioned blueprints; they're needed for mixed Spot/On-Demand and multiple instance types.</li>
+      <li>Prefer target tracking when the metric moves with capacity; the docs discourage simple scaling and cooldowns.</li>
+      <li>Warmup keeps new instances out of the metric average; cooldown only applies to simple scaling (default 300 s).</li>
+      <li>Lifecycle hooks pause at Pending:Wait and Terminating:Wait for up to an hour by default; warm pools trade standby cost for faster scale-out and are only worth it for slow boots.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <p style="font-size:14px;color:var(--muted);">Projects 1 to 3 are local simulations. Project 4 uses the AWS console or CLI and creates billable resources, so use a small group and delete it. I did not run any AWS commands for this digest, and I do not give CLI commands here for that reason: use the console or look up the exact options in the CLI reference.</p>
+    <ol>
+      <li><strong>Desired-state loop.</strong> Write a small simulation with min, desired and max, a list of "instances", and a loop that randomly kills one. <em>Done when:</em> the group replaces it and never goes below min or above max even when you try to set desired outside the range.</li>
+      <li><strong>Step scaling calculator.</strong> Implement <code>PercentChangeInCapacity</code> with the docs' rounding rules and <code>MinAdjustmentMagnitude</code>. <em>Done when:</em> your function reproduces 10, 11, 14, 13, 10 from the docs' example.</li>
+      <li><strong>Thermostat vs. flapping.</strong> Simulate load and a group size; implement target tracking (target 50%) and a naive pair of alarms at 50/50 with no gap. Add a warmup delay. <em>Done when:</em> you can show the naive version oscillating and explain, using the docs' flapping advice, how a margin and warmup help.</li>
+      <li><strong>Real group (small cost).</strong> In the console, create a launch template, then a group with min 1, desired 1, max 2 across two AZs, then terminate the instance by hand. <em>Done when:</em> you see the group launch a replacement, and you can find the cause in the group's activity history. Delete the group afterwards.</li>
+      <li><strong>Lifecycle timeline.</strong> Draw (on paper) the timeline for one scale-out with a launch hook and a load balancer: wait state, heartbeat, complete, InService, grace period. <em>Done when:</em> you can say when registration with the load balancer happens relative to InService and what happens at the one-hour default.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Next: scheduled scaling and predictive scaling policy details (forecast-only mode, I only read the overview), instance refresh and checkpoints, termination policies and scale-in protection, mixed instances policies with allocation strategies, the health check grace period, and ASG notifications through EventBridge.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the official docs. Defaults and recommendations change; verify against the live pages. Source accessed on 2026-10-25.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/autoscaling/ec2/userguide/what-is-amazon-ec2-auto-scaling.html" target="_blank" rel="noopener">What is Amazon EC2 Auto Scaling?</a></li>
+    <li><a href="https://docs.aws.amazon.com/autoscaling/ec2/userguide/launch-templates.html" target="_blank" rel="noopener">Auto Scaling launch templates</a></li>
+    <li><a href="https://docs.aws.amazon.com/autoscaling/ec2/userguide/scale-your-group.html" target="_blank" rel="noopener">Increase or decrease compute capacity with scaling</a></li>
+    <li><a href="https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-target-tracking.html" target="_blank" rel="noopener">Target tracking scaling policies</a>, <a href="https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-scaling-simple-step.html" target="_blank" rel="noopener">step and simple scaling policies</a> and <a href="https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-scaling-cooldowns.html" target="_blank" rel="noopener">scaling cooldowns</a></li>
+    <li><a href="https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-predictive-scaling.html" target="_blank" rel="noopener">Predictive scaling</a></li>
+    <li><a href="https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-health-checks.html" target="_blank" rel="noopener">Health checks for instances in an Auto Scaling group</a></li>
+    <li><a href="https://docs.aws.amazon.com/autoscaling/ec2/userguide/lifecycle-hooks-overview.html" target="_blank" rel="noopener">How lifecycle hooks work</a></li>
+    <li><a href="https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-warm-pools.html" target="_blank" rel="noopener">Warm pools</a></li>
+  </ul>
+  <p class="src-note">Flagged: (1) One fetch of the scaling-methods page returned model-generated text rather than the page, so I discarded it; scheduled scaling is described only by name, from the docs' topic list. (2) Not fetched: scheduled scaling, the lifecycle hook default result, health check grace period default, mixed instance policies, instance refresh details. (3) Predictive scaling: overview only. (4) The 1.5-instance rounding is the docs' own example. (5) No CLI commands are given because none were verified. No prices quoted.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
