@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: DNS in a VPC: Route 53 Resolver, Private Hosted Zones, DHCP Option Sets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS VPC &middot; CONCEPT 5 DIGEST</p>
+  <h1>DNS in a VPC: Route 53 Resolver, Private Hosted Zones, DHCP Option Sets</h1>
+  <p class="lead">How a name like <code>db.example.com</code> turns into a private IP inside your VPC, who answers that question, and which dials (two VPC switches, a DHCP option set, a private hosted zone) change the answer.</p>
+
+  <h2>In one line</h2>
+  <p>Every VPC gets a built-in DNS resolver; a DHCP option set tells instances to use it, two VPC attributes switch its features on or off, private hosted zones teach it your own names, and Resolver endpoints plus rules stretch it out to your on-premises network.</p>
+
+  <h2>The big idea</h2>
+  <p>Computers talk using IP addresses, but humans (and config files) use names. DNS is the phone book that connects the two. In a VPC you don't have to run a phone book server yourself: AWS provides one, and it already knows the names of your instances. The interesting part is how much control you have around it. Instances learn which DNS server to ask through DHCP (a startup handshake), so a DHCP option set is the lever that decides <em>who gets asked</em>. Two VPC attributes decide <em>what the built-in resolver is allowed to do</em>. A private hosted zone decides <em>which custom names it can answer</em>. And Resolver endpoints decide <em>whether the conversation can cross over to your own data center</em>. If you can name those four levers, most VPC DNS puzzles stop being mysterious.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">DNS</span>: the Domain Name System, which resolves names to IP addresses. e.g. <code>db.example.com</code> to <code>10.0.3.17</code>.</li>
+    <li><span class="keyterm-term">DNS hostname</span>: a name made of a host name plus a domain name that identifies a computer.</li>
+    <li><span class="keyterm-term">Recursive resolver</span>: a DNS server that does the whole lookup on a client's behalf and hands back the final answer. The docs say Route 53 Resolver only supports recursive queries.</li>
+    <li><span class="keyterm-term">Route 53 Resolver (also called the Amazon DNS server or AmazonProvidedDNS)</span>: the DNS service built into each Availability Zone of a Region. The newest Route 53 docs have renamed it "Route 53 VPC Resolver"; the VPC User Guide still uses the older name. Same thing.</li>
+    <li><span class="keyterm-term">VPC+2 address</span>: the resolver's address inside your VPC, the base of the VPC's primary IPv4 range plus two. e.g. <code>10.0.0.2</code> for a <code>10.0.0.0/16</code> VPC.</li>
+    <li><span class="keyterm-term">DHCP</span>: Dynamic Host Configuration Protocol, the handshake where a machine gets its network settings automatically.</li>
+    <li><span class="keyterm-term">DHCP option set</span>: a group of network settings (DNS servers, domain name, NTP servers, NetBIOS settings, IPv6 lease time) that resources in a VPC use.</li>
+    <li><span class="keyterm-term">enableDnsSupport / enableDnsHostnames</span>: the two VPC attributes that control DNS resolution through the Amazon resolver and public DNS hostnames respectively.</li>
+    <li><span class="keyterm-term">Private hosted zone</span>: a Route 53 container of DNS records that answers queries for a domain only inside the VPCs you associate with it.</li>
+    <li><span class="keyterm-term">Split-view DNS</span>: using the same domain name internally and externally, with different answers depending on where the question comes from.</li>
+    <li><span class="keyterm-term">Inbound endpoint</span>: lets DNS queries from your on-premises network (or another VPC) come <em>into</em> your VPC's resolver.</li>
+    <li><span class="keyterm-term">Outbound endpoint + forwarding rule</span>: lets queries for chosen domains go <em>out</em> from your VPC to a DNS server on your network.</li>
+    <li><span class="keyterm-term">NXDOMAIN</span>: the DNS answer meaning "that name doesn't exist".</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>Grounding: what happens when an instance looks up a name</h3>
+  <p>Picture an EC2 instance running <code>ping db.example.com</code>. The operating system doesn't know the answer, so it asks whichever DNS server it was told to use. Where did it get that setting? From DHCP, when its network interface came up. In the default setup that server is the Amazon-provided resolver. The docs say it lives at <code>169.254.169.253</code> (IPv4), <code>fd00:ec2::253</code> (IPv6), and at the VPC's primary IPv4 range plus two. The queries travel to it privately over a link-local address and aren't visible on the network.</p>
+  <p>The resolver then answers three kinds of question, per the Route 53 docs: names for EC2 instances in the VPC (like <code>ec2-192-0-2-44.compute-1.amazonaws.com</code>), records in private hosted zones, and public names, which it looks up recursively on the internet.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="An instance asks the VPC resolver, which answers from three places">
+      <rect x="10" y="10" width="620" height="210" rx="10" fill="none" stroke="#7A7A80" stroke-dasharray="5 4"/>
+      <text x="22" y="30" fill="#7A7A80" font-family="monospace" font-size="11">YOUR VPC</text>
+      <rect x="30" y="90" width="110" height="50" rx="6" fill="#131316" stroke="#F2EFE9"/>
+      <text x="85" y="112" fill="#F2EFE9" font-family="monospace" font-size="11" text-anchor="middle">instance</text>
+      <text x="85" y="128" fill="#7A7A80" font-family="monospace" font-size="10" text-anchor="middle">"who is db?"</text>
+      <rect x="230" y="80" width="150" height="70" rx="8" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="305" y="107" fill="#6FCF97" font-family="monospace" font-size="11" text-anchor="middle">Route 53 Resolver</text>
+      <text x="305" y="125" fill="#C9C7C1" font-family="monospace" font-size="10" text-anchor="middle">VPC+2 / 169.254.169.253</text>
+      <path d="M140 115 L230 115" stroke="#F2EFE9" fill="none"/>
+      <rect x="470" y="40" width="150" height="38" rx="6" fill="#131316" stroke="#F2EFE9" stroke-opacity="0.4"/>
+      <text x="545" y="63" fill="#C9C7C1" font-family="monospace" font-size="10" text-anchor="middle">instance names</text>
+      <rect x="470" y="96" width="150" height="38" rx="6" fill="#131316" stroke="#F2EFE9" stroke-opacity="0.4"/>
+      <text x="545" y="119" fill="#C9C7C1" font-family="monospace" font-size="10" text-anchor="middle">private hosted zones</text>
+      <rect x="470" y="152" width="150" height="38" rx="6" fill="#131316" stroke="#F2EFE9" stroke-opacity="0.4"/>
+      <text x="545" y="175" fill="#C9C7C1" font-family="monospace" font-size="10" text-anchor="middle">public DNS (recursive)</text>
+      <path d="M380 105 L470 60" stroke="#6FCF97" fill="none"/>
+      <path d="M380 115 L470 115" stroke="#6FCF97" fill="none"/>
+      <path d="M380 125 L470 170" stroke="#6FCF97" fill="none"/>
+    </svg>
+    <figcaption>One resolver, three sources of answers. The instance never needs to know which one applies.</figcaption>
+  </figure>
+
+  <h3>1. The Amazon DNS server and its limits</h3>
+  <p><strong>What you can and can't do to it.</strong> Per the docs, you cannot filter traffic to or from the Amazon DNS server with network ACLs or security groups. That surprises people after the earlier security group and NACL topic: DNS to the VPC resolver is not something those rules gate.</p>
+  <p><strong>A hard ceiling.</strong> The docs state a limit of 1024 packets per second per network interface for services that use link-local addresses, and it's an aggregate: Resolver DNS queries, instance metadata requests, Amazon Time Sync (NTP) requests, and Windows licensing requests all share it. The page says the quota can't be increased. If you hit it, the resolver rejects traffic. A busy instance that does a lot of lookups without caching can run into this, which is one reason people cache DNS answers on the instance (that's an inference on my part, not a statement from the docs).</p>
+  <p><strong>Instance names.</strong> Every instance gets a private DNS hostname that resolves to its private IPv4 address. If it has a public IPv4 address and the right attributes are on, it also gets a public DNS hostname. That public name resolves to the public IP from outside, but to the <em>private</em> IP from inside the network of the instance. That's a handy detail: two instances in the same VPC that use each other's public DNS names still talk over private addresses.</p>
+
+  <h3>2. The two DNS attributes</h3>
+  <p>These are properties of the VPC itself:</p>
+  <div class="card">
+    <ul>
+      <li><code>enableDnsSupport</code>: whether DNS resolution through the Amazon DNS server works at all. Default is <code>true</code>.</li>
+      <li><code>enableDnsHostnames</code>: whether instances with public IPs get public DNS hostnames. Default is <code>false</code> unless the VPC is a default VPC.</li>
+    </ul>
+  </div>
+  <p>With both <code>true</code>, instances with public IPs get public DNS hostnames and the resolver can resolve Amazon-provided private hostnames. If at least one is <code>false</code>, neither of those happens. And the important rule: if you use private hosted zones or private DNS on interface VPC endpoints (last topic), <strong>both must be <code>true</code></strong>. Forgetting this is a classic reason why a private DNS name "just doesn't work".</p>
+  <p>CLI, from the reference page: <code>aws ec2 modify-vpc-attribute --vpc-id &lt;vpc&gt; --enable-dns-support "{\"Value\":true}"</code>, and the same with <code>--enable-dns-hostnames</code>. The reference states you can't change the two in the same request, and you can only enable DNS hostnames if DNS support is already enabled, so do support first. Read them back with <code>describe-vpc-attribute</code>.</p>
+  <p><em>Simplification:</em> I'm treating "DNS support off" as "the resolver stops working". The docs describe it as the VPC not supporting resolution through the Amazon server; if your instances point at your own DNS server through a custom DHCP option set, they are not using the Amazon resolver anyway, which changes what you'd see.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Truth table for the two DNS attributes">
+      <rect x="20" y="15" width="600" height="160" rx="8" fill="#0E0E10" stroke="#F2EFE9" stroke-opacity="0.3"/>
+      <text x="40" y="42" fill="#7A7A80" font-family="monospace" font-size="11">enableDnsSupport</text>
+      <text x="200" y="42" fill="#7A7A80" font-family="monospace" font-size="11">enableDnsHostnames</text>
+      <text x="390" y="42" fill="#7A7A80" font-family="monospace" font-size="11">result</text>
+      <line x1="30" y1="52" x2="610" y2="52" stroke="#F2EFE9" stroke-opacity="0.15"/>
+      <text x="40" y="80" fill="#6FCF97" font-family="monospace" font-size="12">true</text>
+      <text x="200" y="80" fill="#6FCF97" font-family="monospace" font-size="12">true</text>
+      <text x="390" y="80" fill="#C9C7C1" font-family="monospace" font-size="11">public DNS names + private names resolve; PHZ works</text>
+      <text x="40" y="112" fill="#6FCF97" font-family="monospace" font-size="12">true</text>
+      <text x="200" y="112" fill="#C8453A" font-family="monospace" font-size="12">false</text>
+      <text x="390" y="112" fill="#C9C7C1" font-family="monospace" font-size="11">no public DNS names; PHZ and endpoint DNS</text>
+      <text x="390" y="127" fill="#C9C7C1" font-family="monospace" font-size="11">need both on, so they won't work</text>
+      <text x="40" y="157" fill="#C8453A" font-family="monospace" font-size="12">false</text>
+      <text x="200" y="157" fill="#7A7A80" font-family="monospace" font-size="12">(can't enable)</text>
+      <text x="390" y="157" fill="#C9C7C1" font-family="monospace" font-size="11">hostnames can't be on without support</text>
+    </svg>
+    <figcaption>A cheat sheet built from the docs' rules. Rows two and three are my reading of "both must be true" and "hostnames needs support first".</figcaption>
+  </figure>
+
+  <h3>3. DHCP option sets: telling instances who to ask</h3>
+  <p><strong>What it is.</strong> A DHCP option set is a group of network settings used by resources in your VPC. Each Region has a default one, and each VPC uses it unless you attach a custom set or none. The default set's domain name server is always <code>AmazonProvidedDNS</code>, and it includes the IPv6 preferred lease time (default 140 seconds). NTP servers, NetBIOS name servers and node type aren't used in the default set, though EC2 instances still default to the Amazon Time Sync Service for time.</p>
+  <p><strong>Custom sets.</strong> You can set domain name servers, domain name, NTP servers, NetBIOS name servers and node type, and an IPv6 lease time. Rules from the docs worth remembering:</p>
+  <ul>
+    <li>A VPC can have only one option set at a time; one set can serve many VPCs.</li>
+    <li>You can't modify a set after creating it. To change anything, create a new one and associate it.</li>
+    <li>New settings reach existing instances without restart, usually within a few hours depending on lease renewal, or sooner if you renew the lease in the OS.</li>
+    <li>Domain name servers: up to four IPv4 servers (or three plus AmazonProvidedDNS), and four IPv6. The docs say mixing AmazonProvidedDNS with custom servers might cause unexpected behavior.</li>
+    <li>If your VPC has an internet gateway, you must give it your own DNS server or AmazonProvidedDNS. Otherwise instances have no DNS, which disables internet access in practice (docs wording).</li>
+    <li>Choosing "no DHCP option set" disables domain name resolution for the VPC. Per the concepts page, Nitro instances then get <code>169.254.169.253</code> as default name server, while Xen-based instances get none.</li>
+    <li>The domain-name field: use only domain names you fully control; some Linux versions accept several names separated by spaces, but Windows and others treat the value as one domain.</li>
+  </ul>
+  <p><strong>Why you'd customize it.</strong> The usual reason is wanting instances to use your own DNS servers, such as ones that also know your corporate zones. Custom DNS servers you run on instances should forward private queries to the VPC+2 address, per the docs. Today there's a managed alternative, Resolver endpoints, covered below.</p>
+  <p><em>Flagged docs inconsistency:</em> the "Create a DHCP option set" page gives the IPv6 lease time range as 140 to 2147483647 seconds, but the concepts page says 140 to 4294967295. I'm not picking one; check the live pages if you need that number.</p>
+
+  <h3>4. Private hosted zones: your own names, visible only inside</h3>
+  <p><strong>What it is.</strong> A private hosted zone (PHZ) is a Route 53 container holding records for a domain, answered only for the VPCs you associate with it. You create a zone like <code>example.com</code>, associate a VPC, then add records. The docs example: an A record <code>db.example.com</code> pointing to a database instance's IP. Any app in the associated VPC that looks up <code>db.example.com</code> gets that IP.</p>
+  <p><strong>Who can ask.</strong> Per the docs, you get answers from a PHZ by running an EC2 instance in an associated VPC, or by using an inbound endpoint in a hybrid setup. Query it from elsewhere and the query resolves recursively on the internet, where the private records don't exist. The docs also say PHZs don't support transitive relationships outside the VPC: you can't use the custom private names from the other side of a VPN connection (unless you set up Resolver endpoints).</p>
+  <p><strong>Requirements.</strong> Both DNS attributes must be <code>true</code>. Creating a PHZ also needs EC2 IAM permissions in addition to Route 53 ones. You can associate more VPCs later, including VPCs in other accounts via a separate procedure in the Route 53 guide that this digest doesn't walk through.</p>
+  <p><strong>Split-view DNS.</strong> Create a public and a private zone with the same name, associate your VPCs with the private one, and put different records in each. Inside the VPC, answers come from the private zone; outside, from the public one. The trap: if a matching private hosted zone exists but has <em>no record</em> for the name and type requested, the resolver does not fall through to public DNS. It returns NXDOMAIN. So if you shadow <code>example.com</code> privately, you must also recreate any public records your VPC needs (such as <code>www</code>).</p>
+  <p><strong>Overlapping zones: most specific wins.</strong> For a query like <code>seattle.accounting.example.com</code> and zones <code>example.com</code> and <code>accounting.example.com</code>, the resolver picks <code>accounting.example.com</code>, because it's the more specific parent. And if a Resolver forwarding rule exists for the same domain as a PHZ, the rule takes precedence, so queries go to your network instead.</p>
+  <p><strong>Records.</strong> Private zones support simple, failover, multivalue answer, weighted, latency, geolocation and geoproximity routing; other routing policies aren't supported there.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Split view DNS: same name, different answers">
+      <rect x="30" y="20" width="250" height="70" rx="8" fill="#131316" stroke="#6FCF97"/>
+      <text x="155" y="48" fill="#6FCF97" font-family="monospace" font-size="11" text-anchor="middle">query from inside VPC</text>
+      <text x="155" y="68" fill="#C9C7C1" font-family="monospace" font-size="11" text-anchor="middle">app.example.com -> 10.0.4.9</text>
+      <rect x="30" y="110" width="250" height="70" rx="8" fill="#131316" stroke="#C8453A"/>
+      <text x="155" y="138" fill="#C8453A" font-family="monospace" font-size="11" text-anchor="middle">query from the internet</text>
+      <text x="155" y="158" fill="#C9C7C1" font-family="monospace" font-size="11" text-anchor="middle">app.example.com -> 203.0.113.7</text>
+      <rect x="400" y="20" width="210" height="70" rx="8" fill="#0E0E10" stroke="#F2EFE9" stroke-opacity="0.4"/>
+      <text x="505" y="60" fill="#F2EFE9" font-family="monospace" font-size="11" text-anchor="middle">private hosted zone</text>
+      <rect x="400" y="110" width="210" height="70" rx="8" fill="#0E0E10" stroke="#F2EFE9" stroke-opacity="0.4"/>
+      <text x="505" y="150" fill="#F2EFE9" font-family="monospace" font-size="11" text-anchor="middle">public hosted zone</text>
+      <path d="M280 55 L400 55" stroke="#6FCF97" fill="none"/>
+      <path d="M280 145 L400 145" stroke="#C8453A" fill="none"/>
+    </svg>
+    <figcaption>Same name, two zones, two answers. The IPs are made-up examples (203.0.113.0/24 is a documentation range).</figcaption>
+  </figure>
+
+  <h3>5. Hybrid DNS: Resolver endpoints and rules</h3>
+  <p>Your VPC resolver is only reachable from inside the VPC, and your office DNS doesn't know AWS names. Resolver endpoints bridge the two, over a Direct Connect or VPN link (a later concept in this series).</p>
+  <ul>
+    <li><strong>Inbound endpoint</strong>: you pick IP addresses in your VPC; your on-premises resolvers forward queries for AWS-hosted names to those IPs. Those IPs aren't public, so you need a VPN or Direct Connect connection.</li>
+    <li><strong>Outbound endpoint</strong>: the IPs that queries originate from when the VPC forwards a lookup to your network. You need Direct Connect, a VPN, or a NAT gateway for connectivity (docs wording). One outbound endpoint can serve multiple VPCs in the same Region.</li>
+    <li><strong>Forwarding rule</strong>: one domain name per rule, associated with the VPCs that should forward it. E.g. forward <code>internal.example.com</code> to the on-premises resolver. The resolver picks a target IP at random and retries another if one doesn't respond; unreachable targets can lengthen lookup times.</li>
+  </ul>
+  <p>The docs' own walk-through: an instance asks VPC+2 for <code>internal.example.com</code>; the rule matches; the query leaves through the outbound endpoint and the private connection; the on-premises resolver answers and the reply returns the same way. The inbound direction is the mirror image.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hybrid DNS with inbound and outbound endpoints">
+      <rect x="10" y="10" width="330" height="210" rx="10" fill="none" stroke="#7A7A80" stroke-dasharray="5 4"/>
+      <text x="22" y="30" fill="#7A7A80" font-family="monospace" font-size="11">VPC</text>
+      <rect x="30" y="80" width="100" height="40" rx="6" fill="#131316" stroke="#F2EFE9"/>
+      <text x="80" y="104" fill="#F2EFE9" font-family="monospace" font-size="11" text-anchor="middle">instance</text>
+      <rect x="170" y="45" width="150" height="38" rx="6" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="245" y="68" fill="#6FCF97" font-family="monospace" font-size="10" text-anchor="middle">outbound endpoint</text>
+      <rect x="170" y="150" width="150" height="38" rx="6" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="245" y="173" fill="#6FCF97" font-family="monospace" font-size="10" text-anchor="middle">inbound endpoint</text>
+      <rect x="470" y="75" width="150" height="80" rx="10" fill="#131316" stroke="#F2EFE9"/>
+      <text x="545" y="108" fill="#F2EFE9" font-family="monospace" font-size="11" text-anchor="middle">on-premises DNS</text>
+      <text x="545" y="126" fill="#7A7A80" font-family="monospace" font-size="10" text-anchor="middle">internal.example.com</text>
+      <path d="M130 95 L170 64" stroke="#6FCF97" fill="none"/>
+      <path d="M320 64 L470 95" stroke="#6FCF97" fill="none"/>
+      <text x="395" y="68" fill="#7A7A80" font-family="monospace" font-size="10">VPN / DX</text>
+      <path d="M470 135 L320 169" stroke="#C8453A" fill="none"/>
+      <text x="395" y="165" fill="#7A7A80" font-family="monospace" font-size="10">VPN / DX</text>
+    </svg>
+    <figcaption>Green: VPC asks on-premises. Red: on-premises asks the VPC. Both ride a private link.</figcaption>
+  </figure>
+
+  <h2>Why it matters</h2>
+  <p>DNS is behind a huge share of "it can't connect" tickets. Knowing the chain (DHCP option set, then the resolver, then attributes, then zones and rules) gives you a checklist. It also connects to earlier topics: interface endpoint private DNS needs these attributes, security groups and NACLs don't filter Amazon DNS traffic, and hybrid DNS rides on the VPN and Direct Connect links coming up soon.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>The VPC resolver lives at VPC+2 (and 169.254.169.253); instances learn to use it through the DHCP option set.</li>
+      <li>Private hosted zones and endpoint private DNS need both <code>enableDnsSupport</code> and <code>enableDnsHostnames</code> set to true.</li>
+      <li>DHCP option sets can't be edited: create a new one and associate it. One per VPC at a time.</li>
+      <li>A matching private zone without a matching record gives NXDOMAIN, it does not fall back to public DNS.</li>
+      <li>Hybrid DNS = inbound endpoint (on-prem to VPC), outbound endpoint plus rules (VPC to on-prem).</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Inspect the attributes.</strong> Run <code>aws ec2 describe-vpc-attribute --vpc-id &lt;vpc&gt; --attribute enableDnsSupport</code> and again with <code>enableDnsHostnames</code> on your default VPC and a custom VPC. <em>Done when:</em> you can explain why the two values differ.</li>
+      <li><strong>Find the resolver.</strong> On a test instance run <code>cat /etc/resolv.conf</code> and <code>dig db.example.com</code> (or <code>nslookup</code>). <em>Done when:</em> you can point to the nameserver address and match it to the VPC+2 or 169.254.169.253 address from the docs. (The exact file contents depend on your OS image; I haven't verified what yours shows.)</li>
+      <li><strong>Private zone.</strong> Create a private hosted zone for a made-up domain you control, associate a throwaway VPC, add an A record for <code>db</code>, and resolve it from an instance and from your laptop. <em>Done when:</em> the VPC returns the private IP and the laptop does not. Delete the zone afterwards (hosted zones have a monthly charge; check Route 53 pricing).</li>
+      <li><strong>Trigger NXDOMAIN on purpose.</strong> Make a private zone with the same name as a public domain you own, with no <code>www</code> record, and look up <code>www</code> from the instance. <em>Done when:</em> you've seen NXDOMAIN and added the missing record.</li>
+      <li><strong>Swap a DHCP option set.</strong> Create a second set with a different domain name, associate it, then renew the lease on the instance (OS-specific) and check the search domain. <em>Done when:</em> the change shows up without a reboot, and you've confirmed you can't edit the old set.</li>
+      <li><strong>Paper design.</strong> Draw a hybrid DNS setup: one VPC, an on-premises DNS, a VPN. Mark the inbound endpoint, outbound endpoint, and one forwarding rule. <em>Done when:</em> you can trace both directions of a lookup.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Read the Route 53 pages on Resolver delegation rules and on associating a VPC with a private hosted zone from a different account; both are mentioned here but not worked through. For DNS between peered VPCs, see the peering concept later in this series.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the official documentation. Quotas, defaults and CLI syntax change, so verify anything you plan to rely on against the live pages below.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/AmazonDNS-concepts.html" target="_blank" rel="noopener">Understanding Amazon DNS</a> (resolver address, attributes, quota)</li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/vpc-dns-updating.html" target="_blank" rel="noopener">View and update DNS attributes for your VPC</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/modify-vpc-attribute.html" target="_blank" rel="noopener">CLI reference: modify-vpc-attribute</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/DHCPOptionSetConcepts.html" target="_blank" rel="noopener">DHCP option set concepts</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/DHCPOptionSet.html" target="_blank" rel="noopener">Work with DHCP option sets</a></li>
+    <li><a href="https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/hosted-zones-private.html" target="_blank" rel="noopener">Working with private hosted zones</a></li>
+    <li><a href="https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/hosted-zone-private-considerations.html" target="_blank" rel="noopener">Considerations when working with a private hosted zone</a></li>
+    <li><a href="https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resolver.html" target="_blank" rel="noopener">What is Route 53 VPC Resolver?</a></li>
+    <li><a href="https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resolver-forwarding-outbound-queries.html" target="_blank" rel="noopener">Forwarding outbound DNS queries</a> and <a href="https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resolver-forwarding-inbound-queries.html" target="_blank" rel="noopener">inbound DNS queries</a></li>
+  </ul>
+  <p class="src-note">Flagged: commands were checked against the CLI reference and docs text, not run in a live account. The two pages disagree on the maximum IPv6 lease time (see section 3). Resolver endpoint pricing, per-endpoint IP minimums and cross-account zone association steps were not read for this digest. The "cache DNS on busy instances" remark is my own inference, not from the docs.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
