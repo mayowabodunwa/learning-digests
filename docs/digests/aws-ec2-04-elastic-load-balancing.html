@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: EC2 Elastic Load Balancing in Depth: ALB, NLB, GWLB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS EC2 &middot; CONCEPT 4 DIGEST</p>
+  <h1>Elastic Load Balancing in Depth: ALB vs. NLB vs. GWLB, Target Groups and Health Checks</h1>
+  <p class="lead">Once you run more than one server, something has to decide which one gets each request, and stop sending traffic to the one that just fell over. That's the load balancer. AWS has three current types that work at different network layers, and they share the same skeleton: listeners, target groups, health checks.</p>
+
+  <h2>In one line</h2>
+  <p>Elastic Load Balancing spreads incoming traffic across healthy targets in one or more Availability Zones; you choose an Application (layer 7), Network (layer 4) or Gateway (layer 3) Load Balancer depending on what you need to do with the traffic.</p>
+
+  <h2>The big idea</h2>
+  <p>A load balancer is a single front door with a receptionist who knows which back-office servers are awake. The clients only know the front door's address. You can add or remove servers behind it without clients noticing, and servers that fail their checks stop getting visitors.</p>
+  <p>The three types differ in <em>how much they look at</em>. ALB reads the request (URL, host, headers) so it can make smart routing decisions. NLB looks only at connections (TCP/UDP/TLS/QUIC), which is why it fits raw speed and static IPs. GWLB isn't for your own app servers at all: it's a doorway for traffic to pass through security appliances like firewalls.</p>
+  <p>This builds on the earlier EC2 digest, which introduced load balancing and Auto Scaling at a pairing level. This one goes deeper on the load balancer half. I quote no prices; the docs just say you pay for what you use and point to the pricing page.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Load balancer</span>: the single point of contact for clients that distributes incoming traffic across targets.</li>
+    <li><span class="keyterm-term">Target</span>: a destination that receives traffic, such as an EC2 instance, a container, an IP address or (for ALB) a Lambda function.</li>
+    <li><span class="keyterm-term">Listener</span>: a process that checks for connection requests using a protocol and port you configure.</li>
+    <li><span class="keyterm-term">Rule</span> (ALB): a priority, one or more conditions and one or more actions on a listener.</li>
+    <li><span class="keyterm-term">Target group</span>: a set of registered targets that a listener forwards to, with its own health check settings.</li>
+    <li><span class="keyterm-term">Health check</span>: a periodic test request the load balancer sends to each target.</li>
+    <li><span class="keyterm-term">Load balancer node</span>: the piece of the load balancer that ELB creates in each Availability Zone you enable.</li>
+    <li><span class="keyterm-term">Cross-zone load balancing</span>: letting each node send traffic to targets in all enabled AZs rather than only its own.</li>
+    <li><span class="keyterm-term">OSI layers 3, 4, 7</span>: network layer (IP packets), transport layer (TCP/UDP connections), application layer (e.g. HTTP).</li>
+    <li><span class="keyterm-term">Internet-facing / internal</span>: whether the nodes have public IPs or only private ones.</li>
+    <li><span class="keyterm-term">Fail open</span>: when every target looks unhealthy, the balancer sends traffic to all of them anyway.</li>
+    <li><span class="keyterm-term">GENEVE</span>: the tunnelling protocol (port 6081) GWLB uses to talk to appliances.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>0. Grounding: why not just give clients a server's address?</h3>
+  <p>If clients connect straight to one instance, that instance is a single point of failure and a ceiling on capacity. With ELB, clients resolve the load balancer's DNS name and get the IP addresses of its nodes; a node picks a healthy target and forwards to it using the target's <em>private</em> IP. The docs note the DNS entry has a time-to-live of 60 seconds so addresses can change quickly as ELB scales the balancer. Targets don't need public IPs, even behind an internet-facing balancer.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 300" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#C9C7C1"/></marker></defs>
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">THE COMMON SKELETON</text>
+      <rect x="15" y="120" width="70" height="40" rx="8" fill="#131316" stroke="#7A7A80"/><text x="50" y="145" fill="#C9C7C1" font-size="11" text-anchor="middle">client</text>
+      <rect x="110" y="60" width="150" height="180" rx="10" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/>
+      <text x="185" y="80" fill="#C8453A" font-size="11" font-weight="700" text-anchor="middle">LOAD BALANCER</text>
+      <rect x="125" y="95" width="120" height="30" rx="6" fill="#131316" stroke="#7A7A80"/><text x="185" y="115" fill="#F2EFE9" font-size="10.5" text-anchor="middle">listener :443</text>
+      <rect x="125" y="140" width="120" height="30" rx="6" fill="#131316" stroke="#7A7A80"/><text x="185" y="158" fill="#C9C7C1" font-size="10" text-anchor="middle">rule: /api/*</text>
+      <rect x="125" y="185" width="120" height="30" rx="6" fill="#131316" stroke="#7A7A80"/><text x="185" y="203" fill="#C9C7C1" font-size="10" text-anchor="middle">default rule</text>
+      <rect x="320" y="60" width="200" height="75" rx="10" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="420" y="78" fill="#6FCF97" font-size="10.5" font-weight="700" text-anchor="middle">TARGET GROUP "api"</text>
+      <circle cx="360" cy="108" r="14" fill="#131316" stroke="#6FCF97"/><circle cx="420" cy="108" r="14" fill="#131316" stroke="#6FCF97"/><circle cx="480" cy="108" r="14" fill="#131316" stroke="#C8453A" stroke-dasharray="3 2"/>
+      <text x="480" y="130" fill="#C8453A" font-size="9" text-anchor="middle">unhealthy</text>
+      <rect x="320" y="165" width="200" height="75" rx="10" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="420" y="183" fill="#6FCF97" font-size="10.5" font-weight="700" text-anchor="middle">TARGET GROUP "web"</text>
+      <circle cx="380" cy="213" r="14" fill="#131316" stroke="#6FCF97"/><circle cx="440" cy="213" r="14" fill="#131316" stroke="#6FCF97"/>
+      <path d="M85 140 L110 140" stroke="#C9C7C1" marker-end="url(#ar)"/>
+      <path d="M245 155 L320 100" stroke="#C9C7C1" marker-end="url(#ar)"/>
+      <path d="M245 200 L320 205" stroke="#C9C7C1" marker-end="url(#ar)"/>
+      <text x="310" y="275" fill="#7A7A80" font-size="10" text-anchor="middle">health checks run per target group; the unhealthy target gets no requests</text>
+    </svg>
+    <figcaption>Original schematic: listener, rules, target groups and health state (ALB-style; NLB has no rule list beyond the default action).</figcaption>
+  </figure>
+
+  <h3>1. Three types, three layers</h3>
+  <div class="card">
+  <ul>
+    <li><strong>Application Load Balancer (ALB)</strong>: works at the application layer (OSI layer 7). It evaluates listener rules in priority order and can route by the content of the request: path conditions, host conditions, HTTP headers and methods, query parameters, source IP. It can also redirect, return a custom HTTP response, authenticate users, and register Lambda functions as targets. Target groups speak HTTP or HTTPS (HTTP/1.1 by default, HTTP/2 or gRPC optionally).</li>
+    <li><strong>Network Load Balancer (NLB)</strong>: works at layer 4. The docs say it can handle millions of requests per second. Target group protocols include TCP, UDP, TCP_UDP, TLS, QUIC and TCP_QUIC. It gets a static IP per enabled AZ and you can optionally attach one Elastic IP per subnet on an internet-facing one. It supports registering targets by IP, including outside the VPC.</li>
+    <li><strong>Gateway Load Balancer (GWLB)</strong>: works at layer 3. It exists to deploy, scale and manage virtual appliances like firewalls, intrusion detection/prevention and deep packet inspection systems. It acts as a transparent gateway (one entry and exit point), listens for all IP packets on all ports, and exchanges traffic with appliances via GENEVE on port 6081.</li>
+    <li><strong>Classic Load Balancer</strong>: previous generation; the docs recommend migrating. Not covered further.</li>
+  </ul>
+  </div>
+  <p><strong>Which do I pick? (my reading of the docs, not an official decision tree.)</strong> Need to route by URL path or host header, or use Lambda targets: ALB. Need static IPs, UDP/TCP/TLS/QUIC, or very high connection volume: NLB. Need to push traffic through third-party or in-house inspection appliances: GWLB. <strong>Simplification flag:</strong> this is a rule of thumb; the full feature comparison lives on the ELB product comparison page, which I did not fetch. One docs-stated twist: an NLB target group can even register an Application Load Balancer as a target type.</p>
+
+  <h3>2. Listeners, rules and target groups</h3>
+  <p>A <strong>listener</strong> waits for connections on a protocol and port. On an ALB, each listener has a mandatory default rule and optional extra rules; each rule has a priority, conditions and actions, and when its conditions match, the actions run (typically "forward to target group X"). On an NLB, the listener forwards to a target group.</p>
+  <p>A <strong>target group</strong> has a <em>target type</em> chosen at creation, which you can't change afterwards:</p>
+  <ul>
+    <li><code>instance</code>: register by instance ID; traffic goes to the instance's primary private IP on its primary network interface.</li>
+    <li><code>ip</code>: register IP addresses. For an ALB these must come from the VPC subnets or the RFC 1918 and RFC 6598 private ranges the docs list; <em>publicly routable IPs are not allowed</em>. This is how you reach peered VPCs, on-premises servers over Direct Connect or VPN, or multiple apps sharing a port on one instance.</li>
+    <li><code>lambda</code>: a single Lambda function (ALB).</li>
+  </ul>
+  <p>A target can be registered in several target groups, and the docs say each target group can be used with only one load balancer. Registering a new target: traffic starts once registration completes and the first health check passes. Deregistering: the balancer stops routing new requests immediately and the target goes into <code>draining</code> while in-flight requests finish; the ALB attribute <code>deregistration_delay.timeout_seconds</code> defaults to 300 (range 0 to 3600).</p>
+  <p>Routing algorithm per ALB target group: <code>round_robin</code> (default), <code>least_outstanding_requests</code>, or <code>weighted_random</code>. NLB picks a target by a <em>flow hash</em> (protocol, source and destination IP and port, and for TCP the sequence number), so a single TCP connection stays on one target for its life. GWLB uses a 5-tuple flow hash by default so a flow always hits the same appliance.</p>
+
+  <h3>3. Health checks: how a balancer notices a dead server</h3>
+  <p>The ALB docs give these settings (API names) and defaults for instance/ip target groups:</p>
+  <ul>
+    <li><code>HealthCheckProtocol</code>: HTTP (default) or HTTPS, using GET. <code>HealthCheckPath</code> default <code>/</code>. <code>HealthCheckPort</code> default is the port the target takes traffic on.</li>
+    <li><code>HealthCheckIntervalSeconds</code>: default 30 (range 5 to 300).</li>
+    <li><code>HealthCheckTimeoutSeconds</code>: default 5 (range 2 to 120).</li>
+    <li><code>HealthyThresholdCount</code>: default 5 (range 2 to 10). <code>UnhealthyThresholdCount</code>: default 2 (range 2 to 10).</li>
+    <li><code>Matcher</code> (success codes): default 200; HTTP values can be 200 to 499, as a list or range.</li>
+  </ul>
+  <p><strong>Worked timing (my arithmetic on the defaults).</strong> With the default 30-second interval and an unhealthy threshold of 2, a target that stops responding needs two consecutive failures, so roughly 60 seconds of failed checks before it's taken out of service. To come back, five consecutive successes at 30 seconds is roughly 150 seconds. The docs call the interval "approximate", so treat these as ballpark. A newly registered target is the exception: it needs to pass just one initial health check.</p>
+  <p><strong>Health states:</strong> <code>initial</code>, <code>healthy</code>, <code>unhealthy</code>, <code>unused</code> (not registered, group not used in a listener rule, AZ not enabled, or instance stopped/terminated), <code>draining</code>, and <code>unavailable</code> (health checks disabled). Reason codes starting with <code>Elb.</code> are balancer-side, <code>Target.</code> are target-side; for example <code>Target.ResponseCodeMismatch</code> and <code>Target.Timeout</code>.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 210" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="ar2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#C9C7C1"/></marker></defs>
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">TARGET HEALTH STATES (simplified)</text>
+      <rect x="20" y="70" width="110" height="44" rx="8" fill="#131316" stroke="#7A7A80"/><text x="75" y="97" fill="#C9C7C1" font-size="11" text-anchor="middle">initial</text>
+      <rect x="205" y="70" width="110" height="44" rx="8" fill="#131316" stroke="#6FCF97"/><text x="260" y="97" fill="#6FCF97" font-size="11" text-anchor="middle">healthy</text>
+      <rect x="390" y="70" width="110" height="44" rx="8" fill="#131316" stroke="#C8453A"/><text x="445" y="97" fill="#C8453A" font-size="11" text-anchor="middle">unhealthy</text>
+      <path d="M130 92 L205 92" stroke="#C9C7C1" marker-end="url(#ar2)"/><text x="167" y="84" fill="#7A7A80" font-size="9" text-anchor="middle">passes 1 check</text>
+      <path d="M315 82 L390 82" stroke="#C9C7C1" marker-end="url(#ar2)"/><text x="352" y="74" fill="#7A7A80" font-size="9" text-anchor="middle">2 fails*</text>
+      <path d="M390 104 L315 104" stroke="#C9C7C1" marker-end="url(#ar2)"/><text x="352" y="120" fill="#7A7A80" font-size="9" text-anchor="middle">5 passes*</text>
+      <rect x="205" y="150" width="110" height="36" rx="8" fill="#131316" stroke="#7A7A80" stroke-dasharray="4 3"/><text x="260" y="173" fill="#C9C7C1" font-size="10.5" text-anchor="middle">draining</text>
+      <path d="M260 114 L260 150" stroke="#C9C7C1" marker-end="url(#ar2)"/><text x="330" y="136" fill="#7A7A80" font-size="9">deregister</text>
+      <text x="560" y="190" fill="#7A7A80" font-size="9" text-anchor="end">* default thresholds</text>
+    </svg>
+    <figcaption>Original sketch of the main state transitions. The docs list more states (unused, unavailable).</figcaption>
+  </figure>
+
+  <p><strong>Fail open.</strong> If a target group contains only unhealthy targets, the ALB routes to all of them anyway. The reasoning I took from the docs: if everything looks dead, sending to something beats sending to nothing. The docs also let you set <em>target group health thresholds</em> (minimum healthy count or percent) that trigger <em>DNS failover</em> (the zone's IPs are removed from DNS) and <em>routing failover</em> (send to all targets, healthy or not, in that zone). Docs example: two AZs of 10 targets, 6 fail in AZ B, threshold 50%: with cross-zone off, AZ B is at 40% and fails over; with cross-zone on, the pooled 14 of 20 is 70% and nothing fails over.</p>
+
+  <h3>4. Availability Zones, nodes and cross-zone balancing</h3>
+  <p>Enabling an AZ makes ELB create a node there. Registered targets in an AZ you haven't enabled get no traffic. An ALB requires at least two AZs. By default (when cross-zone is off) each node only sends to targets in its own AZ, which can produce uneven load. The docs' example: 2 targets in AZ A, 8 in AZ B, and DNS splits clients 50/50 between nodes. Cross-zone <strong>off</strong>: each A target gets 25%, each B target 6.25%. Cross-zone <strong>on</strong>: every one of the 10 gets 10%.</p>
+  <p><strong>Defaults differ by type</strong> (docs): ALB has it always on at the load balancer level, though it can be disabled per target group; NLB and GWLB have it off by default and you can toggle it.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">CROSS-ZONE: SAME TRAFFIC, DIFFERENT SPLIT</text>
+      <text x="155" y="48" fill="#C8453A" font-size="11" text-anchor="middle" font-weight="700">OFF</text>
+      <text x="465" y="48" fill="#6FCF97" font-size="11" text-anchor="middle" font-weight="700">ON</text>
+      <g font-size="10.5" fill="#C9C7C1">
+        <rect x="30" y="60" width="115" height="50" rx="6" fill="#131316" stroke="#7A7A80"/><text x="87" y="80" text-anchor="middle">node A: 50%</text><text x="87" y="98" text-anchor="middle" fill="#C8453A">2 targets: 25% each</text>
+        <rect x="165" y="60" width="115" height="50" rx="6" fill="#131316" stroke="#7A7A80"/><text x="222" y="80" text-anchor="middle">node B: 50%</text><text x="222" y="98" text-anchor="middle" fill="#C8453A">8 targets: 6.25% each</text>
+        <rect x="340" y="60" width="115" height="50" rx="6" fill="#131316" stroke="#7A7A80"/><text x="397" y="80" text-anchor="middle">node A: 50%</text><text x="397" y="98" text-anchor="middle" fill="#6FCF97">spread over all 10</text>
+        <rect x="475" y="60" width="115" height="50" rx="6" fill="#131316" stroke="#7A7A80"/><text x="532" y="80" text-anchor="middle">node B: 50%</text><text x="532" y="98" text-anchor="middle" fill="#6FCF97">spread over all 10</text>
+      </g>
+      <text x="155" y="150" fill="#C9C7C1" font-size="10.5" text-anchor="middle">uneven: A's servers do 4x B's share each</text>
+      <text x="465" y="150" fill="#C9C7C1" font-size="10.5" text-anchor="middle">even: 10% per target</text>
+      <text x="310" y="200" fill="#7A7A80" font-size="10" text-anchor="middle">numbers from the docs' two-AZ round-robin example (2 targets in AZ A, 8 in AZ B)</text>
+    </svg>
+    <figcaption>Original rendering of the docs' cross-zone example.</figcaption>
+  </figure>
+
+  <h3>5. Internet-facing vs. internal, and how it ties to Auto Scaling</h3>
+  <p>An internet-facing balancer's nodes have public IPs; an internal one has only private IPs and serves clients that can reach the VPC. Both talk to targets over private IPs. A classic two-tier pattern from the docs: internet-facing balancer in front of web servers, internal balancer in front of app servers.</p>
+  <p>With instance targets you can attach a target group to an Auto Scaling group; the group registers launched instances and deregisters terminated ones for you. That is the link to the next concept (Auto Scaling in depth).</p>
+  <p><strong>Gateway Load Balancer plumbing.</strong> Consumers reach GWLB through a <em>Gateway Load Balancer endpoint</em> (a kind of VPC endpoint). You put the endpoint and the application servers in different subnets, so the endpoint can be the next hop in the application subnet's route table. Traffic goes consumer VPC, endpoint, GWLB in the provider VPC, appliance, and back. The docs stress you are responsible for choosing and trusting the appliance software; AWS doesn't guarantee its security or reliability.</p>
+
+  <h2>Why it matters</h2>
+  <p>Load balancers are how "one server" turns into "a service". Health checks and AZ choices decide whether a failure is invisible or an outage, and the cross-zone default is a classic source of uneven load. Picking the wrong type is expensive to undo, so knowing the layer distinction up front helps.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>All three current types share listener, target group and health check concepts; they differ by layer: ALB (7, request-aware), NLB (4, connection-level), GWLB (3, appliances via GENEVE on 6081).</li>
+      <li>Health is per target group. Defaults for an ALB: 30 s interval, 5 s timeout, 5 passes to heal, 2 fails to eject.</li>
+      <li>If every target looks unhealthy, an ALB fails open and sends to all of them.</li>
+      <li>Cross-zone balancing is on for ALB by default but off by default for NLB and GWLB, which changes how evenly targets are loaded.</li>
+      <li>Target type (instance, ip, lambda) is fixed at target group creation; ip targets must be private addresses.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <p style="font-size:14px;color:var(--muted);">Projects 1 to 3 run locally with no AWS account. Projects 4 and 5 touch AWS and may incur charges (load balancers are billed while they exist); delete everything afterwards. I did not run any AWS commands for this digest. I checked the arithmetic in 1 and 2 by hand against the docs' examples.</p>
+    <ol>
+      <li><strong>Round-robin vs. cross-zone simulator.</strong> Model 2 AZs, with node A getting 50% of requests and node B 50%, and target counts you choose. Compute per-target share with cross-zone on and off. <em>Done when:</em> 2 and 8 targets reproduce 25% / 6.25% (off) and 10% each (on), and you can explain why.</li>
+      <li><strong>Health-check state machine.</strong> Implement a target that flips between up and down on a schedule and a checker with interval, unhealthy threshold and healthy threshold parameters. <em>Done when:</em> with 30 s, 2 and 5 your log shows the target ejected after about 60 s of failures and restored after about 150 s of successes.</li>
+      <li><strong>Mini load balancer.</strong> In any language, start three tiny HTTP servers and a proxy that round-robins across the healthy ones, polling a <code>/health</code> path. Kill one server. <em>Done when:</em> requests keep succeeding and the dead server stops receiving traffic. Then kill all three and decide what your proxy should do; compare with ALB's fail-open behaviour.</li>
+      <li><strong>Path-based routing on ALB (small cost).</strong> Create an ALB with two target groups and a rule that forwards <code>/api/*</code> to one and everything else to the default. <em>Done when:</em> two different test pages come back from the same DNS name by path, and you can point at the rule priority and default rule in the console. Delete the load balancer after.</li>
+      <li><strong>Read a target's health.</strong> With any target group, run <code>aws elbv2 describe-target-health --target-group-arn &lt;arn&gt;</code> (I'm writing this from memory of the CLI; check it against the CLI reference). <em>Done when:</em> you can explain each state and reason code it returns using the docs' tables.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Next questions: listener rule condition types and actions in detail, TLS termination with ACM certificates, sticky sessions, connection draining behaviour on NLB, client IP preservation, Gateway Load Balancer endpoints and PrivateLink, Application Recovery Controller zonal shift, and Auto Scaling health checks (next concept).</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the official docs. Defaults, ranges and supported protocols change; verify against the live pages. Source accessed on 2026-10-25.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/elasticloadbalancing/latest/userguide/what-is-load-balancing.html" target="_blank" rel="noopener">What is Elastic Load Balancing?</a></li>
+    <li><a href="https://docs.aws.amazon.com/elasticloadbalancing/latest/userguide/how-elastic-load-balancing-works.html" target="_blank" rel="noopener">How Elastic Load Balancing works</a> (nodes, cross-zone, routing, scheme)</li>
+    <li><a href="https://docs.aws.amazon.com/elasticloadbalancing/latest/application/introduction.html" target="_blank" rel="noopener">What is an Application Load Balancer?</a>, <a href="https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-target-groups.html" target="_blank" rel="noopener">ALB target groups</a> and <a href="https://docs.aws.amazon.com/elasticloadbalancing/latest/application/target-group-health-checks.html" target="_blank" rel="noopener">ALB health checks</a></li>
+    <li><a href="https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html" target="_blank" rel="noopener">What is a Network Load Balancer?</a></li>
+    <li><a href="https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/introduction.html" target="_blank" rel="noopener">What is a Gateway Load Balancer?</a></li>
+  </ul>
+  <p class="src-note">Flagged: (1) The "which do I pick" guidance is my synthesis, not an official decision tree; the product comparison page was not fetched. (2) Health-check defaults quoted are ALB defaults; NLB and GWLB health checks have their own settings pages I did not fetch. (3) The <code>describe-target-health</code> command in project 5 was not checked against the CLI reference. (4) The ~60 s and ~150 s timings are my arithmetic on documented defaults. (5) No prices or limits beyond those shown are quoted.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
