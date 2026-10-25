@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S3 Access Control: Bucket Policies, IAM, ACLs, Block Public Access and Access Points</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+  pre { background: var(--panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 16px; }
+  pre code { background: none; padding: 0; font-size: 12.5px; line-height: 1.55; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS S3 &middot; CONCEPT 5 DIGEST</p>
+  <h1>S3 Access Control: Bucket Policies, IAM, ACLs, Block Public Access and Access Points</h1>
+  <p class="lead">An S3 bucket starts private. Everything after that is you deciding who gets in and how, and S3 gives you several overlapping tools to do it. This digest sorts them: which ones are the modern defaults, which one is a legacy you mostly switch off, and which one is a safety net that overrides the rest.</p>
+
+  <h2>In one line</h2>
+  <p>S3 decides every request by looking at identity-based policies (IAM), resource-based policies (bucket and access point policies, plus legacy ACLs), and guardrails like Block Public Access, with an explicit deny beating any allow and no allow meaning denied.</p>
+
+  <h2>The big idea</h2>
+  <p>The first thing to know is the starting position: by default all S3 resources are private. Only the account that created the resource (the resource owner) and IAM identities in that account with the right permissions can reach it. Every other way in is something someone granted.</p>
+  <p>The second thing is that "granting" can happen in several places, and they're checked together. A policy on the person or role (IAM), a policy on the bucket, a policy on an access point, an old-style ACL, and an account-wide Block Public Access switch can all weigh in on one request. Once you know what each tool is for, the pile stops feeling random.</p>
+  <p>Simplification label: this is the S3-side view. IAM itself (users, roles, policy evaluation across services, service control policies) is a big topic that I only touch where S3 docs do. I also don't cover S3 Access Grants, which the docs list as another option.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Resource owner</span>: the AWS account that creates the resource. For an object, the account that uploaded it (unless ACLs are disabled, see below).</li>
+    <li><span class="keyterm-term">Principal</span>: who a statement is about: a user, role, account or service.</li>
+    <li><span class="keyterm-term">Identity-based policy</span>: a policy attached to an IAM user, group or role saying what that identity may do.</li>
+    <li><span class="keyterm-term">Resource-based policy</span>: a policy attached to the resource, such as a bucket policy or access point policy, saying who may do what to it.</li>
+    <li><span class="keyterm-term">Policy statement</span>: one rule with an <code>Effect</code> (Allow or Deny), <code>Principal</code>, <code>Action</code>, <code>Resource</code> and optional <code>Condition</code>.</li>
+    <li><span class="keyterm-term">Implicit deny</span>: if nothing allows a request, it's denied.</li>
+    <li><span class="keyterm-term">Explicit deny</span>: a Deny statement. Used to guarantee blocking even if another policy allows.</li>
+    <li><span class="keyterm-term">ACL (access control list)</span>: the older per-bucket / per-object permission list, predating policies.</li>
+    <li><span class="keyterm-term">Object Ownership</span>: a bucket setting that controls who owns uploaded objects and whether ACLs are active.</li>
+    <li><span class="keyterm-term">Block Public Access (BPA)</span>: override switches that stop public access from being granted by ACLs or policies.</li>
+    <li><span class="keyterm-term">Access point</span>: a named network endpoint attached to a bucket, with its own policy and network controls.</li>
+    <li><span class="keyterm-term">Cross-account access</span>: one AWS account accessing another account's resources.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>0. Grounding: the pieces and who owns what</h3>
+  <p>When S3 gets a request it evaluates all the relevant policies: the user's policy, the bucket policy, and bucket and object ACLs. If it finds no valid permission, it returns <code>403 Forbidden</code> (Access Denied).</p>
+  <p>Ownership matters because policies are "owned" by accounts. By default, if another account uploads an object into your bucket, <em>that account</em> owns the object. The bucket owner still keeps some powers (the docs say they pay the bills, so they can deny access to or delete any object in the bucket regardless of who owns it). That ownership split is why cross-account S3 used to be messy, and why Object Ownership (section 3) exists.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 300" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="c1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#7A7A80"/></marker></defs>
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">ONE REQUEST, SEVERAL REVIEWERS</text>
+      <rect x="20" y="110" width="110" height="60" rx="8" fill="#0E0E10" stroke="#F2EFE9"/>
+      <text x="75" y="136" fill="#F2EFE9" font-size="11" text-anchor="middle" font-weight="700">Request</text>
+      <text x="75" y="154" fill="#7A7A80" font-size="9" text-anchor="middle">GetObject</text>
+      <rect x="190" y="44" width="230" height="38" rx="6" fill="#131316" stroke="#6FCF97"/>
+      <text x="305" y="68" fill="#6FCF97" font-size="10.5" text-anchor="middle">identity policy (IAM) on the caller</text>
+      <rect x="190" y="94" width="230" height="38" rx="6" fill="#131316" stroke="#6FCF97"/>
+      <text x="305" y="118" fill="#6FCF97" font-size="10.5" text-anchor="middle">bucket policy / access point policy</text>
+      <rect x="190" y="144" width="230" height="38" rx="6" fill="#131316" stroke="#7A7A80"/>
+      <text x="305" y="168" fill="#C9C7C1" font-size="10.5" text-anchor="middle">ACLs (only if enabled)</text>
+      <rect x="190" y="194" width="230" height="38" rx="6" fill="#131316" stroke="#C8453A"/>
+      <text x="305" y="218" fill="#C8453A" font-size="10.5" text-anchor="middle">Block Public Access (can override)</text>
+      <rect x="470" y="110" width="130" height="60" rx="8" fill="#0E0E10" stroke="#F2EFE9"/>
+      <text x="535" y="136" fill="#F2EFE9" font-size="11" text-anchor="middle" font-weight="700">Allow / 403</text>
+      <text x="535" y="154" fill="#7A7A80" font-size="9" text-anchor="middle">any explicit deny wins</text>
+      <line x1="132" y1="140" x2="188" y2="140" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#c1)"/>
+      <line x1="422" y1="140" x2="468" y2="140" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#c1)"/>
+      <text x="310" y="266" fill="#7A7A80" font-size="10" text-anchor="middle">my mental model, not an official flowchart; see the docs' authorization page for the exact order</text>
+    </svg>
+    <figcaption>Fig 1. Think "several tools weigh in", not "pick one".</figcaption>
+  </figure>
+
+  <h3>1. Policies: the main tool</h3>
+  <p>A policy statement has a few parts. From the docs:</p>
+  <ul>
+    <li><strong>Resource:</strong> the ARN of the bucket, object, access point or job. Bucket-level actions use <code>arn:aws:s3:::bucket</code>; object-level ones use <code>arn:aws:s3:::bucket/*</code> (all objects) or <code>.../prefix/*</code> (a prefix).</li>
+    <li><strong>Action:</strong> what's allowed or denied, such as <code>s3:GetObject</code>. Note the docs' own example that <code>s3:ListBucket</code> is the permission behind the <code>ListObjectsV2</code> operation, so names don't always match.</li>
+    <li><strong>Effect:</strong> Allow or Deny. No allow means implicitly denied; an explicit Deny blocks even if another policy allows.</li>
+    <li><strong>Principal:</strong> who the statement is for (in bucket policies).</li>
+    <li><strong>Condition:</strong> when the statement applies, using AWS-wide and S3-specific condition keys.</li>
+  </ul>
+  <p>A tiny example in the shape of the docs' own sample, allowing one user to read a bucket (this is my paraphrase of the structure, with placeholders):</p>
+<pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": {"AWS": "arn:aws:iam::{account-id}:user/{name}"},
+    "Action": ["s3:GetObject", "s3:ListBucket"],
+    "Resource": ["arn:aws:s3:::{bucket}", "arn:aws:s3:::{bucket}/*"]
+  }]
+}</code></pre>
+  <p>Notice both the bucket ARN and the <code>/*</code> object ARN: list actions apply to the bucket, get actions to objects.</p>
+  <p><strong>Which kind of policy when?</strong> Per the docs: use a <em>bucket policy</em> for one bucket or a few, or when buckets share similar permissions (you manage one policy per bucket); and you can't grant to another AWS account with an identity-based policy alone, so cross-account needs a bucket policy (or another recommended tool like access points). Both bucket policies and identity-based policies have a 20 KB size limit, which complex setups can hit.</p>
+  <p><strong>Two-sided checks.</strong> From the authorization docs: an IAM principal needs permission from the account it belongs to <em>and</em> from the account that owns the resource (for cross-account work). For objects the bucket owner doesn't own, S3 also checks the bucket policy for an explicit deny, because the bucket owner can deny access to any object in the bucket.</p>
+
+  <h3>2. ACLs: the legacy tool (and why they're off)</h3>
+  <p>ACLs are the oldest access mechanism: a list of grants on a bucket or object. The docs say the majority of modern use cases don't need them and recommend keeping them disabled except where you must control access per object individually. A couple of reasons it matters: S3 treats an ACL as public if it grants anything to the predefined <code>AllUsers</code> or <code>AuthenticatedUsers</code> groups.</p>
+
+  <h3>3. Object Ownership: the ACL switch</h3>
+  <p>This is a bucket-level setting with three values:</p>
+  <ul>
+    <li><strong>Bucket owner enforced (the default for new buckets):</strong> ACLs are disabled, the bucket owner owns every object, and access is controlled by policies only. Requests that set or update ACLs fail, but requests to read ACLs work.</li>
+    <li><strong>Bucket owner preferred:</strong> ACLs on. New objects written with the <code>bucket-owner-full-control</code> canned ACL are owned by the bucket owner.</li>
+    <li><strong>Object writer:</strong> ACLs on. The uploading account owns the object and can grant access via ACLs.</li>
+  </ul>
+  <p>With ACLs disabled, uploads must either specify no ACL or the bucket-owner-full-control ACL; others fail with a 400 and error code <code>AccessControlListNotSupported</code>. You can disable ACLs on existing buckets too (review your ACL-based permissions and policies first), and you can switch back later: previously existing ACLs are restored, though objects written in the meantime remain owned by the bucket owner.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">OBJECT OWNERSHIP: WHO OWNS A CROSS-ACCOUNT UPLOAD?</text>
+      <rect x="20" y="44" width="180" height="150" rx="10" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="110" y="68" fill="#6FCF97" font-size="11" font-weight="700" text-anchor="middle">Bucket owner enforced</text>
+      <text x="110" y="94" fill="#C9C7C1" font-size="9.5" text-anchor="middle">ACLs: off</text>
+      <text x="110" y="114" fill="#C9C7C1" font-size="9.5" text-anchor="middle">owner: bucket owner</text>
+      <text x="110" y="134" fill="#C9C7C1" font-size="9.5" text-anchor="middle">control: policies</text>
+      <text x="110" y="166" fill="#7A7A80" font-size="9" text-anchor="middle">default for new buckets</text>
+      <rect x="220" y="44" width="180" height="150" rx="10" fill="#0E0E10" stroke="#7A7A80" stroke-width="1.3"/>
+      <text x="310" y="68" fill="#F2EFE9" font-size="11" font-weight="700" text-anchor="middle">Bucket owner preferred</text>
+      <text x="310" y="94" fill="#C9C7C1" font-size="9.5" text-anchor="middle">ACLs: on</text>
+      <text x="310" y="114" fill="#C9C7C1" font-size="9.5" text-anchor="middle">owner: bucket owner if</text>
+      <text x="310" y="130" fill="#C9C7C1" font-size="9.5" text-anchor="middle">full-control ACL sent</text>
+      <text x="310" y="166" fill="#7A7A80" font-size="9" text-anchor="middle">otherwise the writer</text>
+      <rect x="420" y="44" width="180" height="150" rx="10" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/>
+      <text x="510" y="68" fill="#C8453A" font-size="11" font-weight="700" text-anchor="middle">Object writer</text>
+      <text x="510" y="94" fill="#C9C7C1" font-size="9.5" text-anchor="middle">ACLs: on</text>
+      <text x="510" y="114" fill="#C9C7C1" font-size="9.5" text-anchor="middle">owner: uploading account</text>
+      <text x="510" y="134" fill="#C9C7C1" font-size="9.5" text-anchor="middle">control: ACLs by writer</text>
+      <text x="310" y="216" fill="#7A7A80" font-size="10" text-anchor="middle">fewer owners, fewer surprises</text>
+    </svg>
+    <figcaption>Fig 2. The three Object Ownership settings side by side.</figcaption>
+  </figure>
+
+  <h3>4. Block Public Access: the safety net</h3>
+  <p>Block Public Access (BPA) settings override policies and ACLs that would otherwise make things public. By default, new buckets, access points and objects don't allow public access, but people can edit policies or ACLs to allow it. BPA exists to stop that. You can set it per access point, per bucket, per account, and at the organization level through AWS Organizations; when levels differ, S3 applies the most restrictive combination. There are four independent settings:</p>
+  <ul>
+    <li><code>BlockPublicAcls</code>: calls that try to set a public ACL fail (<code>PutBucketAcl</code>, <code>PutObjectAcl</code>, and <code>PutObject</code> with a public ACL). Existing ACLs aren't changed.</li>
+    <li><code>IgnorePublicAcls</code>: S3 ignores all public ACLs on the bucket and its objects, while still accepting uploads that include them.</li>
+    <li><code>BlockPublicPolicy</code>: S3 rejects <code>PutBucketPolicy</code> calls whose policy would allow public access (and same-account access point policies). The docs recommend applying it at the account level, since a user who can edit the bucket policy could otherwise turn the bucket setting off.</li>
+    <li><code>RestrictPublicBuckets</code>: a bucket or access point with a public policy is limited to AWS service principals and authorized users in the owner's account, blocking cross-account access.</li>
+  </ul>
+  <p>The docs recommend turning all four on for your account unless you need public access (for example, a static website without CloudFront, which requires turning off the relevant BPA settings). Two things to remember. BPA doesn't alter existing policies or ACLs, so removing a BPA setting makes a bucket with a public policy or ACL publicly reachable again. And BPA covers resource policies and ACLs on S3 resources, so the docs also tell you to check identity-based policies and other resource policies (like KMS key policies) yourself.</p>
+  <p><strong>What counts as "public"?</strong> For policies, S3 starts by assuming public, then calls it non-public only if it grants access to fixed values (no wildcards) of things like a specific principal, a set of CIDR blocks via <code>aws:SourceIp</code>, <code>aws:SourceVpc</code>, <code>aws:SourceVpce</code>, <code>aws:SourceArn</code>, or <code>aws:SourceAccount</code>. A <code>"Principal": "*"</code> statement with no limiting condition is public. One statement can make the whole policy public, which then makes <code>RestrictPublicBuckets</code> cut off even the other statements' cross-account grants.</p>
+
+  <h3>5. Access points: many doors, one bucket</h3>
+  <p>An access point is a named network endpoint attached to a bucket. Each one has its own policy and network controls, which S3 enforces for requests made through it. Use them when many teams or apps share a dataset and one huge bucket policy is hard to manage.</p>
+  <ul>
+    <li><strong>Both must allow.</strong> If an access point is attached to a bucket, the access point policy works with the bucket policy, and the docs say both must permit the request. The recommended pattern is delegating: a bucket policy that allows access when <code>s3:DataAccessPointAccount</code> matches your account, so the access point policies do the real work.</li>
+    <li><strong>VPC-only.</strong> You can set the network origin to a specific VPC so the access point only takes requests from that private network. The VPC config can't be changed after creation.</li>
+    <li><strong>Own BPA.</strong> Each access point has its own Block Public Access settings (all on by default for new ones), fixed at creation.</li>
+    <li><strong>Doesn't change the bucket.</strong> Restrictions in an access point policy apply only to requests through that access point; direct bucket requests work as before.</li>
+    <li><strong>Limits from the docs:</strong> each access point attaches to exactly one bucket; by default up to 10,000 per account per Region (can request an increase); names are 3 to 50 characters, DNS-compliant, unique within account and Region; policies limited to 20 KB; HTTPS only; no anonymous access; objects only (you can't delete buckets or set up replication through one).</li>
+    <li><strong>Cross-account:</strong> you can create an access point on another account's bucket, but it grants nothing until the bucket owner authorizes it in their bucket policy.</li>
+  </ul>
+  <p>Create one from the CLI (syntax from the docs):</p>
+<pre><code>aws s3control create-access-point --name {name} \
+  --account-id {account-id} --bucket {bucket}</code></pre>
+
+  <figure>
+    <svg viewBox="0 0 620 270" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="c2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#7A7A80"/></marker></defs>
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">ACCESS POINTS: ONE BUCKET, DIFFERENT DOORS</text>
+      <rect x="20" y="50" width="120" height="44" rx="6" fill="#0E0E10" stroke="#F2EFE9"/><text x="80" y="76" fill="#F2EFE9" font-size="10.5" text-anchor="middle">analytics team</text>
+      <rect x="20" y="110" width="120" height="44" rx="6" fill="#0E0E10" stroke="#F2EFE9"/><text x="80" y="136" fill="#F2EFE9" font-size="10.5" text-anchor="middle">partner app</text>
+      <rect x="20" y="170" width="120" height="44" rx="6" fill="#0E0E10" stroke="#F2EFE9"/><text x="80" y="196" fill="#F2EFE9" font-size="10.5" text-anchor="middle">batch job</text>
+      <rect x="220" y="50" width="130" height="44" rx="6" fill="#131316" stroke="#6FCF97"/><text x="285" y="68" fill="#6FCF97" font-size="10" text-anchor="middle">AP: analytics</text><text x="285" y="83" fill="#7A7A80" font-size="8.5" text-anchor="middle">read, prefix a/</text>
+      <rect x="220" y="110" width="130" height="44" rx="6" fill="#131316" stroke="#6FCF97"/><text x="285" y="128" fill="#6FCF97" font-size="10" text-anchor="middle">AP: partner</text><text x="285" y="143" fill="#7A7A80" font-size="8.5" text-anchor="middle">read, prefix p/</text>
+      <rect x="220" y="170" width="130" height="44" rx="6" fill="#131316" stroke="#6FCF97"/><text x="285" y="188" fill="#6FCF97" font-size="10" text-anchor="middle">AP: batch (VPC)</text><text x="285" y="203" fill="#7A7A80" font-size="8.5" text-anchor="middle">write, VPC-only</text>
+      <rect x="440" y="60" width="160" height="150" rx="10" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/>
+      <text x="520" y="100" fill="#C8453A" font-size="12" text-anchor="middle" font-weight="700">the bucket</text>
+      <text x="520" y="124" fill="#7A7A80" font-size="9" text-anchor="middle">policy delegates to</text>
+      <text x="520" y="138" fill="#7A7A80" font-size="9" text-anchor="middle">access points</text>
+      <line x1="142" y1="72" x2="218" y2="72" stroke="#7A7A80" marker-end="url(#c2)"/>
+      <line x1="142" y1="132" x2="218" y2="132" stroke="#7A7A80" marker-end="url(#c2)"/>
+      <line x1="142" y1="192" x2="218" y2="192" stroke="#7A7A80" marker-end="url(#c2)"/>
+      <line x1="352" y1="72" x2="438" y2="100" stroke="#7A7A80" marker-end="url(#c2)"/>
+      <line x1="352" y1="132" x2="438" y2="132" stroke="#7A7A80" marker-end="url(#c2)"/>
+      <line x1="352" y1="192" x2="438" y2="164" stroke="#7A7A80" marker-end="url(#c2)"/>
+      <text x="310" y="248" fill="#7A7A80" font-size="10" text-anchor="middle">my made-up scenario; each door has its own small policy</text>
+    </svg>
+    <figcaption>Fig 3. Several small policies replace one giant bucket policy.</figcaption>
+  </figure>
+
+  <h3>6. Putting it together: a sensible default stack</h3>
+  <p>Reading across the docs, the modern path they point to is: keep Block Public Access on, keep ACLs disabled (Bucket owner enforced), grant access with IAM policies for your own principals and bucket policies (or access points) for sharing, and use explicit denies for must-never-happen rules. That is a summary of the docs' recommendations, not the only valid design; some workloads (for example static websites, or per-object ACL needs) have good reasons to deviate.</p>
+
+  <h2>Why it matters</h2>
+  <p>Misconfigured S3 access is one of the most common ways data ends up exposed, and nearly always because one of these layers was loosened without the person realizing which others were still in play. Knowing the layers also makes the next concepts click: presigned URLs, CORS and website hosting all interact with Block Public Access and policies, and replication and event notifications need cross-account permissions.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>S3 resources are private by default; access is whatever you grant, and no allow means denied while an explicit deny beats allows.</li>
+      <li>Policies (IAM, bucket, access point) are the main tool; ACLs are legacy and disabled by default on new buckets via Object Ownership "bucket owner enforced".</li>
+      <li>Block Public Access has four settings and can override public policies and ACLs at access point, bucket, account and organization levels; the most restrictive combination wins.</li>
+      <li>Access points are named doors to one bucket with their own policy and network origin; both the access point and bucket must allow the request.</li>
+      <li>Removing a Block Public Access setting doesn't rewrite policies, so an old public policy can become live again.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <p style="font-size:14px;color:#7A7A80;margin-top:0">Projects 1 and 2 are offline. Projects 3 to 5 use the AWS CLI against a scratch bucket in your own account; I checked the syntax against the docs but haven't run it against a live account. Don't make anything genuinely public, and delete the scratch resources afterwards.</p>
+    <ol>
+      <li><strong>Policy evaluator toy (offline, ~1.5 hours).</strong> Model statements as (effect, principal, action, resource-pattern). Implement "explicit deny wins, otherwise any allow, otherwise denied". <em>Done when</em> a test with an allow plus an overlapping deny returns denied, and an empty policy set returns denied.</li>
+      <li><strong>"Is it public?" classifier (offline, ~1 hour).</strong> Given a list of bucket-policy statements, flag the ones with <code>Principal: "*"</code> and no limiting condition, using the docs' fixed-value rule for the condition keys. <em>Done when</em> it flags the docs' two "public" examples and passes the <code>aws:SourceVpc</code> fixed-value example.</li>
+      <li><strong>Inspect your defaults.</strong> On a fresh bucket run <code>aws s3api get-public-access-block --bucket NAME</code> and <code>aws s3api get-bucket-ownership-controls --bucket NAME</code>. <em>Done when</em> you can say what each returned value means and how it matches the docs' stated defaults for new buckets.</li>
+      <li><strong>Trigger a BPA rejection.</strong> With <code>BlockPublicPolicy</code> on, try <code>aws s3api put-bucket-policy</code> with a deliberately public statement (<code>Principal: "*"</code>, no conditions) on your scratch bucket. <em>Done when</em> S3 rejects it and you can explain which setting blocked it.</li>
+      <li><strong>Make an access point.</strong> Run <code>aws s3control create-access-point --name NAME --account-id ID --bucket BUCKET</code>, then attach a small read-only policy for one IAM user with <code>aws s3control put-access-point-policy</code>, and add the delegation bucket policy from the docs. <em>Done when</em> that user can read through the access point ARN but a different, unlisted prefix is denied.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Read "How Amazon S3 authorizes a request for a bucket operation" and "...for an object operation" in the docs, and trace one of your own cross-account scenarios through them. Also look at IAM Access Analyzer for S3, which the docs mention for finding public and shared buckets. Next in this track: replication (CRR, SRR, Replication Time Control and batch replication).</p>
+
+  <h2>Sources &amp; verify</h2>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-management.html">Access control in Amazon S3</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-policy-language-overview.html">Policies and permissions in Amazon S3</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/how-s3-evaluates-access-control.html">How Amazon S3 authorizes a request</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/about-object-ownership.html">Controlling ownership of objects and disabling ACLs for your bucket</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html">Blocking public access to your Amazon S3 storage</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-points.html">Managing access to shared datasets with access points</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/creating-access-points.html">Creating an access point</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-points-restrictions-limitations-naming-rules.html">Access points naming rules, restrictions, and limitations</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-points-policies.html">Configuring IAM policies for using access points</a></li>
+  </ul>
+  <p class="src-note">This is a teaching draft, not a substitute for the AWS documentation. Verify anything you rely on against the live docs, especially limits (the 10,000 access point and 20 KB policy figures) which can change. Notes on uncertainty: docs read in October 2026; no prices quoted; commands checked against the docs, not run against a live account; the JSON policy and the diagrams are my own simplified shapes, not copies of docs figures; I did not read the ACL overview, S3 Access Grants, or the per-operation authorization pages in full, and the evaluation flow in Fig 1 is a loose mental model rather than the exact algorithm.</p>
+
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
