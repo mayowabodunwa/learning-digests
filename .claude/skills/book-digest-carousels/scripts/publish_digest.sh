@@ -14,6 +14,16 @@ slug="${1:?usage: publish_digest.sh <slug>}"
 html="docs/digests/${slug}.html"
 entry="docs/_entries/${slug}.json"
 
+# This pushes straight to main, so it must be run from a checkout of main. From any
+# other ref the rebase replays that branch's unrelated commits onto main, which either
+# conflicts (losing the digest) or smuggles unmerged work into main. Fail loudly
+# instead: the backfill workflow guards against this too, this is the backstop.
+branch="$(git rev-parse --abbrev-ref HEAD)"
+if [ "$branch" != "main" ]; then
+  echo "::error::publish_digest.sh must run on main, not '${branch}'. Re-run the workflow with --ref main."
+  exit 1
+fi
+
 [ -f "$html" ]  || { echo "::error::$html does not exist"; exit 1; }
 [ -f "$entry" ] || { echo "::error::$entry does not exist (write the sidecar first)"; exit 1; }
 

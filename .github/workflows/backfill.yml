@@ -46,6 +46,14 @@ jobs:
       matrix: ${{ steps.pick.outputs.matrix }}
       count: ${{ steps.pick.outputs.count }}
     steps:
+      # Producers push finished digests straight to main. Run from any other ref and
+      # the rebase replays that branch's commits onto main: it conflicts and the digest
+      # is lost, or unmerged work rides along into main. Stop before burning any tokens.
+      - name: Refuse to run from anything but main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Backfill must be dispatched with --ref main (got ${{ github.ref }}). Merge the workflow change first."
+          exit 1
       - uses: actions/checkout@v4
       - name: Filter the area table to the requested areas
         id: pick
