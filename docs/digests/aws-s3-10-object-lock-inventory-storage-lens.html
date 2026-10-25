@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S3 Object Lock, Retention @@TITLE@@amp; Legal Hold, Inventory and Storage Lens: Locking Data Down and Seeing What You Have</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+  pre { background: var(--panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 16px; }
+  pre code { background: none; padding: 0; font-size: 12.5px; line-height: 1.55; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS S3 &middot; CONCEPT 10 DIGEST</p>
+  <h1>S3 Object Lock, Retention &amp; Legal Hold, Inventory and Storage Lens: Locking Data Down and Seeing What You Have</h1>
+  <p class="lead">This last S3 concept covers two jobs that sit on top of everything before it. Object Lock makes object versions unchangeable for a time (the WORM model), and Inventory and Storage Lens tell you what's actually in your buckets and whether your settings are what you think they are.</p>
+
+  <h2>In one line</h2>
+  <p>Object Lock prevents object versions from being overwritten or deleted using retention periods (governance or compliance mode) and legal holds, S3 Inventory produces scheduled flat-file lists of your objects and their metadata, and S3 Storage Lens gives account- and organization-wide dashboards, metrics and recommendations about storage usage and configuration.</p>
+
+  <h2>The big idea</h2>
+  <p>Earlier digests gave you ways to <em>protect</em> data (versioning, MFA delete, encryption, access control) and to <em>manage cost</em> (storage classes, lifecycle). Two questions remain. How do you make data genuinely unchangeable for a period, even against someone with admin rights? And at scale, how do you find out what you have and whether the protections are actually switched on?</p>
+  <p>Object Lock answers the first with a <em>write-once-read-many</em> (WORM) model. Inventory and Storage Lens answer the second from two angles: Inventory is a detailed per-object list you can query like data; Storage Lens is an aggregated, dashboard-style view with recommendations.</p>
+  <p>Simplification label: Object Lock is a compliance-oriented feature with some irreversible settings, so please read the caveats before trying it. I describe the S3 behaviour only; whether it satisfies any regulation is a question for your compliance team. The docs say Object Lock has been assessed by Cohasset Associates for SEC 17a-4, CFTC and FINRA environments, and I don't go beyond that. I quote no prices.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">WORM</span>: write once, read many; data can be read repeatedly but not changed or deleted for a period.</li>
+    <li><span class="keyterm-term">Object Lock</span>: the S3 feature that applies WORM protection to object versions.</li>
+    <li><span class="keyterm-term">Retention period</span>: a time during which an object version is locked, ending at a retain-until date.</li>
+    <li><span class="keyterm-term">Fixed retention</span>: you set the retain-until date up front.</li>
+    <li><span class="keyterm-term">Variable retention</span>: you set an event hold and a duration, and S3 fixes the date when you release the hold.</li>
+    <li><span class="keyterm-term">Governance mode</span>: protected against most users, but those with a special permission can override.</li>
+    <li><span class="keyterm-term">Compliance mode</span>: no user, including the root user, can overwrite or delete the version during retention.</li>
+    <li><span class="keyterm-term">Legal hold</span>: protection with no end date, on or off by anyone with the right permission.</li>
+    <li><span class="keyterm-term">S3 Inventory</span>: scheduled reports listing objects and metadata.</li>
+    <li><span class="keyterm-term">Manifest</span>: a file listing the inventory output files.</li>
+    <li><span class="keyterm-term">S3 Storage Lens</span>: analytics with dashboards, metrics and recommendations across buckets, accounts and organizations.</li>
+    <li><span class="keyterm-term">Free vs advanced tier</span>: two Storage Lens metric sets; advanced adds metrics and features for an additional charge.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>0. Grounding: what problem each one solves</h3>
+  <ul>
+    <li><strong>Object Lock:</strong> "this data must not change or disappear for N years" (regulatory records, ransomware or accidental-delete protection).</li>
+    <li><strong>Inventory:</strong> "list everything, with its encryption, storage class, replication status, lock state" (audits, batch jobs, migrations).</li>
+    <li><strong>Storage Lens:</strong> "which buckets lack lifecycle rules, versioning or encryption, and where is my storage growing?" (fleet-level visibility).</li>
+  </ul>
+
+  <h3>1. Object Lock basics</h3>
+  <p>Object Lock works <strong>only in buckets with versioning enabled</strong>, and it locks <em>object versions</em>, not keys. Key facts from the docs:</p>
+  <ul>
+    <li>A version can have a retention period, a legal hold, or both.</li>
+    <li>Locking protects only the version named in the request. It does not stop new versions being written or delete markers being added on top (delete markers themselves aren't WORM-protected).</li>
+    <li>If you upload to a key whose existing version is locked, S3 creates a new version; the locked version stays locked.</li>
+    <li>You must enable Object Lock <em>and</em> versioning on a general purpose bucket before locking anything. After you enable Object Lock you can't disable it or suspend versioning for that bucket. Buckets with Object Lock can't be destinations for server access logs.</li>
+  </ul>
+
+  <h3>2. Retention periods and the two modes</h3>
+  <p>A retention period has a <strong>retain-until date</strong>; after it passes, the version can be overwritten or deleted. You can set it per object version, or set a bucket default (a duration in days or years applied to each new version; an explicit per-object setting overrides the bucket default). You can extend a retention period later (a later date replaces the current one), but you can't shorten it in compliance mode.</p>
+  <p>Variable retention is the newer flavour: instead of a date, you turn an <em>event hold</em> on with a <em>duration</em>. While on, the version is protected and S3 shows a moving computed date. When you release the hold, S3 fixes the date at release time plus duration. If you also gave an explicit date, S3 treats it as a minimum and uses whichever is later. Durations run from 1 to 36,500 days or 1 to 100 years (the docs also say 1 year is counted as 365 days for policy conditions).</p>
+
+  <figure>
+    <svg viewBox="0 0 620 270" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">GOVERNANCE vs COMPLIANCE vs LEGAL HOLD</text>
+      <rect x="20" y="44" width="185" height="180" rx="10" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="112" y="68" fill="#6FCF97" font-size="11" font-weight="700" text-anchor="middle">Governance</text>
+      <text x="112" y="94" fill="#C9C7C1" font-size="9.5" text-anchor="middle">most users: blocked</text>
+      <text x="112" y="112" fill="#C9C7C1" font-size="9.5" text-anchor="middle">with BypassGovernance-</text>
+      <text x="112" y="126" fill="#C9C7C1" font-size="9.5" text-anchor="middle">Retention + header: allowed</text>
+      <text x="112" y="152" fill="#C9C7C1" font-size="9.5" text-anchor="middle">can shorten / remove</text>
+      <text x="112" y="196" fill="#7A7A80" font-size="9" text-anchor="middle">good for testing settings</text>
+      <rect x="217" y="44" width="185" height="180" rx="10" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/>
+      <text x="310" y="68" fill="#C8453A" font-size="11" font-weight="700" text-anchor="middle">Compliance</text>
+      <text x="310" y="94" fill="#C9C7C1" font-size="9.5" text-anchor="middle">no one can delete or</text>
+      <text x="310" y="108" fill="#C9C7C1" font-size="9.5" text-anchor="middle">overwrite, even root</text>
+      <text x="310" y="134" fill="#C9C7C1" font-size="9.5" text-anchor="middle">mode can't change,</text>
+      <text x="310" y="148" fill="#C9C7C1" font-size="9.5" text-anchor="middle">period can't shorten</text>
+      <text x="310" y="196" fill="#7A7A80" font-size="9" text-anchor="middle">only way out early: delete the account</text>
+      <rect x="414" y="44" width="186" height="180" rx="10" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.3"/>
+      <text x="507" y="68" fill="#F2EFE9" font-size="11" font-weight="700" text-anchor="middle">Legal hold</text>
+      <text x="507" y="94" fill="#C9C7C1" font-size="9.5" text-anchor="middle">same protection,</text>
+      <text x="507" y="108" fill="#C9C7C1" font-size="9.5" text-anchor="middle">no end date</text>
+      <text x="507" y="134" fill="#C9C7C1" font-size="9.5" text-anchor="middle">on/off with</text>
+      <text x="507" y="148" fill="#C9C7C1" font-size="9.5" text-anchor="middle">PutObjectLegalHold</text>
+      <text x="507" y="196" fill="#7A7A80" font-size="9" text-anchor="middle">independent of retention</text>
+      <text x="310" y="252" fill="#7A7A80" font-size="10" text-anchor="middle">a version can have a retention period, a legal hold, or both</text>
+    </svg>
+    <figcaption>Fig 1. Three kinds of "can't touch this", with different escape hatches.</figcaption>
+  </figure>
+
+  <ul>
+    <li><strong>Governance mode:</strong> users can't overwrite, delete or alter lock settings unless they have special permissions. To bypass, a caller needs <code>s3:BypassGovernanceRetention</code> and must send <code>x-amz-bypass-governance-retention:true</code>. The docs note the console sends that header by default, so a user with the permission can delete there. Bypass does not affect a legal hold.</li>
+    <li><strong>Compliance mode:</strong> the version can't be overwritten or deleted by any user, including the account's root user, for the retention period. The mode can't be changed and the period can't be shortened. The docs state the only way to delete under compliance mode before the date expires is to delete the associated AWS account. Treat that as a design fact: test with governance mode first, as the docs suggest.</li>
+    <li><strong>Legal hold:</strong> same protection but no expiry, placed or removed by anyone with <code>s3:PutObjectLegalHold</code>. If a retention period ends but a legal hold is still on, the object stays protected, and vice versa.</li>
+  </ul>
+  <p>What happens on delete attempts: a permanent delete (with a version ID) of a locked version returns 403 Access Denied; a simple delete returns 200 and adds a delete marker. Lifecycle rules keep working normally on locked objects but cannot delete a locked version. Lock settings persist across storage class transitions.</p>
+
+  <h3>4. Setting it up (CLI shapes from the docs)</h3>
+<pre><code># create a bucket with Object Lock enabled
+aws s3api create-bucket --bucket {bucket} --object-lock-enabled-for-bucket
+
+# bucket default retention: 50 days, compliance mode
+aws s3api put-object-lock-configuration --bucket {bucket} \
+  --object-lock-configuration='{ "ObjectLockEnabled": "Enabled",
+  "Rule": { "DefaultRetention": { "Mode": "COMPLIANCE", "Days": 50 }}}'
+
+# per-object retention (governance)
+aws s3api put-object-retention --bucket {bucket} --key {key} \
+  --retention='{ "Mode": "GOVERNANCE", "RetainUntilDate": "2030-01-01T00:00:00" }'
+
+# legal hold on / off
+aws s3api put-object-legal-hold --bucket {bucket} --key {key} --legal-hold="Status=ON"</code></pre>
+  <p>Notes: uploads with a retention period need a <code>Content-MD5</code> or <code>x-amz-sdk-checksum-algorithm</code> header (the console adds one automatically); bucket policy condition <code>s3:object-lock-remaining-retention-days</code> can cap allowed retention, up to a 100-year maximum; replication of locked objects needs Object Lock on the destination and extra read permissions on the replication role (<code>s3:GetObjectRetention</code>, <code>s3:GetObjectLegalHold</code>), matching the replication digest; and Object Lock does not protect you from losing the encryption keys, because deleting a KMS key can make locked objects unreadable.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">LOCKED VERSION ON A TIMELINE (compliance, fixed retention)</text>
+      <line x1="30" y1="110" x2="590" y2="110" stroke="#7A7A80" stroke-width="2"/>
+      <rect x="60" y="92" width="330" height="36" rx="4" fill="#131316" stroke="#C8453A"/>
+      <text x="225" y="114" fill="#C8453A" font-size="10.5" text-anchor="middle">retention: no delete, no overwrite, by anyone</text>
+      <circle cx="60" cy="110" r="6" fill="#6FCF97"/><text x="60" y="80" fill="#6FCF97" font-size="10" text-anchor="middle">upload v1</text>
+      <circle cx="390" cy="110" r="6" fill="#F2EFE9"/><text x="390" y="80" fill="#F2EFE9" font-size="10" text-anchor="middle">retain-until</text>
+      <text x="490" y="114" fill="#C9C7C1" font-size="10" text-anchor="middle">deletable (unless legal hold)</text>
+      <text x="225" y="160" fill="#7A7A80" font-size="9.5" text-anchor="middle">meanwhile: new PUTs add v2, v3 (unlocked unless defaults apply)</text>
+      <text x="225" y="178" fill="#7A7A80" font-size="9.5" text-anchor="middle">simple DELETE adds a delete marker; v1 is untouched</text>
+      <text x="310" y="212" fill="#7A7A80" font-size="10" text-anchor="middle">lock attaches to a version, not to the key</text>
+    </svg>
+    <figcaption>Fig 2. A lock protects one version's data; the key can still move on around it.</figcaption>
+  </figure>
+
+  <h3>5. S3 Inventory</h3>
+  <p>Inventory is a scheduled alternative to calling the synchronous List APIs over and over. It writes flat files listing objects and metadata for a bucket (or a prefix) on a <strong>daily or weekly</strong> schedule, in <strong>CSV, ORC or Parquet</strong>, to a destination bucket. The docs say it doesn't use List API calls and doesn't affect your bucket's request rate; weekly reports run every Sunday (UTC), and the first report can take up to 48 hours.</p>
+  <ul>
+    <li><strong>Destination bucket:</strong> must be in the same Region as the source, can be the same bucket or in another account, and needs a bucket policy letting S3 write (the console adds it for you; with the CLI or SDK you add it yourself).</li>
+    <li><strong>Fields:</strong> bucket name and key are always included. Optional fields include size, last modified, ETag, storage class, encryption status, replication status, Bucket Key status, version ID and IsLatest (for all-versions lists), delete marker, multipart flag, Object ACL, checksum algorithm, Intelligent-Tiering tier, Object Lock mode/date/legal hold/event hold, and lifecycle expiration date.</li>
+    <li><strong>Versions:</strong> choose current versions only, or all versions.</li>
+    <li><strong>Encryption of the report:</strong> SSE-S3 or SSE-KMS with a customer managed key (the AWS managed <code>aws/s3</code> key is not supported); S3 needs <code>kms:GenerateDataKey</code> in the key policy.</li>
+    <li><strong>Eventual consistency:</strong> each list is a snapshot, so recent adds or deletes might be missing; the docs advise a <code>HeadObject</code> check before acting on an object. Objects aren't guaranteed to be in any order, and CSV key names are URL-encoded.</li>
+    <li><strong>Uses:</strong> audits (encryption, replication, lock status), feeding S3 Batch Operations (CSV is suggested for that), and SQL queries with Athena and similar tools. The docs recommend a lifecycle policy to delete old inventory lists.</li>
+  </ul>
+  <p>Compared with Storage Lens: Inventory is row-per-object detail you analyse yourself; Storage Lens is rolled-up metrics.</p>
+
+  <h3>6. S3 Storage Lens</h3>
+  <p>Storage Lens is a cloud-storage analytics feature giving organization-wide visibility into usage and activity, with contextual recommendations. Concepts from the docs:</p>
+  <ul>
+    <li><strong>Dashboards:</strong> an interactive dashboard with drill-down by organization, account, Region, storage class, bucket, prefix or Storage Lens group. The preconfigured <strong>default-account-dashboard</strong> covers your whole account, updates daily, and feeds the Account snapshot on the console Buckets page. You can't change its scope or delete it, though you can upgrade or disable it. You can create other dashboards scoped by Region, bucket or account (up to 50 per home Region).</li>
+    <li><strong>Home Region:</strong> chosen at creation, can't be changed, and stores that dashboard's metrics.</li>
+    <li><strong>Free tier:</strong> summary, cost optimization, data protection, access management (Object Ownership), event and performance metrics, collected daily and queryable for 14 days in the console.</li>
+    <li><strong>Advanced tier</strong> (additional charge; I don't quote it): adds advanced cost and data-protection metrics, activity and detailed status-code metrics, prefix aggregation, CloudWatch publishing, contextual recommendations, expanded prefix reports. Data is queryable for 15 months. The docs say all metrics are retained 15 months but free ones are only available to query for 14 days.</li>
+    <li><strong>Exports:</strong> a daily metrics export in CSV or Parquet to a general purpose bucket in the same Region as the dashboard configuration, or to an AWS-managed S3 table bucket.</li>
+    <li><strong>Recommendations:</strong> suggestions, call-outs (outliers via a z-score over a 30-day trend, and significant-change call-outs) and reminders. The docs caution that a call-out isn't necessarily a problem.</li>
+    <li><strong>Examples of questions it answers:</strong> which buckets lack lifecycle rules for incomplete multipart uploads older than 7 days (a link back to the multipart digest), which buckets aren't using versioning or replication, which Object Ownership settings are in use, and how many Object Lock-enabled bytes you have.</li>
+    <li><strong>Scope note:</strong> it generates metrics only for general purpose buckets. For organization-wide dashboards you enable trusted access in AWS Organizations and can designate a delegated administrator.</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 620 240" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">TWO WAYS TO LOOK AT YOUR BUCKETS</text>
+      <rect x="20" y="44" width="280" height="170" rx="10" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="160" y="68" fill="#6FCF97" font-size="11" font-weight="700" text-anchor="middle">S3 Inventory</text>
+      <text x="160" y="94" fill="#C9C7C1" font-size="9.5" text-anchor="middle">one row per object (or version)</text>
+      <text x="160" y="112" fill="#C9C7C1" font-size="9.5" text-anchor="middle">files in a destination bucket</text>
+      <text x="160" y="130" fill="#C9C7C1" font-size="9.5" text-anchor="middle">daily or weekly, CSV/ORC/Parquet</text>
+      <text x="160" y="148" fill="#C9C7C1" font-size="9.5" text-anchor="middle">query with Athena, feed Batch Ops</text>
+      <text x="160" y="190" fill="#7A7A80" font-size="9" text-anchor="middle">"which objects are not encrypted?"</text>
+      <rect x="320" y="44" width="280" height="170" rx="10" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="460" y="68" fill="#C8453A" font-size="11" font-weight="700" text-anchor="middle">S3 Storage Lens</text>
+      <text x="460" y="94" fill="#C9C7C1" font-size="9.5" text-anchor="middle">aggregated metrics + dashboards</text>
+      <text x="460" y="112" fill="#C9C7C1" font-size="9.5" text-anchor="middle">account / organization scope</text>
+      <text x="460" y="130" fill="#C9C7C1" font-size="9.5" text-anchor="middle">free and advanced tiers</text>
+      <text x="460" y="148" fill="#C9C7C1" font-size="9.5" text-anchor="middle">recommendations and call-outs</text>
+      <text x="460" y="190" fill="#7A7A80" font-size="9" text-anchor="middle">"which buckets lack versioning?"</text>
+      <text x="310" y="234" fill="#7A7A80" font-size="10" text-anchor="middle">my side-by-side summary; they complement each other</text>
+    </svg>
+    <figcaption>Fig 3. Detail versus summary.</figcaption>
+  </figure>
+
+  <h2>Why it matters</h2>
+  <p>Object Lock turns "we promise not to delete this" into something S3 enforces, which matters for regulated records and for ransomware or insider-delete scenarios, but its irreversibility makes it the S3 feature where a mistake is hardest to undo, so start in governance mode with a short period. Inventory and Storage Lens close the loop on the whole track: you can verify that encryption, versioning, replication, lifecycle and lock settings are really in place, rather than hoping. That completes the S3 area: from keys and consistency, through cost, protection and sharing, to scale and governance.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Object Lock needs versioning, locks individual versions (not keys), and can't be turned off once enabled on a bucket.</li>
+      <li>Governance mode can be bypassed with a permission and header; compliance mode can't be, even by root; legal holds have no end date and are independent of retention.</li>
+      <li>A simple delete on a locked object adds a delete marker; a version-ID delete of a locked version returns 403.</li>
+      <li>Inventory = scheduled per-object reports (CSV/ORC/Parquet, daily or weekly, snapshot-style and eventually consistent); Storage Lens = aggregated dashboards and recommendations with free and advanced tiers.</li>
+      <li>Start Object Lock experiments in governance mode with short retention; compliance mode is effectively permanent for the period.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <p style="font-size:14px;color:#7A7A80;margin-top:0">Projects 1 and 2 are offline. Projects 3 to 5 use the AWS CLI on a scratch bucket. <strong>Use governance mode only, with a very short retention (for example 1 day), and never compliance mode in a real account you care about.</strong> The Object Lock commands are shaped from the docs; I did not verify the Inventory CLI JSON, so use the console for Inventory or check the CLI reference. Storage Lens advanced tier can cost money; stick to the free tier. I haven't run any of this against a live account.</p>
+    <ol>
+      <li><strong>Lock-state evaluator (offline, ~1 hour).</strong> Model an object version with (mode, retain-until, legal-hold) and a caller (has bypass permission or not, sends header or not). Output whether delete, overwrite and shorten-retention are allowed. <em>Done when</em> it matches Fig 1 and the rule that a legal hold survives a governance bypass.</li>
+      <li><strong>Variable retention date calculator (offline, ~30 min).</strong> Implement the docs' rules: computed date while the hold is on, fixed at release plus duration, and the "later of the minimum and computed date" rule. <em>Done when</em> it reproduces the docs' examples (for instance release on 2027-01-01 with a 1-year duration fixes 2028-01-01).</li>
+      <li><strong>Lock one object.</strong> Create a bucket with <code>--object-lock-enabled-for-bucket</code>, upload a file, set governance retention to a date a day away with <code>put-object-retention</code>, then try to permanently delete that version. <em>Done when</em> you see the 403 and have also tried a simple delete and found the delete marker.</li>
+      <li><strong>Legal hold toggle.</strong> Put a legal hold on, try deleting the version, remove the hold, try again. <em>Done when</em> the second delete succeeds only once no retention remains and the hold is off.</li>
+      <li><strong>Inventory and Storage Lens tour.</strong> In the console, create an inventory configuration (CSV, daily) for the scratch bucket with the encryption status and Object Lock fields, and open the default-account-dashboard. <em>Done when</em> you've written down the free metrics you can see, and which questions you can answer from each (remember the first inventory report can take up to 48 hours).</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Read the docs' "Using Object Lock with S3 Replication" and the Storage Lens metrics glossary, and try an Athena query over an Inventory report. That finishes the S3 area of this track; the EC2, VPC and CloudWatch areas continue separately.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock.html">Locking objects with Object Lock</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock-configure.html">Configuring S3 Object Lock</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock-managing.html">Object Lock considerations</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-inventory.html">Cataloging and analyzing your data with S3 Inventory</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/configure-inventory.html">Configuring Amazon S3 Inventory</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage_lens.html">Monitoring your storage activity and usage with Amazon S3 Storage Lens</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage_lens_basics_metrics_recommendations.html">Understanding Amazon S3 Storage Lens</a></li>
+  </ul>
+  <p class="src-note">This is a teaching draft, not a substitute for the AWS documentation. Verify anything you rely on against the live docs, and consult your compliance team before relying on Object Lock for any regulation. Notes on uncertainty: docs read in October 2026; no prices quoted; Object Lock CLI commands are shaped from the docs' examples, none run against a live account; I did not verify any Inventory CLI syntax; I did not read the Storage Lens metrics glossary, groups, Organizations or S3 Tables pages, the Inventory Athena or notification pages, or the Object Lock troubleshooting pages in full; the Storage Lens retention figures are from the docs' two statements (15 months retained, 14 days or 15 months queryable by tier).</p>
+
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
