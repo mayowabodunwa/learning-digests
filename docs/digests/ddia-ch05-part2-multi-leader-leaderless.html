@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DDIA: Ch.5 Multi-Leader, Leaderless, and Concurrent Writes (Part 2, final)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+  pre { background:#0A0A0B; border:1px solid var(--hairline); border-radius:8px; padding:14px 16px; overflow-x:auto; font-family:"JetBrains Mono",monospace; font-size:11.5px; line-height:1.5; color:var(--body); margin:10px 0 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">SYSTEMS &middot; CH.5 DIGEST (PART 2, FINAL)</p>
+  <h1>Replication: Multi-Leader, Leaderless, and Concurrent Writes</h1>
+  <p class="lead">Part 1 had one node taking every write. This final part asks what happens when more than one node accepts writes, either a handful of leaders or no leader at all. You gain resilience to outages and slow links. You pay with a new class of problem: two people change the same thing at the same time and the system has to decide what the truth is. It covers multi-leader replication, write conflicts, leaderless (Dynamo-style) replication with quorums, and how a database can tell "one write came after the other" from "they were concurrent".</p>
+
+  <h2>In one line</h2>
+  <p>Letting several nodes accept writes buys availability and low latency, and the price is conflicts: you need a defined way to detect concurrent writes and converge every replica on the same final value.</p>
+
+  <h2>The big idea</h2>
+  <p>With a single leader, there's one official order of writes, so "last write wins" is a meaningful sentence. Remove the single leader and there is no official order. Two writes made without knowledge of each other are <strong>concurrent</strong>, and neither is "later" in any meaningful way. Every design in this part is a way of living with that fact: avoid the conflict, resolve it with a rule, merge the values, or keep both and ask someone. A rule that quietly picks a winner and throws the rest away is easy to build, and it is also how data gets lost.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Multi-leader replication</span> (master-master, active/active): more than one node accepts writes, and each forwards its changes to the others. Each leader acts as a follower of the others.</li>
+    <li><span class="keyterm-term">Write conflict</span>: the same record changed on two leaders concurrently.</li>
+    <li><span class="keyterm-term">Convergent</span>: resolution that makes all replicas end at the same final value once all changes have replicated.</li>
+    <li><span class="keyterm-term">Last write wins (LWW)</span>: give each write a timestamp and keep the highest; discard the others.</li>
+    <li><span class="keyterm-term">CRDT</span> (conflict-free replicated datatype): data structures for sets, maps, lists, counters, and so on that merge concurrent edits automatically in sensible ways.</li>
+    <li><span class="keyterm-term">Operational transformation</span>: the conflict-resolution algorithm behind collaborative editors for ordered lists such as text.</li>
+    <li><span class="keyterm-term">Replication topology</span>: the paths along which writes flow between leaders (circular, star, all-to-all).</li>
+    <li><span class="keyterm-term">Leaderless / Dynamo-style replication</span>: any replica accepts writes directly from clients; there's no failover.</li>
+    <li><span class="keyterm-term">Quorum (n, w, r)</span>: n replicas hold a value; a write must be confirmed by w, a read must query r. If w + r &gt; n the read and write sets overlap.</li>
+    <li><span class="keyterm-term">Read repair</span>: a client that notices a stale replica during a read writes the newer value back to it.</li>
+    <li><span class="keyterm-term">Anti-entropy process</span>: a background job that copies missing data between replicas.</li>
+    <li><span class="keyterm-term">Sloppy quorum / hinted handoff</span>: accepting writes on reachable nodes outside a value's usual n "home" nodes, and forwarding them home when the network recovers.</li>
+    <li><span class="keyterm-term">Happens-before / concurrent</span>: A happens before B if B knows about or builds on A; two operations are concurrent if neither knows about the other.</li>
+    <li><span class="keyterm-term">Siblings</span>: concurrent values for one key that the database keeps side by side (Riak's term).</li>
+    <li><span class="keyterm-term">Tombstone</span>: a deletion marker with a version number, so a removal isn't lost in a merge.</li>
+    <li><span class="keyterm-term">Version vector</span>: one version number per replica (and per key), used to tell overwrites from concurrent writes. Close to, but not exactly, a vector clock.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>Grounding first. In single-leader replication, if the leader is unreachable you can't write, and every write travels to wherever the leader sits. Two natural fixes: allow several leaders (multi-leader), or drop the leader idea entirely (leaderless). Both increase availability and cut latency. Both mean that two writes to the same data can happen at the same moment in different places. The word to hold on to is <strong>conflict</strong>.</p>
+
+  <h3>Multi-leader replication: where it makes sense</h3>
+  <p>Within a single datacenter, the source says the benefits rarely outweigh the added complexity. It shows up in three situations.</p>
+  <ul>
+    <li><strong>Multi-datacenter operation.</strong> One leader per datacenter, normal leader-follower replication inside each, and the leaders replicate to each other across datacenters. Compared with single-leader across datacenters: (a) <em>performance</em>: writes are handled locally and replicated asynchronously, hiding the inter-datacenter delay, whereas single-leader sends every write to the leader's datacenter; (b) <em>datacenter outages</em>: each datacenter keeps running independently and replication catches up later, whereas single-leader needs failover; (c) <em>network problems</em>: asynchronous cross-datacenter replication tolerates a flaky link better. The downside: concurrent edits in two datacenters must be reconciled. The source adds that multi-leader is often retrofitted onto databases, with pitfalls around autoincrementing keys, triggers and integrity constraints, and is "often considered dangerous territory that should be avoided if possible". Tools mentioned include Tungsten Replicator for MySQL, BDR for PostgreSQL and GoldenGate for Oracle.</li>
+    <li><strong>Clients with offline operation.</strong> Think of a calendar app on your phone and laptop. Every device has a local database acting as a leader, and sync is asynchronous multi-leader replication whose lag may be hours or days. The source calls this the datacenter case taken to the extreme: each device is a "datacenter" with a very unreliable link. CouchDB is designed for this mode.</li>
+    <li><strong>Collaborative editing.</strong> Each user's edits apply instantly to a local replica and replicate to others. Locking the document first avoids conflicts but equals single-leader with transactions. For faster collaboration, make the unit of change tiny (a keystroke) and drop locking, and you get all the conflict problems of multi-leader.</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">MULTI-LEADER ACROSS TWO DATACENTERS</text>
+      <rect x="20" y="40" width="260" height="170" rx="10" fill="#0E0E10" stroke="#7A7A80" stroke-dasharray="4 3"/><text x="150" y="58" fill="#7A7A80" font-size="10" text-anchor="middle">datacenter A</text>
+      <rect x="360" y="40" width="260" height="170" rx="10" fill="#0E0E10" stroke="#7A7A80" stroke-dasharray="4 3"/><text x="490" y="58" fill="#7A7A80" font-size="10" text-anchor="middle">datacenter B</text>
+      <rect x="95" y="80" width="110" height="36" rx="6" fill="#0E0E10" stroke="#C8453A"/><text x="150" y="103" fill="#C8453A" font-size="10" text-anchor="middle">leader A</text>
+      <rect x="435" y="80" width="110" height="36" rx="6" fill="#0E0E10" stroke="#C8453A"/><text x="490" y="103" fill="#C8453A" font-size="10" text-anchor="middle">leader B</text>
+      <line x1="205" y1="98" x2="435" y2="98" stroke="#6FCF97" stroke-dasharray="5 4"/><polygon points="435,98 427,94 427,102" fill="#6FCF97"/><polygon points="205,98 213,94 213,102" fill="#6FCF97"/>
+      <text x="320" y="90" fill="#6FCF97" font-size="9" text-anchor="middle">async, both ways</text>
+      <text x="320" y="116" fill="#C8453A" font-size="9" text-anchor="middle">conflicts found here</text>
+      <rect x="60" y="150" width="80" height="30" rx="5" fill="#0E0E10" stroke="#C9C7C1"/><text x="100" y="169" fill="#F2EFE9" font-size="9" text-anchor="middle">follower</text>
+      <rect x="160" y="150" width="80" height="30" rx="5" fill="#0E0E10" stroke="#C9C7C1"/><text x="200" y="169" fill="#F2EFE9" font-size="9" text-anchor="middle">follower</text>
+      <rect x="400" y="150" width="80" height="30" rx="5" fill="#0E0E10" stroke="#C9C7C1"/><text x="440" y="169" fill="#F2EFE9" font-size="9" text-anchor="middle">follower</text>
+      <rect x="500" y="150" width="80" height="30" rx="5" fill="#0E0E10" stroke="#C9C7C1"/><text x="540" y="169" fill="#F2EFE9" font-size="9" text-anchor="middle">follower</text>
+      <line x1="130" y1="116" x2="100" y2="150" stroke="#7A7A80"/><line x1="170" y1="116" x2="200" y2="150" stroke="#7A7A80"/><line x1="470" y1="116" x2="440" y2="150" stroke="#7A7A80"/><line x1="510" y1="116" x2="540" y2="150" stroke="#7A7A80"/>
+    </svg>
+    <figcaption>Fig 1. Each datacenter writes locally; leaders swap changes asynchronously. (My own sketch.)</figcaption>
+  </figure>
+
+  <h3>Handling write conflicts</h3>
+  <p>The biggest problem. Picture a shared document title: user 1 renames it from A to B on leader 1 while user 2 renames A to C on leader 2. Both succeed locally. When the changes replicate, each leader sees a conflict. A single-leader database avoids this because the second writer blocks and waits, or is aborted and retries. In multi-leader, both writes succeed first and the conflict surfaces later, possibly too late to ask the user. You could detect conflicts synchronously (wait for every replica before reporting success), but then you lose multi-leader's main advantage and may as well use single-leader.</p>
+  <p><strong>Conflict avoidance.</strong> Simplest: make sure all writes to a given record go through the same leader. For example, route a user's requests to their "home" datacenter. From that user's view it's single-leader. It breaks down when you reroute (a datacenter failed or the user moved).</p>
+  <p><strong>Converging.</strong> In multi-leader there's no defined order, so replicas applying writes in the order they saw them would end up different (C on one, B on the other). Every scheme must be convergent. Options in the source:</p>
+  <ul>
+    <li>Give each write a unique ID (timestamp, random number, UUID, or hash) and keep the highest. With a timestamp this is last write wins, popular but "dangerously prone to data loss".</li>
+    <li>Give each replica an ID and let writes from higher-numbered replicas win. Also loses data.</li>
+    <li>Merge the values somehow (the source's example: sort and concatenate to something like "B/C").</li>
+    <li>Record the conflict in a data structure that keeps all information and let application code (or the user) resolve it later.</li>
+  </ul>
+  <p><strong>Custom resolution logic.</strong> Many tools let you write resolution code that runs <em>on write</em> (a handler called as soon as the conflict is detected in the replication log, in a background process, quick, can't ask a user; Bucardo allows a Perl snippet) or <em>on read</em> (all conflicting versions are stored and returned together on the next read, the application resolves and writes back; CouchDB does this). Resolution usually applies per row or document, not per whole transaction.</p>
+  <p><strong>Automatic resolution</strong> is error-prone when hand-written. The source cites a case where a shopping cart's resolution kept additions but not removals, so deleted items reappeared. Research lines it mentions: CRDTs (implemented in Riak 2.0), mergeable persistent data structures that track history like Git and use a three-way merge, and operational transformation behind Etherpad and Google Docs. The source calls database implementations "still young".</p>
+  <p><strong>What counts as a conflict?</strong> Obvious: two different values in one field. Subtle: a room-booking system where two bookings for the same room and time are made on two different leaders, even though each leader checked availability first.</p>
+
+  <h3>Multi-leader topologies</h3>
+  <p>A topology is the path writes take between nodes. With two leaders there's one option. With more: <strong>all-to-all</strong> (everyone sends to everyone), <strong>circular</strong> (each node passes writes to the next; MySQL by default supports only this, per the source) or <strong>star</strong> (a root forwards to all; generalizes to a tree). In circular and star shapes, writes pass through several nodes, so each node has an ID and each write is tagged with the IDs it passed through; a node that sees its own ID ignores the change, preventing infinite loops. Circular and star have a weakness: one failed node interrupts the flow between others, and reconfiguring is usually manual. All-to-all is more fault tolerant because messages can take different paths. But all-to-all has a hazard: network links differ in speed, so a message can overtake another. An insert might arrive after the update that depends on it, at one replica. That is a causality problem like consistent prefix reads in Part 1, and timestamps don't fix it because clocks can't be trusted to be sufficiently in sync (Chapter 8). Version vectors (below) can. The source says conflict detection is poorly implemented in many multi-leader systems (at the time of writing, PostgreSQL BDR didn't provide causal ordering and Tungsten Replicator for MySQL didn't try to detect conflicts) and advises reading the docs and testing for the guarantees you assume.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 210" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">TOPOLOGIES (4 LEADERS)</text>
+      <g font-size="9" text-anchor="middle" fill="#F2EFE9">
+        <text x="105" y="190" fill="#7A7A80">circular</text><text x="320" y="190" fill="#7A7A80">star</text><text x="535" y="190" fill="#7A7A80">all-to-all</text>
+      </g>
+      <g stroke="#7A7A80" fill="none">
+        <polyline points="60,60 150,60 150,150 60,150 60,60"/>
+        <line x1="320" y1="105" x2="260" y2="55"/><line x1="320" y1="105" x2="380" y2="55"/><line x1="320" y1="105" x2="260" y2="155"/><line x1="320" y1="105" x2="380" y2="155"/>
+        <line x1="490" y1="60" x2="580" y2="60"/><line x1="490" y1="150" x2="580" y2="150"/><line x1="490" y1="60" x2="490" y2="150"/><line x1="580" y1="60" x2="580" y2="150"/><line x1="490" y1="60" x2="580" y2="150"/><line x1="580" y1="60" x2="490" y2="150"/>
+      </g>
+      <g fill="#0E0E10" stroke="#C8453A">
+        <circle cx="60" cy="60" r="11"/><circle cx="150" cy="60" r="11"/><circle cx="150" cy="150" r="11"/><circle cx="60" cy="150" r="11"/>
+        <circle cx="320" cy="105" r="13"/><circle cx="260" cy="55" r="11"/><circle cx="380" cy="55" r="11"/><circle cx="260" cy="155" r="11"/><circle cx="380" cy="155" r="11"/>
+        <circle cx="490" cy="60" r="11"/><circle cx="580" cy="60" r="11"/><circle cx="580" cy="150" r="11"/><circle cx="490" cy="150" r="11"/>
+      </g>
+    </svg>
+    <figcaption>Fig 2. Fewer links are simpler but one failure can cut the flow; more links tolerate failures but allow overtaking. (My own sketch.)</figcaption>
+  </figure>
+
+  <h3>Leaderless replication</h3>
+  <p>Some stores drop the leader: any replica accepts writes directly from clients, either via the client sending to several replicas or via a coordinator that doesn't enforce an order. Some of the earliest replicated systems were leaderless; the idea returned after Amazon used it for its in-house Dynamo system, and Riak, Cassandra and Voldemort are open source stores inspired by it ("Dynamo-style"). The source stresses that Amazon's Dynamo is not the same as the AWS DynamoDB product, which uses a different architecture based on single-leader replication (per the book's footnote).</p>
+  <p><strong>Writing when a node is down.</strong> Failover doesn't exist here. With three replicas and one rebooting, the client sends the write to all three in parallel, two accept it, and if two acks count as success the client moves on. When the missed node returns it's stale. So reads also go to several nodes in parallel, and version numbers decide which response is newer.</p>
+  <p><strong>Catching up</strong> takes two mechanisms: <em>read repair</em> (the client sees one replica returned version 6 while the others returned version 7 and writes 7 back to the stale one; works well for frequently read values) and an <em>anti-entropy process</em> (a background process that copies missing data, in no particular order, possibly with significant delay). Not every system has both; per the source Voldemort doesn't have anti-entropy, and without it rarely read values can be missing from some replicas, reducing durability.</p>
+
+  <h3>Quorums</h3>
+  <p>With <strong>n</strong> replicas, a write needs <strong>w</strong> confirmations and a read queries <strong>r</strong> nodes. If <strong>w + r &gt; n</strong>, the nodes you wrote to and the nodes you read from must overlap in at least one node, so you generally expect to see the latest value. Reads and writes sent to all n replicas in parallel; w and r say how many replies you wait for. Dynamo-style databases usually make n, w and r configurable. A common choice is odd n (3 or 5) with w = r = (n + 1) / 2 rounded up. A read-heavy workload might use w = n and r = 1: fast reads, but a single failed node makes all writes fail. With n = 3, w = 2, r = 2 you tolerate one unavailable node; with n = 5, w = 3, r = 3, two. If fewer than w or r nodes respond, the operation errors. Quorums need not be majorities; only the overlap matters. You can set w + r &le; n for lower latency and higher availability, accepting a greater chance of stale reads.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 210" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">n = 5, w = 3, r = 3: THE SETS MUST OVERLAP</text>
+      <g font-size="10" text-anchor="middle" fill="#F2EFE9">
+        <rect x="70" y="60" width="70" height="46" rx="6" fill="#0E0E10" stroke="#C9C7C1"/><text x="105" y="88">R1</text>
+        <rect x="170" y="60" width="70" height="46" rx="6" fill="#0E0E10" stroke="#C8453A"/><text x="205" y="88">R2</text>
+        <rect x="270" y="60" width="70" height="46" rx="6" fill="#0E0E10" stroke="#C8453A"/><text x="305" y="88">R3</text>
+        <rect x="370" y="60" width="70" height="46" rx="6" fill="#0E0E10" stroke="#C8453A"/><text x="405" y="88">R4</text>
+        <rect x="470" y="60" width="70" height="46" rx="6" fill="#0E0E10" stroke="#C9C7C1"/><text x="505" y="88">R5</text>
+      </g>
+      <rect x="62" y="120" width="290" height="8" rx="4" fill="#C8453A"/><text x="207" y="146" fill="#C8453A" font-size="9.5" text-anchor="middle">write reached R1..R3 (w=3)</text>
+      <rect x="262" y="160" width="290" height="8" rx="4" fill="#6FCF97"/><text x="407" y="186" fill="#6FCF97" font-size="9.5" text-anchor="middle">read asks R3..R5 (r=3)</text>
+      <text x="305" y="50" fill="#F2EFE9" font-size="9.5" text-anchor="middle">R3 is in both</text>
+    </svg>
+    <figcaption>Fig 3. At least one node you read from has seen the write (so long as the quorum behaves as designed). My own sketch.</figcaption>
+  </figure>
+
+  <h3>Limits of quorum consistency</h3>
+  <p>Even with w + r &gt; n the source lists edge cases where you can read stale values: a sloppy quorum (the w writes may land on different nodes than the r reads); concurrent writes with no clear order (and picking a winner by timestamp can lose writes through clock skew); a write concurrent with a read, which may show on only some replicas; a write that succeeded on fewer than w replicas isn't rolled back where it did succeed, so later reads may or may not see a "failed" write; a node with the new value being restored from an older replica, dropping the count of new-value replicas below w; and unlucky timing even when everything works. So quorums look like they guarantee the latest value, but in practice w and r mainly adjust the <em>probability</em> of stale reads, and the source advises not treating them as absolute guarantees. Dynamo-style stores are generally for use cases that tolerate eventual consistency, and you usually don't get read-your-writes, monotonic reads or consistent prefix reads from them. Stronger guarantees need transactions or consensus.</p>
+  <p><strong>Monitoring staleness.</strong> In leader-based replication, lag is easy to measure: subtract a follower's log position from the leader's. In leaderless systems there's no fixed write order, so it's harder, and with only read repair there's no bound on how old a value can be. Some research predicts the share of stale reads from n, w and r but it isn't common practice; the source's view is that for operability you want to quantify "eventual".</p>
+
+  <h3>Sloppy quorums and hinted handoff</h3>
+  <p>A network interruption can cut a client off from many nodes. In a big cluster the client can probably still reach <em>some</em> nodes, just not the n designated for a value. Choice: return errors, or accept the write on reachable nodes outside the usual n. The second is a <strong>sloppy quorum</strong>: still w and r successful responses, but they may include non-home nodes. (The source's analogy: locked out, you sleep on a neighbour's couch.) When the network heals, the temporary holder forwards the writes to the proper nodes: <strong>hinted handoff</strong>. This increases write availability, but even with w + r &gt; n you can't be sure of reading the latest value until the handoff is done, so it's only an assurance of durability, not a true quorum. Per the source, sloppy quorums are optional in common Dynamo implementations: enabled by default in Riak, disabled by default in Cassandra and Voldemort (the book's statements).</p>
+  <p><strong>Multi-datacenter.</strong> Leaderless fits multi-datacenter use because it already tolerates conflicts, interruptions and latency spikes. Cassandra and Voldemort count nodes in all datacenters in n and let you set how many per datacenter; writes go to all replicas but the client waits only for a quorum in its local datacenter. Riak keeps client communication local to one datacenter and replicates between clusters asynchronously, similar to multi-leader.</p>
+
+  <h3>Detecting concurrent writes</h3>
+  <p>Several clients can write the same key at once, so conflicts occur even with strict quorums (and also in read repair and hinted handoff). Because network delay varies, replicas can see the same writes in different orders. If each node just overwrote on receipt, replicas would stay permanently inconsistent. The source warns most implementations are poor at this: to avoid losing data, the developer needs to know a lot about the database's conflict handling.</p>
+  <p><strong>Last write wins.</strong> Keep only the "most recent" value by timestamp. The quotes matter: concurrent writes have no true order, we're just forcing one. LWW converges but costs durability: of several concurrent writes all reported successful, only one survives and the rest are silently discarded, and it can even drop non-concurrent writes (the book points to the clocks chapter). It's the only conflict resolution Cassandra supports and an optional feature in Riak (the book's statements). It can be acceptable for caching. The only safe use is writing each key once and treating it as immutable; the source's example is Cassandra with a UUID as the key.</p>
+  <p><strong>Happens-before.</strong> Operation A happens before B if B knows about, depends on, or builds on A. Two operations are concurrent if neither happens before the other. For any pair there are three possibilities: A before B, B before A, or concurrent. If one happened before the other, the later overwrites; if concurrent, you have a conflict to resolve. Importantly, concurrency isn't about literally overlapping clock time. It's about <em>not knowing</em> about each other. Two operations hours apart can be concurrent if a network problem kept one from learning of the other. (The source draws a comparison to relativity.)</p>
+
+  <h3>Capturing happens-before with version numbers</h3>
+  <p>Start with one replica. I'll use a shared to-do list (my own illustration, same mechanism as the source's example). The server keeps a version number per key, bumps it on every write, and stores it with the value.</p>
+  <ol>
+    <li>Rules: a client must <strong>read before writing</strong>. A read returns all values not yet overwritten plus the latest version number.</li>
+    <li>A write includes the version number from the prior read and must <strong>merge together</strong> all values from that read.</li>
+    <li>On receiving a write with version V, the server overwrites all values with version V or below (they've been merged in) and keeps all values with a higher version (they're concurrent with this write).</li>
+    <li>A write with no version number is concurrent with everything: it overwrites nothing and shows up as another value on later reads.</li>
+  </ol>
+  <p>Walk through: client 1 writes <code>[milk]</code> (version 1). Client 2, unaware, writes <code>[eggs]</code> (version 2) and the server keeps both. Client 1 then writes <code>[milk, flour]</code> based on version 1: it replaces the milk value but is concurrent with eggs, so the server keeps both. And so on. The server learns concurrency by comparing version numbers, without interpreting the values. No writes are lost, but clients end up having to merge the siblings.</p>
+  <p><strong>Merging siblings.</strong> Picking one by timestamp is LWW and loses data. For something add-only (a list where items are only added) taking the union works. If removal is allowed, a union resurrects removed items, so deletions must leave a <strong>tombstone</strong> with a version number. Hand-merging is error-prone, which is why CRDTs exist; the source says Riak's datatype support uses them, including preserving deletions.</p>
+  <p><strong>Version vectors.</strong> With several replicas accepting writes, a single number isn't enough: you need a version number <em>per replica</em> as well as per key. Each replica increments its own number on a write and tracks what it's seen from the others; the set is a version vector. A variant, the dotted version vector, is used in Riak 2.0, and Riak's encoded form is called causal context. As in the single-replica case, vectors travel to clients on reads and back on writes. They make it safe to read from one replica and write to another: siblings may appear, but no data is lost if siblings are merged correctly. (A version vector is sometimes called a vector clock; they are not quite the same, and for comparing replica state version vectors are the right structure, per the source.)</p>
+
+  <figure>
+    <svg viewBox="0 0 640 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">VERSION NUMBERS TELL OVERWRITE FROM CONCURRENT</text>
+      <g font-size="9.5" fill="#C9C7C1">
+        <text x="30" y="52">1. client A writes [milk]            -> stored: v1 [milk]</text>
+        <text x="30" y="76">2. client B writes [eggs] (no version) -> stored: v1 [milk], v2 [eggs]</text>
+        <text x="30" y="100">3. A writes [milk,flour] based on v1   -> v1 replaced;</text>
+        <text x="30" y="116">                                          stored: v2 [eggs], v3 [milk,flour]</text>
+        <text x="30" y="140">4. B reads both, merges, writes based on v3:</text>
+        <text x="30" y="156">   [eggs,milk,flour] -> v2 and v3 both replaced</text>
+        <text x="30" y="172">                          stored: v4 [eggs,milk,flour]</text>
+      </g>
+      <text x="30" y="204" fill="#6FCF97" font-size="9.5">based-on version covers a value  =>  overwrite it</text>
+      <text x="30" y="220" fill="#C8453A" font-size="9.5">higher than the based-on version =>  concurrent, keep as sibling</text>
+      <text x="320" y="242" fill="#7A7A80" font-size="9" text-anchor="middle">my own walkthrough (tested in a tiny script)</text>
+    </svg>
+    <figcaption>Fig 4. A to-do list edited by two clients; the server never reads the values. (My own sketch.)</figcaption>
+  </figure>
+
+  <h3>The chapter in review (its Summary)</h3>
+  <ul>
+    <li><strong>Why replicate:</strong> high availability, disconnected operation, lower latency, and read scalability.</li>
+    <li><strong>Three approaches:</strong> single-leader (all writes to one node, reads anywhere but possibly stale); multi-leader (several nodes accept writes and exchange change streams); leaderless (writes to several nodes, reads from several in parallel to detect and fix stale data).</li>
+    <li><strong>Trade-off:</strong> single-leader is popular because it's easier to understand and has no conflict resolution. Multi-leader and leaderless can be more robust against faulty nodes, network interruptions and latency spikes, at the cost of being harder to reason about and giving only very weak consistency guarantees.</li>
+    <li>Sync vs async has a big effect during faults: promoting an asynchronously updated follower can lose recently committed data.</li>
+    <li>Lag effects and the guarantees that address them: read-after-write, monotonic reads, consistent prefix reads.</li>
+    <li>Multi-leader and leaderless allow concurrent writes, hence conflicts; an algorithm can tell happens-before from concurrent, and concurrent updates can be merged.</li>
+  </ul>
+
+  <h2>Why it matters</h2>
+  <p>Dynamo-style quorums, "tunable consistency" settings, calendar and note-taking sync, collaborative editors, and multi-region databases all rely on ideas in this part. When a vendor says a database is "eventually consistent" or lets you pick a consistency level, you now know what's being traded and where silent data loss can come from (LWW is the big one).</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Multi-leader suits multi-datacenter, offline clients and collaborative editing, but concurrent writes mean conflicts. Avoiding them (routing a record to one leader) is the simplest cure; otherwise you need a convergent rule.</li>
+      <li>Last write wins converges but silently discards concurrent writes; it's only safe for immutable-key or loss-tolerant uses like caches.</li>
+      <li>Leaderless replication has no failover; clients write to and read from several nodes, with read repair and anti-entropy catching stragglers.</li>
+      <li>With quorums, w + r &gt; n makes read and write sets overlap, but sloppy quorums, concurrency and partial failures mean it isn't an absolute guarantee.</li>
+      <li>Two operations are concurrent if neither knew of the other, regardless of clock time; version numbers (vectors with many replicas) detect this, siblings must be merged, and deletes need tombstones.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Provoke a conflict.</strong> Simulate two leaders that each apply a rename locally and then exchange logs. First apply writes in arrival order and show the replicas diverge. Then add LWW with a (timestamp, replica ID) tiebreak. Done when both end equal, and you have written down which write was silently lost.</li>
+      <li><strong>Quorum explorer.</strong> For n = 5, enumerate every write set of size w and read set of size r and check whether they always overlap. Done when you can print a table for a few (w, r) pairs showing which settings guarantee overlap and which don't.</li>
+      <li><strong>Leaderless mini-store.</strong> Three in-memory replicas, a client that writes to all and counts acks, a node you can switch off, and a read that asks all and returns the highest version. Add read repair. Done when a node that missed writes is brought up to date by reads alone.</li>
+      <li><strong>Version-number server.</strong> Implement the single-replica algorithm: read returns (version, values), write takes (value, based-on version). Replay a two-client scenario and confirm no write is lost and that concurrent values appear as siblings. Done when a client that merges and rewrites collapses them to one value.</li>
+      <li><strong>Tombstones.</strong> Extend project 4 to a set that supports removing items. Show that a union-merge brings a removed item back, then fix it with tombstones. Done when a removal survives merging with a stale sibling.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Compare the "danger" the source assigns to multi-leader with the weaknesses it lists for quorums. Then ask which one you would rather debug at 3 a.m. and why. The chapter promises more on conflicts, transactions and consensus in Chapters 7 and 9.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, written to help you build a mental model quickly. It is not a substitute for the source; verify anything you plan to rely on against the original before using it for real.</p>
+  <ul class="src-list">
+    <li>Martin Kleppmann, <em>Designing Data-Intensive Applications</em> (O'Reilly, 2017), Chapter 5, "Replication": "Multi-Leader Replication", "Leaderless Replication" (including "Detecting Concurrent Writes") and the chapter's "Summary": printed pages 168 to 193 (PDF pages 190 to 215 of the supplied file).</li>
+  </ul>
+  <p class="src-note">Flagged for accuracy: (1) Product behaviors (Cassandra only supports LWW; sloppy quorums on by default in Riak, off in Cassandra and Voldemort; Voldemort lacks anti-entropy; MySQL's default circular topology; BDR and Tungsten gaps) are the book's statements as of 2017 and are not verified against current versions. (2) The to-do list walk-through is my own example of the book's version-number algorithm, run in a small script that matched the algorithm's expected result. (3) "Vector clock vs version vector differ subtly" is as the book states; I did not go into the difference. (4) Diagrams are original; quorum and version values are invented illustrations. (5) Nothing outside the supplied chapter was consulted; the AWS DynamoDB note is the book's footnote, not something I checked against AWS docs.</p>
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
