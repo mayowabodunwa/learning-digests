@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>High Performance MySQL: Optimizer Limits, COUNT, Pagination and UNION (Part 3, final)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">SQL &middot; CH.8 DIGEST (PART 3, FINAL)</p>
+  <h1>Where the Optimizer Struggles, and How to Rewrite COUNT, Pagination and UNION Queries</h1>
+  <p class="lead">Parts 1 and 2 explained how MySQL runs a query. This last part is the practical payoff: the handful of places the optimizer does a poor job, and a toolkit of rewrites for the query shapes that cause the most trouble in real applications (counting, joining, grouping, paginating and combining results). It ends with the chapter's own three-move summary.</p>
+
+  <h2>In one line</h2>
+  <p>When MySQL's optimizer won't do something for you, you do it yourself by rewriting the query (pushing a limit inside a UNION, counting the right way, paginating from a position instead of an offset), and for most of these tricks the cost you remove is rows generated only to be thrown away.</p>
+
+  <h2>The big idea</h2>
+  <p>The source says the optimizer fails on only a limited number of query shapes, and those can usually be rewritten. The pattern behind most rewrites in this part is the same one from Part 1: stop making the server produce rows nobody needs. Counting every row to show a page number, skipping ten thousand rows to reach page 501, and building a giant union only to keep twenty rows are all examples.</p>
+  <p>One honest warning comes from the source itself: most of the advice in "Optimizing Specific Types of Queries" depends on the MySQL version and may not hold in future ones, since the server could learn to do some of these things on its own. I tested several of these on MySQL 8.0.46 and, where the behaviour differs from the book's description, I say so below.</p>
+  <p>This part covers printed pages 219 to 226: "Limitations of the MySQL Query Optimizer" (UNION limits, equality propagation, parallel execution, SELECT and UPDATE on the same table), "Optimizing Specific Types of Queries" (COUNT, JOIN, GROUP BY with ROLLUP, LIMIT and OFFSET, SQL_CALC_FOUND_ROWS, UNION), and the chapter "Summary."</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Push down</span>: copying a condition (a <code>LIMIT</code>, <code>WHERE</code> or <code>ORDER BY</code>) from an outer query into the inner parts so they can use it early.</li>
+    <li><span class="keyterm-term">UNION / UNION ALL</span>: combine the results of several <code>SELECT</code>s. <code>UNION</code> removes duplicate rows; <code>UNION ALL</code> keeps everything.</li>
+    <li><span class="keyterm-term">Temporary table</span>: a scratch table the server builds mid-query to hold intermediate results.</li>
+    <li><span class="keyterm-term">Derived table</span>: a subquery in the <code>FROM</code> clause, treated as a table. Example: <code>FROM (SELECT ...) AS x</code>.</li>
+    <li><span class="keyterm-term">Materialize</span>: fill a temporary table with a subquery's result.</li>
+    <li><span class="keyterm-term">NULL</span>: SQL's marker for "no value." It is not the same as zero or empty text.</li>
+    <li><span class="keyterm-term">Aggregate function</span>: a function summarizing many rows (<code>COUNT</code>, <code>SUM</code>, <code>MIN</code>, <code>MAX</code>).</li>
+    <li><span class="keyterm-term">WITH ROLLUP</span>: a <code>GROUP BY</code> option that adds extra "super-aggregate" rows (subtotals and a grand total).</li>
+    <li><span class="keyterm-term">Pagination</span>: splitting a long list into pages. <span class="keyterm-term">OFFSET</span> says how many rows to skip first.</li>
+    <li><span class="keyterm-term">Deferred join</span>: do the offset/limit on a small covering index first, then join back to the table to fetch the wide columns for just those rows.</li>
+    <li><span class="keyterm-term">Keyset ("cursor") pagination</span>: remember the last key you showed and continue from it, rather than skipping rows. The source describes this as a cursor-like position.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>Grounding: the optimizer's job is hard, and it takes shortcuts. Each shortcut that leaves a gap in what it can do gives you a recognizable "bad shape" of query. This part names those shapes, then gives remedies for the query types where beginners most often hurt themselves. You won't memorize all of it; the goal is to recognize the smell ("this generates a lot and throws most away") and know the family of fixes.</p>
+
+  <h3>1. Limitations of the optimizer</h3>
+  <h3>UNION: conditions don't get pushed in</h3>
+  <p>The source says MySQL sometimes can't push a condition from outside a <code>UNION</code> into the individual queries inside it. Its example: union two tables, each with an <code>ORDER BY</code>, and apply <code>LIMIT 20</code> to the whole thing. MySQL stores both whole tables into a temporary table and then picks 20 rows. The fix: repeat the <code>LIMIT 20</code> inside each part, so the temporary table holds at most 40 rows. Then, because the order in which rows come out of the temporary table is undefined, add a final outer <code>ORDER BY</code> before the last <code>LIMIT</code> if the result order matters.</p>
+  <p>I tried this on my small tables (<code>customer</code> with 2,000 rows, <code>product</code> with 300). Without inner limits, <code>EXPLAIN</code> estimated reading all 2,000 customer rows and all 300 product rows. With <code>LIMIT 20</code> inside each part, the product part dropped to an estimated 20 rows. The customer part still showed 2,000 estimated rows with <code>Using filesort</code> because I had no index on <code>name</code> there; with an index it would not have to sort and read everything. One more version note: in 8.0 the inner <code>ORDER BY</code> without an inner <code>LIMIT</code> didn't show a filesort at all, which looks like the server discarding a pointless inner sort. I'm inferring that from the plan, not from documentation.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="c1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#C9C7C1"/></marker></defs>
+      <text x="320" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">PUSHING THE LIMIT INSIDE A UNION</text>
+      <text x="160" y="46" fill="#C8453A" font-size="11" font-weight="700" text-anchor="middle">LIMIT only outside</text>
+      <rect x="30" y="58" width="110" height="26" rx="6" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="85" y="75" fill="#F2EFE9" font-size="10" text-anchor="middle">all of table X</text>
+      <rect x="30" y="92" width="110" height="26" rx="6" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="85" y="109" fill="#F2EFE9" font-size="10" text-anchor="middle">all of table Y</text>
+      <line x1="140" y1="71" x2="190" y2="96" stroke="#C9C7C1" marker-end="url(#c1)"/>
+      <line x1="140" y1="105" x2="190" y2="100" stroke="#C9C7C1" marker-end="url(#c1)"/>
+      <rect x="192" y="80" width="110" height="40" rx="6" fill="#C8453A" opacity="0.25" stroke="#C8453A"/>
+      <text x="247" y="97" fill="#F2EFE9" font-size="10" text-anchor="middle">temp table</text>
+      <text x="247" y="111" fill="#F2EFE9" font-size="10" text-anchor="middle">(big), then 20</text>
+      <text x="480" y="46" fill="#6FCF97" font-size="11" font-weight="700" text-anchor="middle">LIMIT inside each part</text>
+      <rect x="350" y="58" width="110" height="26" rx="6" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="405" y="75" fill="#F2EFE9" font-size="10" text-anchor="middle">20 from X</text>
+      <rect x="350" y="92" width="110" height="26" rx="6" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="405" y="109" fill="#F2EFE9" font-size="10" text-anchor="middle">20 from Y</text>
+      <line x1="460" y1="71" x2="510" y2="96" stroke="#C9C7C1" marker-end="url(#c1)"/>
+      <line x1="460" y1="105" x2="510" y2="100" stroke="#C9C7C1" marker-end="url(#c1)"/>
+      <rect x="512" y="80" width="100" height="40" rx="6" fill="#6FCF97" opacity="0.2" stroke="#6FCF97"/>
+      <text x="562" y="97" fill="#F2EFE9" font-size="10" text-anchor="middle">temp table</text>
+      <text x="562" y="111" fill="#F2EFE9" font-size="10" text-anchor="middle">(40), then 20</text>
+      <text x="320" y="170" fill="#7A7A80" font-size="10" text-anchor="middle">keep an outer ORDER BY before the last LIMIT if the final order matters</text>
+      <text x="320" y="190" fill="#7A7A80" font-size="10" text-anchor="middle">simplified: sorting inside each part still needs an index to be cheap</text>
+    </svg>
+    <figcaption>Same idea as Part 1: don't materialize rows you'll throw away.</figcaption>
+  </figure>
+
+  <h3>Equality propagation can cost you</h3>
+  <p>Back in Part 2, equality propagation was a good thing. The source points out an edge case: a huge <code>IN()</code> list on a column that the optimizer knows equals columns in other tables gets <em>copied</em> to each of those columns. Normally helpful, but with a very large list it can slow both optimization and execution, and the source says there is no built-in workaround at the time of writing (you would have to change the source code) and that it isn't a problem for most people. I did not test this.</p>
+
+  <h3>No parallel execution of a single query</h3>
+  <p>Per the source, MySQL can't run one query in parallel across many CPUs, unlike some other databases, so don't waste time trying to configure it. (Many connections still run in parallel; the limit is about splitting a <em>single</em> statement. I haven't verified this against newer manuals, so check yours if it matters; the book says it as of its writing.)</p>
+
+  <h3>SELECT and UPDATE on the same table</h3>
+  <p>This one is a classic. You can't, in one statement, read from a table in a subquery while also updating that table. The source's example updates each row with the count of "similar" rows from the same table. MySQL raises error 1093. I reproduced it: with a table <code>t(id, type, c)</code>, an <code>UPDATE t AS o SET c = (SELECT COUNT(*) FROM t AS i WHERE i.type = o.type)</code> failed with "You can't specify target table 'o' for update in FROM clause."</p>
+  <p>The workaround uses a derived table, which MySQL materializes into a temporary table first, so the table is opened and closed by the subquery before the outer update opens it. In effect it runs two statements: one grouped <code>SELECT</code>, then a multi-table <code>UPDATE</code> that joins the table with that result. I ran the rewritten form and it worked: rows with type 1 got count 2 and the row with type 2 got count 1. (The source calls this not strictly an optimizer limitation, but knowing how execution works helps you see the way around it.)</p>
+
+  <h3>2. Optimizing specific kinds of queries</h3>
+  <h3>COUNT(): what it really counts</h3>
+  <p>The source calls <code>COUNT()</code> one of the most misunderstood topics in MySQL. It works in two modes:</p>
+  <ul>
+    <li><code>COUNT(expression)</code> counts how many times the expression has a <strong>value</strong>, meaning is not <code>NULL</code>.</li>
+    <li><code>COUNT(*)</code> counts <strong>rows</strong>. The star isn't expanded into the columns; it just means "count rows." MySQL also does this when it knows the expression can never be <code>NULL</code>.</li>
+  </ul>
+  <p>The common mistake: writing a column name when you want a row count. The source says use <code>COUNT(*)</code> when you want rows, since it states your intent and avoids poor performance. To make the <code>NULL</code> point concrete, I made a 4-row table with a nullable column holding blue, red, <code>NULL</code>, blue:</p>
+  <ul>
+    <li><code>COUNT(*)</code> gave 4 (rows); <code>COUNT(color)</code> gave 3 (non-<code>NULL</code> values); <code>COUNT(DISTINCT color)</code> gave 2.</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">COUNT(*) VS COUNT(column) ON FOUR ROWS</text>
+      <rect x="40" y="40" width="200" height="130" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="140" y="60" fill="#7A7A80" font-size="10" text-anchor="middle">color column</text>
+      <text x="140" y="86" fill="#F2EFE9" font-size="11" text-anchor="middle">blue</text>
+      <text x="140" y="108" fill="#F2EFE9" font-size="11" text-anchor="middle">red</text>
+      <text x="140" y="130" fill="#C8453A" font-size="11" text-anchor="middle">NULL</text>
+      <text x="140" y="152" fill="#F2EFE9" font-size="11" text-anchor="middle">blue</text>
+      <rect x="300" y="50" width="300" height="34" rx="8" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="450" y="72" fill="#F2EFE9" font-size="11" text-anchor="middle">COUNT(*)  =  4   (rows)</text>
+      <rect x="300" y="94" width="300" height="34" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="450" y="116" fill="#F2EFE9" font-size="11" text-anchor="middle">COUNT(color)  =  3   (non-NULL)</text>
+      <rect x="300" y="138" width="300" height="34" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="450" y="160" fill="#F2EFE9" font-size="11" text-anchor="middle">COUNT(DISTINCT color)  =  2</text>
+      <text x="320" y="204" fill="#7A7A80" font-size="10" text-anchor="middle">NULL is "no value", so a column count skips it</text>
+    </svg>
+    <figcaption>My own four-row example of the two counting modes.</figcaption>
+  </figure>
+
+  <h3>Counting several categories in one pass</h3>
+  <p>A common question: how do I get "how many blue" and "how many red" in one query? An <code>OR</code> in <code>COUNT</code> won't separate them, and a <code>WHERE</code> with both colors returns nothing because no row is two colors at once. The source gives two equivalent patterns: <code>SUM(IF(color = 'blue', 1, 0))</code>, and <code>COUNT(color = 'blue' OR NULL)</code>, which works because a false condition turns into <code>NULL</code> and is not counted. Another form is <code>SUM(color = 'blue')</code> (the source's footnote). On my four-row table the <code>COUNT(... OR NULL)</code> pattern gave blue = 2 and red = 1, and <code>SUM(color='blue')</code> gave 2. I also tried the tempting wrong one, <code>COUNT(color = 'blue')</code> without the <code>OR NULL</code>: it returned 3, because the comparison yields a value (0 or 1) for every non-<code>NULL</code> row and each counts. That's a handy trap to know about.</p>
+
+  <h3>Approximate when you can</h3>
+  <p>If you don't need an exact number, you have cheaper options. The optimizer's estimated rows in <code>EXPLAIN</code> often work: run <code>EXPLAIN</code> instead of the real query. On my 60,000-row table, <code>EXPLAIN</code> estimated about 60,345 rows for a full count (the true number was 60,000). The source also tells a story of a site counting active users, cached for 30 minutes and thus approximate by nature; dropping some extra <code>WHERE</code> conditions and an unnecessary <code>DISTINCT</code> (which removed a filesort) changed the count slightly but made the query far faster. And when exact counts are unavoidable, the source's options are a covering index, or changing the architecture, for example an external cache such as memcached, and it summarizes the dilemma as "fast, accurate, simple: pick any two."</p>
+  <p>One related observation of mine: a plain <code>SELECT COUNT(*) FROM orders</code> showed <code>type: index</code>, <code>key: idx_cust</code>, <code>Using index</code>, so MySQL counted using the smaller secondary index instead of the whole table. That's an observation on my build, not a promise.</p>
+
+  <h3>JOIN queries: a few highlights</h3>
+  <ul>
+    <li><strong>Index the join columns, in light of the join order.</strong> The source says that if the optimizer will join B before A, you don't need an index on B's join column; usually you only need indexes on the <em>second</em> table in the join order, unless they're needed for another reason. Unused indexes are overhead.</li>
+    <li><strong>Make <code>GROUP BY</code> and <code>ORDER BY</code> refer to columns from one table</strong>, so MySQL can try to use an index for it (this ties directly to the filesort rule from Part 2).</li>
+    <li><strong>Be careful upgrading MySQL.</strong> Join syntax, operator precedence and other behaviours have changed over time, so something that used to be an ordinary join can turn into a cross product, return different results, or become invalid syntax.</li>
+  </ul>
+
+  <h3>GROUP BY with ROLLUP</h3>
+  <p><code>WITH ROLLUP</code> adds super-aggregate rows (subtotals and a grand total) to a grouped result. The source warns it may not be well optimized: check the plan, watch whether grouping happens via filesort or a temporary table, and try removing <code>WITH ROLLUP</code> to see if the grouping method changes. Sometimes it is more efficient to do the super-aggregation in your application, even if that means fetching more rows, or use a derived table or temporary table with a <code>UNION</code>. The source's bottom line is that moving the rollup into your application code might be best.</p>
+  <p>I saw exactly the "method changes" effect. For <code>SELECT status, COUNT(*) FROM orders GROUP BY status</code>, the plan said <code>Using temporary</code>; adding <code>WITH ROLLUP</code> changed it to <code>Using filesort</code>. Both scanned the full table (estimated 60,345 rows). That's one version, one table, one dataset.</p>
+
+  <h3>LIMIT and OFFSET: the cost hides in the offset</h3>
+  <p>Pagination is almost always <code>ORDER BY</code> plus <code>LIMIT</code>/<code>OFFSET</code>. Without an index supporting the order, you pay for filesorts. The bigger issue is a large offset: <code>LIMIT 10000, 20</code> generates 10,020 rows and discards the first 10,000. The source adds that if pages are viewed equally often, such queries scan half the table on average. Options: limit how deep users can page, or make deep pages cheaper.</p>
+  <p><strong>Technique 1: the deferred join.</strong> Do the offset on a covering index, then join the few resulting ids back to the table for the wide columns. In my test on 60,000 orders: with a plain <code>SELECT id, total FROM orders ORDER BY placed LIMIT 50000, 5</code> the plan was a full table scan <code>type: ALL</code> with <code>Using filesort</code> (the optimizer decided not to walk the <code>placed</code> index and then fetch rows). Written as a join against <code>(SELECT id FROM orders ORDER BY placed LIMIT 50000, 5)</code>, the inner part used the <code>placed</code> index with <code>Using index</code>, and each of the five ids was then fetched by primary key (<code>eq_ref</code>). I did not time these; at 60,000 rows the difference would be too small to measure meaningfully, so I only compared the plans. The source says this works because the server examines as little data as possible in the index before fetching full rows.</p>
+  <p><strong>Technique 2: positions.</strong> Precompute and index a position column, then use a range scan (<code>WHERE position BETWEEN 50 AND 54</code>). For ranked data, expect to precompute and store the ranks.</p>
+  <p><strong>Technique 3: remember where you were (keyset pagination).</strong> The source's insight is that the problem is really the offset. If primary keys increase, fetch the first page with <code>ORDER BY rental_id DESC LIMIT 20</code>, then continue with <code>WHERE rental_id &lt; (last id you saw)</code>. It is efficient no matter how deep you go. I tried the same shape on my table: <code>WHERE id &lt; 40000 ORDER BY id DESC LIMIT 20</code> used a <code>range</code> scan on the primary key with <code>Backward index scan</code>. The estimated row count displayed (30,172) is just the optimizer's range estimate; with the <code>LIMIT</code> the server can stop after 20. <strong>Caveat:</strong> this approach fits "next/previous" navigation and an ordering with a unique, increasing key. It doesn't support jumping straight to "page 37" unless you also keep other state.</p>
+  <p>The source also mentions alternatives: precomputed summaries, or joining against redundant tables that hold only the primary key and the <code>ORDER BY</code> columns.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">PAGE 501 THREE WAYS</text>
+      <text x="40" y="50" fill="#C8453A" font-size="11" font-weight="700">OFFSET 10000</text>
+      <rect x="40" y="58" width="420" height="22" rx="4" fill="#C8453A" opacity="0.3" stroke="#C8453A"/>
+      <text x="250" y="73" fill="#F2EFE9" font-size="10" text-anchor="middle">generate and discard 10,000 rows</text>
+      <rect x="462" y="58" width="40" height="22" rx="4" fill="#6FCF97" opacity="0.5" stroke="#6FCF97"/>
+      <text x="522" y="73" fill="#F2EFE9" font-size="10">keep 20</text>
+      <text x="40" y="108" fill="#E7C46A" font-size="11" font-weight="700">DEFERRED JOIN</text>
+      <rect x="40" y="116" width="420" height="22" rx="4" fill="#E7C46A" opacity="0.18" stroke="#E7C46A"/>
+      <text x="250" y="131" fill="#F2EFE9" font-size="10" text-anchor="middle">walk the narrow index (cheap entries)</text>
+      <rect x="462" y="116" width="40" height="22" rx="4" fill="#6FCF97" opacity="0.5" stroke="#6FCF97"/>
+      <text x="522" y="131" fill="#F2EFE9" font-size="10">fetch 20 rows</text>
+      <text x="40" y="166" fill="#6FCF97" font-size="11" font-weight="700">KEYSET (WHERE id &lt; last_seen)</text>
+      <rect x="40" y="174" width="16" height="22" rx="4" fill="#6FCF97" opacity="0.5" stroke="#6FCF97"/>
+      <text x="68" y="189" fill="#F2EFE9" font-size="10">jump straight to the spot, read 20</text>
+      <text x="320" y="220" fill="#7A7A80" font-size="10" text-anchor="middle">bar length = a sketch of work done, not a measurement</text>
+    </svg>
+    <figcaption>Where the effort goes in three pagination styles.</figcaption>
+  </figure>
+
+  <h3>SQL_CALC_FOUND_ROWS: no magic</h3>
+  <p>Many pagers add <code>SQL_CALC_FOUND_ROWS</code> to a <code>LIMIT</code> query to learn how many rows there would have been. There is no prediction involved: the server just keeps generating and discarding the rest of the result instead of stopping, which is very expensive. Better designs, per the source:</p>
+  <ul>
+    <li>Switch the pager to a "Next" link: with 20 per page, ask for 21 rows (<code>LIMIT 21</code>), show 20, and if the 21st exists, render "Next."</li>
+    <li>Fetch and cache a larger batch (say 1,000 rows) and serve pages from the cache; you then know whether there are fewer than 1,000 results or "more than 1,000."</li>
+    <li>Estimate the total with <code>EXPLAIN</code> rows.</li>
+    <li>Use a separate <code>COUNT(*)</code> query, which can be much faster than <code>SQL_CALC_FOUND_ROWS</code> if it can use a covering index.</li>
+  </ul>
+  <p>A version note I found: on 8.0.46, using <code>SQL_CALC_FOUND_ROWS</code> produced a warning (code 1287) that it is deprecated and will be removed in a future release, suggesting two separate queries instead. <code>FOUND_ROWS()</code> still returned the right total (60,000) in my test. The book doesn't mention the deprecation, so if you're on a recent 8.x version, prefer the separate-query approach.</p>
+
+  <h3>UNION: help it, and use ALL</h3>
+  <p>The source says MySQL always runs <code>UNION</code> by building a temporary table and filling it, so you may need to push <code>WHERE</code>, <code>LIMIT</code> and <code>ORDER BY</code> into each part by hand (as in the earlier example). It also says to always use <code>UNION ALL</code> unless you need duplicates removed: without <code>ALL</code>, the temporary table gets a distinct option that uses the whole row to decide uniqueness, which is expensive. And <code>ALL</code> doesn't remove the temporary table; the source says MySQL still places results in one and reads them out, even when it could return rows directly.</p>
+  <p>My <code>EXPLAIN</code> comparison: plain <code>UNION</code> had an extra row of type <code>UNION RESULT</code> with <code>Using temporary</code>; the <code>UNION ALL</code> plans I ran had no such row. I can't tell from <code>EXPLAIN</code> alone whether 8.0 avoids the temporary table for <code>UNION ALL</code> internally, so I'm not contradicting the book, only noting that the plan output looks different from what its text would suggest. The cost advice (<code>UNION ALL</code> unless you need to dedupe) stands on its own because dedupe is extra work.</p>
+
+  <h3>3. The chapter's summary: three moves</h3>
+  <p>The source closes with its core claim: query optimization is the last piece of an interlocking puzzle with schema design and indexing, you need to understand each to do the others well, and in the end it is still about response time. Its final line sums up the whole chapter: <strong>stop doing things, do them fewer times, and do them more quickly.</strong> Notice that every rewrite in this part is one of those three: drop the unneeded <code>SQL_CALC_FOUND_ROWS</code> (stop), push the limit into the union (fewer rows), use a covering index in a deferred join (faster).</p>
+
+  <h2>Why it matters</h2>
+  <p>Pagination, counts and unions are in nearly every application, and they're where "it was fast in testing" turns into "the site is crawling" once the table grows. Deep offsets and exact counts both get slower as data grows, because the work is proportional to rows skipped or counted. Knowing the rewrites, and why they work, means you can fix those paths without guessing. The deeper habit is the same through all three parts of this chapter: look at what the server is generating, compare it to what you need, and shrink the gap.</p>
+  <p>It also closes the loop on the three chapters in this track: schema (Ch.6) decides what's possible, indexes (Ch.7) decide what's cheap, and query shape (Ch.8) decides whether MySQL gets to use either.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>The optimizer fails in a limited number of known shapes; the usual fix is a rewrite that stops it generating throwaway rows.</li>
+      <li>Push <code>LIMIT</code> (and <code>ORDER BY</code>) into each part of a <code>UNION</code>, and use <code>UNION ALL</code> unless you need dedupe.</li>
+      <li><code>COUNT(*)</code> counts rows; <code>COUNT(column)</code> counts non-<code>NULL</code> values.</li>
+      <li>The cost of deep pagination is the offset; defer the join, store positions, or continue from the last key.</li>
+      <li><code>SQL_CALC_FOUND_ROWS</code> isn't magic and is deprecated in recent 8.x; use "Next" links, a cache, an estimate, or a separate count.</li>
+      <li>Advice in this section is version dependent; test on your version.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Count autopsy.</strong> Make a table with a nullable column and a few <code>NULL</code>s. Write the queries for <code>COUNT(*)</code>, <code>COUNT(col)</code>, <code>COUNT(DISTINCT col)</code>, and a one-pass "how many of each category" query using both the <code>SUM(IF(...))</code> and <code>COUNT(... OR NULL)</code> patterns. Done when you can predict each result before running it, including the wrong <code>COUNT(col = 'x')</code> trap.</li>
+      <li><strong>Pagination showdown.</strong> Load 500,000 rows. Time page 1, page 500 and page 20,000 using plain <code>OFFSET</code>, a deferred join, and keyset pagination (run each at least three times). Chart the timings. Done when you can explain the curves, and say what keyset can't do that offset can.</li>
+      <li><strong>Next-link pager.</strong> Build a tiny paging function that requests <code>LIMIT page_size + 1</code> and returns the rows plus a "has next page" flag. Done when it works on exactly-full, partially-full and empty pages.</li>
+      <li><strong>Union pushdown.</strong> Union two tables with <code>ORDER BY ... LIMIT 20</code> on the outside only, then with the limit repeated inside each part plus an outer <code>ORDER BY</code>. Compare <code>EXPLAIN</code> rows and the real timing, and check both give the same final 20 rows. Done when you can say why the outer <code>ORDER BY</code> is still needed.</li>
+      <li><strong>The self-update puzzle.</strong> Reproduce error 1093 on a table of your own, then fix it with the derived-table join. Done when the update works and you can say in your own words why the derived table helps.</li>
+      <li><strong>Rollup in the app.</strong> Run a <code>GROUP BY ... WITH ROLLUP</code> query and look at its plan; then write the same totals by running the plain grouped query and summing in code (any language). Done when the two outputs match and you've compared plans and timing.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Take one real list screen in an application you know and trace its three costs: the page query, the count, and any join behind it. Decide for each whether the source's three moves (stop, fewer, faster) applies. This is the last chapter in this track's focused scope.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <ul class="src-list">
+    <li><em>High Performance MySQL</em>, 4th Edition, Chapter 8, "Query Performance Optimization." This digest (Part 3, final) covers printed pages 219 to 226 (PDF pages 241 to 248 of the source file): "Limitations of the MySQL Query Optimizer" (UNION limitations, equality propagation, parallel execution, SELECT and UPDATE on the same table), "Optimizing Specific Types of Queries" (COUNT, JOIN, GROUP BY with ROLLUP, LIMIT and OFFSET, SQL_CALC_FOUND_ROWS, UNION), and the chapter "Summary."</li>
+    <li>Everything labelled "I ran," "I tried," "I saw," or "my table" comes from small made-up tables (<code>customer</code>, <code>orders</code>, <code>product</code>, a four-row <code>n</code> table and a three-row <code>t</code> table) on a local MySQL 8.0.46 server. None of it reproduces the book's Sakila examples, figures or numbers.</li>
+  </ul>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the book; verify anything you plan to rely on against the book or the MySQL manual for your version. <strong>Tested by me:</strong> error 1093 and the derived-table workaround, the <code>COUNT</code> variants and the <code>OR NULL</code> and <code>SUM</code> patterns, <code>EXPLAIN</code> row estimates for counts, the plan differences for <code>WITH ROLLUP</code>, the offset vs deferred-join plans, the keyset range scan, the <code>SQL_CALC_FOUND_ROWS</code> deprecation warning, and the plan differences for <code>UNION</code> with and without inner limits and with and without <code>ALL</code>. I did not time any of the pagination variants. <strong>Taken on the source's word, not tested:</strong> equality propagation with huge <code>IN()</code> lists, no parallel execution of a single query, the "half the table on average" claim, join-index advice, upgrade-related join behaviour changes, the memcached suggestion, and the claim that <code>UNION ALL</code> always uses a temporary table. <strong>Simplifications flagged above:</strong> the union push-down diagram and the pagination bars. <strong>Version differences noticed:</strong> the <code>SQL_CALC_FOUND_ROWS</code> deprecation, the inner <code>ORDER BY</code> without a <code>LIMIT</code> showing no filesort in a <code>UNION</code>, and the missing <code>UNION RESULT</code> row for <code>UNION ALL</code> in <code>EXPLAIN</code>.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
