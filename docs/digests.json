@@ -229,5 +229,362 @@
     "ch": "Ch.7 (Part 3, final)",
     "title": "Covering Indexes, Index Sorting, Redundant Indexes and Maintenance",
     "date": "2026-10-25"
+  },
+  {
+    "slug": "ai-eng-ch07-part1-when-to-finetune-memory",
+    "book": "AI Engineering",
+    "ch": "Ch.7 (Part 1)",
+    "title": "Finetuning: When to Do It, and Why Memory Is the Wall",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "ai-eng-ch07-part2-peft-lora-merging",
+    "book": "AI Engineering",
+    "ch": "Ch.7 (Part 2, final)",
+    "title": "Finetuning: PEFT, LoRA, Model Merging and Practical Tactics",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "ai-eng-ch08-part1-data-curation",
+    "book": "AI Engineering",
+    "ch": "Ch.8 (Part 1)",
+    "title": "Dataset Engineering: Curating Data (Quality, Coverage, Quantity) and Getting It",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "ai-eng-ch08-part2-synthesis-processing",
+    "book": "AI Engineering",
+    "ch": "Ch.8 (Part 2, final)",
+    "title": "Dataset Engineering: Synthetic Data, Distillation and Processing",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "ai-eng-ch09-part1-inference-metrics-hardware",
+    "book": "AI Engineering",
+    "ch": "Ch.9 (Part 1)",
+    "title": "Inference Optimization: Bottlenecks, Metrics and AI Hardware",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "ai-eng-ch09-part2-optimization-techniques",
+    "book": "AI Engineering",
+    "ch": "Ch.9 (Part 2, final)",
+    "title": "Inference Optimization: Model-Level and Service-Level Techniques",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "ai-eng-ch10-part1-architecture-observability",
+    "book": "AI Engineering",
+    "ch": "Ch.10 (Part 1)",
+    "title": "AI Engineering Architecture: From a Single Model Call to a Full System",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "ai-eng-ch10-part2-user-feedback",
+    "book": "AI Engineering",
+    "ch": "Ch.10 (Part 2, final)",
+    "title": "User Feedback: Extracting, Designing and Handling the Limits of Conversational Feedback",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-cloudwatch-03-logs",
+    "book": "AWS CloudWatch",
+    "ch": "Concept 3",
+    "title": "CloudWatch Logs: Log Groups, Streams, Retention, Metric Filters and Subscription Filters",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-cloudwatch-04-logs-insights",
+    "book": "AWS CloudWatch",
+    "ch": "Concept 4",
+    "title": "CloudWatch Logs Insights: The Query Language for Searching and Analysing Logs",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-cloudwatch-05-dashboards-cross-account",
+    "book": "AWS CloudWatch",
+    "ch": "Concept 5",
+    "title": "CloudWatch Dashboards and Cross-Account, Cross-Region Observability",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-cloudwatch-06-agent-emf",
+    "book": "AWS CloudWatch",
+    "ch": "Concept 6",
+    "title": "The CloudWatch Agent and Embedded Metric Format",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-cloudwatch-07-eventbridge",
+    "book": "AWS CloudWatch",
+    "ch": "Concept 7",
+    "title": "Amazon EventBridge: Rules, Event Patterns, Schedules and Their Link to CloudWatch Events",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-cloudwatch-08-synthetics-rum",
+    "book": "AWS CloudWatch",
+    "ch": "Concept 8",
+    "title": "CloudWatch Synthetics Canaries and RUM: Testing Like a User and Watching Real Users",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-cloudwatch-09-insights-xray",
+    "book": "AWS CloudWatch",
+    "ch": "Concept 9",
+    "title": "Container Insights, Lambda Insights, ServiceLens and X-Ray Tracing",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-ec2-03-ebs-snapshots-instance-store",
+    "book": "AWS EC2",
+    "ch": "Concept 3",
+    "title": "EC2 Storage: EBS Volumes, Snapshots and Instance Store",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-ec2-04-elastic-load-balancing",
+    "book": "AWS EC2",
+    "ch": "Concept 4",
+    "title": "Elastic Load Balancing in Depth: ALB vs. NLB vs. GWLB, Target Groups and Health Checks",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-ec2-05-auto-scaling",
+    "book": "AWS EC2",
+    "ch": "Concept 5",
+    "title": "Auto Scaling in Depth: Launch Templates, Scaling Policies, Lifecycle Hooks and Warm Pools",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-ec2-06-systems-manager",
+    "book": "AWS EC2",
+    "ch": "Concept 6",
+    "title": "Systems Manager (SSM): Session Manager, Run Command, Patch Manager and Parameter Store",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-ec2-07-metadata-userdata-instance-profiles",
+    "book": "AWS EC2",
+    "ch": "Concept 7",
+    "title": "Instance Metadata (IMDSv2), User Data, Instance Profiles and IAM Roles",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-ec2-08-placement-nitro-dedicated",
+    "book": "AWS EC2",
+    "ch": "Concept 8",
+    "title": "Placement Groups, the Nitro System, and Dedicated Hosts vs. Dedicated Instances",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-ec2-09-security-groups-key-pairs",
+    "book": "AWS EC2",
+    "ch": "Concept 9",
+    "title": "Security Groups and Key Pairs from the Instance's Point of View",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-ec2-10-monitoring-status-checks-recovery",
+    "book": "AWS EC2",
+    "ch": "Concept 10",
+    "title": "Instance Monitoring, Status Checks and Auto Recovery",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-s3-03-versioning-delete-markers-mfa-delete",
+    "book": "AWS S3",
+    "ch": "Concept 3",
+    "title": "S3 Versioning, Delete Markers & MFA Delete: Keeping Every Version and Protecting the Delete Button",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-s3-04-encryption-sse-kms-bucket-keys",
+    "book": "AWS S3",
+    "ch": "Concept 4",
+    "title": "S3 Encryption: SSE-S3, SSE-KMS, DSSE-KMS, SSE-C and Bucket Keys",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-s3-05-access-control-policies-bpa-access-points",
+    "book": "AWS S3",
+    "ch": "Concept 5",
+    "title": "S3 Access Control: Bucket Policies, IAM, ACLs, Block Public Access and Access Points",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-s3-06-replication-crr-srr-rtc-batch",
+    "book": "AWS S3",
+    "ch": "Concept 6",
+    "title": "S3 Replication: CRR, SRR, Replication Time Control and Batch Replication",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-s3-07-presigned-urls-cors-static-website",
+    "book": "AWS S3",
+    "ch": "Concept 7",
+    "title": "S3 Presigned URLs, CORS and Static Website Hosting: Sharing S3 Content With Browsers and People",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-s3-08-event-notifications-eventbridge",
+    "book": "AWS S3",
+    "ch": "Concept 8",
+    "title": "S3 Event Notifications and the EventBridge Integration: Making Uploads Trigger Things",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-s3-09-multipart-transfer-acceleration-byte-range",
+    "book": "AWS S3",
+    "ch": "Concept 9",
+    "title": "S3 Multipart Upload, Transfer Acceleration and Byte-Range Fetches: Moving Big Objects Faster",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-s3-10-object-lock-inventory-storage-lens",
+    "book": "AWS S3",
+    "ch": "Concept 10",
+    "title": "S3 Object Lock, Retention & Legal Hold, Inventory and Storage Lens: Locking Data Down and Seeing What You Have",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-vpc-05-dns-resolver-phz-dhcp",
+    "book": "AWS VPC",
+    "ch": "Concept 5",
+    "title": "DNS in a VPC: Route 53 Resolver, Private Hosted Zones, DHCP Option Sets",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-vpc-06-flow-logs-traffic-mirroring",
+    "book": "AWS VPC",
+    "ch": "Concept 6",
+    "title": "VPC Flow Logs and Traffic Mirroring",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-vpc-07-ipv6-egress-only-igw",
+    "book": "AWS VPC",
+    "ch": "Concept 7",
+    "title": "IPv6 in a VPC and the Egress-Only Internet Gateway",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-vpc-08-vpc-peering-in-depth",
+    "book": "AWS VPC",
+    "ch": "Concept 8",
+    "title": "VPC Peering in Depth: Limits, CIDR Overlap, Cross-Account and Cross-Region",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-vpc-09-site-to-site-vpn-direct-connect",
+    "book": "AWS VPC",
+    "ch": "Concept 9",
+    "title": "Site-to-Site VPN, Direct Connect, and Hybrid Routing",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "aws-vpc-10-vpc-sharing-prefix-lists-route-order",
+    "book": "AWS VPC",
+    "ch": "Concept 10",
+    "title": "VPC Sharing with RAM, Managed Prefix Lists, and Route Evaluation Order",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "ddia-ch05-part1-leaders-followers-replication-lag",
+    "book": "Designing Data-Intensive Applications",
+    "ch": "Ch.5 (Part 1)",
+    "title": "Replication: Leaders, Followers, and Replication Lag",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "ddia-ch05-part2-multi-leader-leaderless",
+    "book": "Designing Data-Intensive Applications",
+    "ch": "Ch.5 (Part 2, final)",
+    "title": "Replication: Multi-Leader, Leaderless, and Concurrent Writes",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "ddia-ch06-partitioning",
+    "book": "Designing Data-Intensive Applications",
+    "ch": "Ch.6",
+    "title": "Partitioning: Splitting Data Across Machines",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "ddia-ch07-part1-acid-meaning-multi-object",
+    "book": "Designing Data-Intensive Applications",
+    "ch": "Ch.7 (Part 1)",
+    "title": "Transactions: What They Promise (ACID) and What They Don't",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "ddia-ch07-part2-weak-isolation-write-skew",
+    "book": "Designing Data-Intensive Applications",
+    "ch": "Ch.7 (Part 2)",
+    "title": "Weak Isolation: Read Committed, Snapshots, Lost Updates, and Write Skew",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "ddia-ch07-part3-serializability",
+    "book": "Designing Data-Intensive Applications",
+    "ch": "Ch.7 (Part 3, final)",
+    "title": "Serializability: Serial Execution, Two-Phase Locking, and SSI",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "ddia-ch10-part3-joins-grouping-batch-output",
+    "book": "Designing Data-Intensive Applications",
+    "ch": "Ch.10 (Part 3)",
+    "title": "Joins, Grouping, and What Batch Jobs Produce",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "ddia-ch10-part4-dataflow-engines-graphs-declarative",
+    "book": "Designing Data-Intensive Applications",
+    "ch": "Ch.10 (Part 4, final)",
+    "title": "Beyond MapReduce: Dataflow Engines, Graphs, and Declarative Batch",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "ddia-ch11-part1-event-streams-brokers-logs",
+    "book": "Designing Data-Intensive Applications",
+    "ch": "Ch.11 (Part 1)",
+    "title": "Event Streams, Message Brokers, and Partitioned Logs",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "ddia-ch11-part2-databases-and-streams",
+    "book": "Designing Data-Intensive Applications",
+    "ch": "Ch.11 (Part 2)",
+    "title": "Databases and Streams: Change Data Capture and Event Sourcing",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "ddia-ch11-part3-processing-streams",
+    "book": "Designing Data-Intensive Applications",
+    "ch": "Ch.11 (Part 3, final)",
+    "title": "Processing Streams: Time, Windows, Joins, and Fault Tolerance",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "hpmysql-ch08-part1-slow-queries-restructuring-protocol",
+    "book": "High Performance MySQL",
+    "ch": "Ch.8 (Part 1)",
+    "title": "Why Queries Are Slow: Asking for Less, Restructuring, and the Client/Server Protocol",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "hpmysql-ch08-part2-optimizer-joins-sorting-execution",
+    "book": "High Performance MySQL",
+    "ch": "Ch.8 (Part 2)",
+    "title": "Inside the Optimizer: Cost, Join Order, Sorting and the Execution Engine",
+    "date": "2026-10-25"
+  },
+  {
+    "slug": "hpmysql-ch08-part3-optimizer-limits-specific-queries",
+    "book": "High Performance MySQL",
+    "ch": "Ch.8 (Part 3, final)",
+    "title": "Where the Optimizer Struggles, and How to Rewrite COUNT, Pagination and UNION Queries",
+    "date": "2026-10-25"
   }
 ]
