@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S3 Event Notifications and the EventBridge Integration: Making Uploads Trigger Things</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+  pre { background: var(--panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 16px; }
+  pre code { background: none; padding: 0; font-size: 12.5px; line-height: 1.55; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS S3 &middot; CONCEPT 8 DIGEST</p>
+  <h1>S3 Event Notifications and the EventBridge Integration: Making Uploads Trigger Things</h1>
+  <p class="lead">S3 can tap you on the shoulder when something happens to an object: a file lands, a file is deleted, a restore finishes. You choose where the tap goes (a queue, a topic, a Lambda function, or EventBridge), and you decide how picky to be. This digest covers how that works, and the handful of behaviours that bite people: duplicates, ordering, filters that can't overlap, and loops.</p>
+
+  <h2>In one line</h2>
+  <p>S3 Event Notifications publish messages about bucket events to SNS, SQS or Lambda according to a notification configuration you attach to the bucket, while the EventBridge option sends all supported events to EventBridge, where rules decide what to do with them.</p>
+
+  <h2>The big idea</h2>
+  <p>Many systems follow the same pattern: a file arrives, and something should happen next (resize an image, scan a document, load a CSV, tell a human). Polling the bucket for new files is wasteful. Event notifications flip that around: S3 pushes a small message when the event occurs.</p>
+  <p>There are two flavours with different styles. The original <strong>S3 Event Notifications</strong> are configured per destination: "for these event types and key patterns, send to this queue." The <strong>EventBridge integration</strong> is all-or-nothing at the bucket: switch it on and every supported event goes to EventBridge, and from there you write EventBridge rules to filter and route. Which is better depends on your needs. The docs, for example, point to EventBridge as the route to an SQS FIFO queue, which S3 notifications don't support directly.</p>
+  <p>Simplification label: I don't cover Lambda, SQS, SNS or EventBridge in depth (each is a topic of its own). I cover S3's side, plus the minimal context needed. I quote no prices; the docs just point to EventBridge pricing.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Event</span>: something that happened to a bucket or object (an object created, removed, restored, replicated...).</li>
+    <li><span class="keyterm-term">Notification configuration</span>: the bucket's <code>notification</code> subresource listing event types, filters and destinations.</li>
+    <li><span class="keyterm-term">Destination</span>: where S3 publishes: an SNS topic, an SQS queue, a Lambda function, or Amazon EventBridge.</li>
+    <li><span class="keyterm-term">SNS (Simple Notification Service)</span>: a push messaging service that fans a message out to subscribers.</li>
+    <li><span class="keyterm-term">SQS (Simple Queue Service)</span>: a message queue where consumers pull messages at their own pace.</li>
+    <li><span class="keyterm-term">Lambda</span>: AWS's run-code-on-demand service; S3 can invoke a function with the event as its argument.</li>
+    <li><span class="keyterm-term">EventBridge</span>: a serverless event bus that matches events against rules and delivers them to targets.</li>
+    <li><span class="keyterm-term">Event type</span>: a name like <code>s3:ObjectCreated:Put</code> identifying the kind of event.</li>
+    <li><span class="keyterm-term">Key name filter</span>: a prefix and/or suffix filter limiting which object keys trigger a notification.</li>
+    <li><span class="keyterm-term">At-least-once delivery</span>: a promise that a message arrives one or more times, meaning duplicates are possible.</li>
+    <li><span class="keyterm-term">Idempotent</span>: an operation safe to repeat, so a duplicate event does no extra harm.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>0. Grounding: events, configuration, destinations</h3>
+  <p>By default, notifications aren't enabled for anything: the bucket's notification subresource starts empty. To turn some on, you replace that with a configuration saying which event types to publish and where. The configuration is stored on the bucket, and the docs say it usually takes about five minutes for a new or changed configuration to take effect. When you first enable a notification, S3 sends a test event (<code>s3:TestEvent</code>) to check the destination exists and you have permission; if enabling fails you won't get one.</p>
+  <p>Delivery semantics, straight from the docs: notifications are designed to be delivered <strong>at least once</strong>; typically they arrive in seconds but can take a minute or longer; they're <strong>not guaranteed to arrive in the order events occurred</strong>; and on rare occasions retries can produce duplicate notifications for the same event. So consumers should expect duplicates and reordering.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 300" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="f1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#7A7A80"/></marker></defs>
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">FROM UPLOAD TO ACTION</text>
+      <rect x="20" y="110" width="120" height="70" rx="8" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="80" y="138" fill="#6FCF97" font-size="11" text-anchor="middle" font-weight="700">S3 bucket</text>
+      <text x="80" y="156" fill="#7A7A80" font-size="9" text-anchor="middle">object created</text>
+      <rect x="190" y="40" width="130" height="44" rx="6" fill="#131316" stroke="#F2EFE9"/><text x="255" y="66" fill="#F2EFE9" font-size="10.5" text-anchor="middle">SNS topic</text>
+      <rect x="190" y="100" width="130" height="44" rx="6" fill="#131316" stroke="#F2EFE9"/><text x="255" y="126" fill="#F2EFE9" font-size="10.5" text-anchor="middle">SQS queue</text>
+      <rect x="190" y="160" width="130" height="44" rx="6" fill="#131316" stroke="#F2EFE9"/><text x="255" y="186" fill="#F2EFE9" font-size="10.5" text-anchor="middle">Lambda function</text>
+      <rect x="190" y="220" width="130" height="44" rx="6" fill="#131316" stroke="#C8453A"/><text x="255" y="246" fill="#C8453A" font-size="10.5" text-anchor="middle">EventBridge</text>
+      <line x1="142" y1="130" x2="188" y2="64" stroke="#7A7A80" marker-end="url(#f1)"/>
+      <line x1="142" y1="140" x2="188" y2="122" stroke="#7A7A80" marker-end="url(#f1)"/>
+      <line x1="142" y1="152" x2="188" y2="182" stroke="#7A7A80" marker-end="url(#f1)"/>
+      <line x1="142" y1="164" x2="188" y2="240" stroke="#7A7A80" marker-end="url(#f1)"/>
+      <rect x="400" y="190" width="200" height="90" rx="8" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="500" y="212" fill="#C8453A" font-size="10.5" text-anchor="middle">EventBridge rules</text>
+      <text x="500" y="232" fill="#C9C7C1" font-size="9" text-anchor="middle">match events, route to more</text>
+      <text x="500" y="248" fill="#C9C7C1" font-size="9" text-anchor="middle">targets (email, HTTP, FIFO</text>
+      <text x="500" y="264" fill="#C9C7C1" font-size="9" text-anchor="middle">queue, other services...)</text>
+      <line x1="322" y1="242" x2="398" y2="236" stroke="#7A7A80" marker-end="url(#f1)"/>
+      <text x="470" y="90" fill="#7A7A80" font-size="9.5" text-anchor="middle">each notification config entry</text>
+      <text x="470" y="106" fill="#7A7A80" font-size="9.5" text-anchor="middle">names one destination type</text>
+    </svg>
+    <figcaption>Fig 1. Four destination types; EventBridge fans out further.</figcaption>
+  </figure>
+
+  <h3>1. What events can S3 publish?</h3>
+  <p>The docs' overview lists categories: new object created, object removal, restore events, RRS object lost, replication events, lifecycle expiration, lifecycle transition, Intelligent-Tiering automatic archival, object tagging, object ACL PUT, object annotation, and object retention events. In the SNS/SQS/Lambda style you name specific types (or wildcards):</p>
+  <ul>
+    <li><code>s3:ObjectCreated:*</code> or a specific API: <code>:Put</code>, <code>:Post</code>, <code>:Copy</code>, <code>:CompleteMultipartUpload</code>.</li>
+    <li><code>s3:ObjectRemoved:*</code>, <code>:Delete</code> (permanent or unversioned delete), <code>:DeleteMarkerCreated</code>. Per the docs, these do <em>not</em> fire for automatic lifecycle deletes or failed operations.</li>
+    <li><code>s3:LifecycleExpiration:*</code> and <code>s3:LifecycleTransition</code> for lifecycle-driven changes (this ties back to the lifecycle digest).</li>
+    <li><code>s3:ObjectRestore:*</code> (<code>Post</code>, <code>Completed</code>, <code>Delete</code>) for Glacier-style restores.</li>
+    <li><code>s3:Replication:*</code> events such as <code>OperationFailedReplication</code>, <code>OperationMissedThreshold</code> and <code>OperationReplicatedAfterThreshold</code> (these need replication metrics or RTC enabled; see the replication digest).</li>
+    <li><code>s3:ObjectTagging:*</code>, <code>s3:ObjectAcl:Put</code>, <code>s3:ObjectRetention:Put</code>, <code>s3:IntelligentTiering</code>, and others.</li>
+  </ul>
+
+  <h3>2. Setting it up: destinations, permissions and the config</h3>
+  <p>Rules for destinations (from the docs):</p>
+  <ul>
+    <li>Each notification entry names <strong>one destination type</strong>. Destinations must be in the <strong>same Region</strong> as the bucket.</li>
+    <li>SNS: standard topics only (SNS FIFO isn't allowed). SQS: standard queues only; FIFO isn't supported (use EventBridge to reach a FIFO queue). Lambda durable functions aren't supported.</li>
+    <li>Messages can be up to 64 KB; the docs recommend setting an SQS queue's <code>MaximumMessageSize</code> to at least 64 KB, because otherwise SQS rejects the notification and it isn't delivered.</li>
+  </ul>
+  <p><strong>Permissions go on the destination.</strong> S3 needs permission to publish. For SNS or SQS you attach a resource policy to the topic or queue allowing the S3 service principal (<code>s3.amazonaws.com</code>) to <code>SNS:Publish</code> or <code>SQS:SendMessage</code>, with conditions on <code>aws:SourceArn</code> (your bucket) and <code>aws:SourceAccount</code> (the bucket owner) so only your bucket can use it. For Lambda, S3 needs permission to invoke the function (the console sets this up for you). If the queue or topic is encrypted with a customer managed KMS key, the key policy must let the S3 principal use <code>kms:GenerateDataKey</code> and <code>kms:Decrypt</code>.</p>
+  <p><strong>The config shape.</strong> Stored as XML on the bucket (the CLI and SDK versions use JSON equivalents). The docs' SQS shape:</p>
+<pre><code>&lt;NotificationConfiguration&gt;
+  &lt;QueueConfiguration&gt;
+    &lt;Id&gt;optional-id&lt;/Id&gt;
+    &lt;Queue&gt;sqs-queue-arn&lt;/Queue&gt;
+    &lt;Event&gt;s3:ObjectCreated:Put&lt;/Event&gt;
+  &lt;/QueueConfiguration&gt;
+&lt;/NotificationConfiguration&gt;</code></pre>
+  <p>There are matching <code>TopicConfiguration</code> and <code>CloudFunctionConfiguration</code> blocks for SNS and Lambda. To remove all notifications, you save an empty <code>NotificationConfiguration</code>. One thing to take from the structure: it's a whole-document setting, so a change means sending the full intended configuration, not just the new piece (the docs show saving a replacement configuration; confirm the exact CLI behaviour in the reference).</p>
+
+  <h3>3. Filtering by key name</h3>
+  <p>You can limit a notification to keys with a given <strong>prefix</strong> and/or <strong>suffix</strong> (for example, only <code>images/</code> keys ending <code>.jpg</code>). Rules from the docs:</p>
+  <ul>
+    <li>No wildcards: <code>*</code> can't be used in a prefix or suffix. Spaces must be written as <code>+</code>, and other special characters must be URL-encoded.</li>
+    <li><strong>No overlapping filters for the same event types.</strong> Two entries can't have overlapping prefixes, overlapping suffixes, or overlapping prefix and suffix combos. "Overlap" means some key string could match both. Example: suffixes <code>jpg</code> and <code>pg</code> overlap (a key can end in both), while <code>.jpg</code> and <code>.png</code> don't. You can have the same prefix twice if the suffixes don't overlap.</li>
+    <li>An entry without a filter counts as matching every prefix and suffix, so pairing it with any filtered entry for the same events is invalid.</li>
+    <li>Overlapping filters <em>are</em> fine across different event types (the docs' example: same prefix for <code>ObjectCreated:Put</code> and <code>ObjectRemoved:*</code>).</li>
+    <li>S3 returns an error if you try to save an invalid overlap.</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">DO THESE TWO FILTERS OVERLAP? (same event type)</text>
+      <rect x="20" y="44" width="180" height="150" rx="8" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="110" y="68" fill="#6FCF97" font-size="11" font-weight="700" text-anchor="middle">VALID</text>
+      <text x="110" y="94" fill="#C9C7C1" font-size="9.5" text-anchor="middle">images/  vs  logs/</text>
+      <text x="110" y="116" fill="#C9C7C1" font-size="9.5" text-anchor="middle">.jpg  vs  .png</text>
+      <text x="110" y="138" fill="#C9C7C1" font-size="9.5" text-anchor="middle">images + .jpg</text>
+      <text x="110" y="154" fill="#C9C7C1" font-size="9.5" text-anchor="middle">images + .png</text>
+      <rect x="220" y="44" width="380" height="150" rx="8" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="410" y="68" fill="#C8453A" font-size="11" font-weight="700" text-anchor="middle">REJECTED (a key could match both)</text>
+      <text x="410" y="94" fill="#C9C7C1" font-size="9.5" text-anchor="middle">jpg  vs  pg   (both suffixes)</text>
+      <text x="410" y="116" fill="#C9C7C1" font-size="9.5" text-anchor="middle">no filter  vs  prefix images</text>
+      <text x="410" y="138" fill="#C9C7C1" font-size="9.5" text-anchor="middle">images  vs  images/2024/</text>
+      <text x="410" y="154" fill="#C9C7C1" font-size="9.5" text-anchor="middle">images+jpg  vs  jpg-only</text>
+      <text x="310" y="226" fill="#7A7A80" font-size="10" text-anchor="middle">test: could one key name satisfy both? if yes, overlap</text>
+    </svg>
+    <figcaption>Fig 2. The "could one key match both" test, built from the docs' rules.</figcaption>
+  </figure>
+
+  <h3>4. The EventBridge route</h3>
+  <p>EventBridge is configured differently. Enabling it on a bucket is a single on/off switch: the docs' CLI shape is a notification configuration containing an empty <code>EventBridgeConfiguration</code>:</p>
+<pre><code>aws s3api put-bucket-notification-configuration \
+  --bucket {bucket} \
+  --notification-configuration='{ "EventBridgeConfiguration": {} }'</code></pre>
+  <p>After you enable it, the docs say it takes around five minutes to take effect. Unlike the other destinations, you don't pick event types: once on, all the supported events go to EventBridge (object created, deleted, restore initiated/completed/expired, storage class changed, access tier changed, ACL updated, tags added/deleted, annotations, retention updated). Then you create <strong>EventBridge rules</strong> that match on fields and send to targets, which can be more than the S3-native destinations; that's where the extra flexibility comes from.</p>
+  <p>The event arrives as JSON with an envelope (<code>version</code>, <code>id</code>, <code>detail-type</code> such as "Object Created", <code>source</code> of <code>aws.s3</code>, <code>account</code>, <code>time</code>, <code>region</code>, <code>resources</code> with the bucket ARN) and a <code>detail</code> object (bucket name, object key, size, etag, version ID, sequencer, requester, and a <code>reason</code> such as <code>PutObject</code>; for deletes a <code>deletion-type</code> of "Delete Marker Created" or "Permanently Deleted"). A trimmed shape in the docs' style:</p>
+<pre><code>{
+  "detail-type": "Object Created",
+  "source": "aws.s3",
+  "resources": ["arn:aws:s3:::{bucket}"],
+  "detail": {
+    "bucket": {"name": "{bucket}"},
+    "object": {"key": "example-key", "size": 5},
+    "reason": "PutObject"
+  }
+}</code></pre>
+  <p>The docs also advise your code to compare the major <code>event-version</code> for equality, check the minor version is at least what you need, and ignore fields it doesn't recognise, so additions don't break you.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">TWO STYLES SIDE BY SIDE</text>
+      <rect x="20" y="44" width="280" height="170" rx="10" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="160" y="68" fill="#6FCF97" font-size="11" font-weight="700" text-anchor="middle">S3 Event Notifications</text>
+      <text x="160" y="94" fill="#C9C7C1" font-size="9.5" text-anchor="middle">choose event types per entry</text>
+      <text x="160" y="112" fill="#C9C7C1" font-size="9.5" text-anchor="middle">prefix/suffix filters (no overlap)</text>
+      <text x="160" y="130" fill="#C9C7C1" font-size="9.5" text-anchor="middle">SNS, SQS, Lambda (one type each)</text>
+      <text x="160" y="148" fill="#C9C7C1" font-size="9.5" text-anchor="middle">grant S3 access on each target</text>
+      <text x="160" y="166" fill="#C9C7C1" font-size="9.5" text-anchor="middle">no FIFO queues</text>
+      <rect x="320" y="44" width="280" height="170" rx="10" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="460" y="68" fill="#C8453A" font-size="11" font-weight="700" text-anchor="middle">EventBridge integration</text>
+      <text x="460" y="94" fill="#C9C7C1" font-size="9.5" text-anchor="middle">one switch: all events sent</text>
+      <text x="460" y="112" fill="#C9C7C1" font-size="9.5" text-anchor="middle">filter and route in EventBridge rules</text>
+      <text x="460" y="130" fill="#C9C7C1" font-size="9.5" text-anchor="middle">many possible targets</text>
+      <text x="460" y="148" fill="#C9C7C1" font-size="9.5" text-anchor="middle">can reach SQS FIFO (per docs)</text>
+      <text x="460" y="166" fill="#C9C7C1" font-size="9.5" text-anchor="middle">EventBridge pricing applies</text>
+      <text x="310" y="238" fill="#7A7A80" font-size="10" text-anchor="middle">my side-by-side summary; they can be used together on one bucket</text>
+    </svg>
+    <figcaption>Fig 3. Pick by how much filtering and routing you need.</figcaption>
+  </figure>
+
+  <h3>5. Gotchas worth memorising</h3>
+  <ul>
+    <li><strong>Infinite loops.</strong> The docs warn: if a notification triggers a Lambda that writes back to the same bucket, it can trigger itself. Use two buckets, or a trigger limited to an input prefix.</li>
+    <li><strong>Duplicates and ordering.</strong> Make consumers idempotent; for ordering across events of one object, the <code>sequencer</code> field in the event is there for that purpose (the docs' full guidance is on the AWS Storage Blog post they link).</li>
+    <li><strong>Lifecycle deletes</strong> don't raise <code>ObjectRemoved</code> events; use the <code>LifecycleExpiration</code> types.</li>
+    <li><strong>Configuration delay.</strong> About five minutes before a change is live, so don't test instantly and conclude it's broken.</li>
+    <li><strong>Deleted destinations</strong> leave failed notifications that can block cleanup ("Unable to validate the following destination configurations"); the docs suggest deleting them all together in the console.</li>
+  </ul>
+
+  <h2>Why it matters</h2>
+  <p>Event-driven pipelines on S3 (thumbnails, virus scans, ETL kick-offs, audit trails) all rest on these notifications. Getting the model right (at-least-once, unordered, same-Region destinations, resource policies on the target, non-overlapping filters) separates a pipeline that works in a demo from one that survives production. It also connects to the earlier digests: lifecycle, replication and restore all have events, and versioning shapes what "deleted" means in them.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>S3 Event Notifications go to SNS, SQS or Lambda (one destination type per entry, same Region); EventBridge is an all-events switch with rules downstream.</li>
+      <li>Delivery is at least once and unordered, so duplicates and reordering must be tolerated.</li>
+      <li>Permissions are granted on the destination (resource policy for SNS/SQS, invoke permission for Lambda, KMS key policy if encrypted).</li>
+      <li>Prefix/suffix filters can't overlap for the same event types; no wildcards allowed.</li>
+      <li>Writing to the same bucket from the handler can loop; lifecycle deletes use their own event types; config changes take about five minutes.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <p style="font-size:14px;color:#7A7A80;margin-top:0">Projects 1 and 2 are offline. Projects 3 to 5 use a scratch bucket and one SQS queue in your own account. The EventBridge enabling command is from the docs; I did not verify the CLI JSON for SQS notification configurations or the SQS CLI commands, so check the CLI reference and the docs' notification walkthrough. Remove the configuration and delete the queue when done.</p>
+    <ol>
+      <li><strong>Overlap checker (offline, ~1 hour).</strong> Write a function that takes two (prefix, suffix) filters and says whether some key could match both. <em>Done when</em> it agrees with every valid and invalid example in Fig 2 and treats "no filter" as matching everything.</li>
+      <li><strong>Idempotent consumer (offline, ~1 hour).</strong> Write a handler that processes a list of S3-style events containing duplicates and out-of-order entries, using the event's bucket, key, version ID and sequencer to avoid double work. <em>Done when</em> feeding it the same event five times does the side effect once.</li>
+      <li><strong>Queue notification.</strong> Create an SQS queue, attach the docs' queue policy pattern (S3 principal, <code>SQS:SendMessage</code>, source ARN and account conditions), and configure <code>s3:ObjectCreated:*</code> on your bucket for it using the console. Upload a file and read the message. <em>Done when</em> you've seen the <code>s3:TestEvent</code> and then a real <code>ObjectCreated</code> message.</li>
+      <li><strong>Add a filter.</strong> Restrict the notification to prefix <code>incoming/</code> and suffix <code>.csv</code>; upload three files that match and don't match. <em>Done when</em> only the matching file produces a message, and you've tried saving an overlapping second entry and read the error.</li>
+      <li><strong>Try EventBridge.</strong> Run the docs' <code>put-bucket-notification-configuration</code> command with an empty <code>EventBridgeConfiguration</code> (note it replaces the whole notification configuration, so do this on a bucket where you can afford to lose the queue entry), wait the five minutes, then make a simple EventBridge rule on source <code>aws.s3</code> that sends to a target of your choice. <em>Done when</em> an upload triggers your target and you can point to the <code>detail-type</code> in the event.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Read the AWS Storage Blog post the docs link on event ordering and duplicates, and the EventBridge "mapping and troubleshooting" page for how S3 types map to EventBridge detail types. Next in this track: multipart upload, Transfer Acceleration and byte-range fetches.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/EventNotifications.html">Amazon S3 Event Notifications</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-how-to-event-types-and-destinations.html">Event notification types and destinations</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/how-to-enable-disable-notification-intro.html">Using Amazon SQS, Amazon SNS, and Lambda</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/grant-destinations-permissions-to-s3.html">Granting permissions to publish event notification messages to a destination</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-how-to-filtering.html">Configuring event notifications using object key name filtering</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/EventBridge.html">Using EventBridge</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/enable-event-notifications-eventbridge.html">Enabling Amazon EventBridge</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/ev-events.html">EventBridge event message structure</a></li>
+  </ul>
+  <p class="src-note">This is a teaching draft, not a substitute for the AWS documentation. Verify anything you rely on against the live docs. Notes on uncertainty: docs read in October 2026; no prices quoted; only the EventBridge enable command comes verbatim from the docs, the rest of the project steps are outlines and nothing was run against a live account; the SQS XML is the docs' shape and the "send the whole configuration" point is my reading of how the notification subresource is replaced, so confirm it in the API reference; the JSON event is trimmed from the docs' example; I did not read the SNS/SQS walkthrough, the console steps, or the EventBridge mapping and permissions pages in full, and I did not verify the docs' statements about EventBridge delivery guarantees (they are not in the pages I read).</p>
+
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
