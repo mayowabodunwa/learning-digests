@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DDIA: Ch.10 Joins, Grouping, and Batch Output (Part 3)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+  pre { background:#0A0A0B; border:1px solid var(--hairline); border-radius:8px; padding:14px 16px; overflow-x:auto; font-family:"JetBrains Mono",monospace; font-size:11.5px; line-height:1.5; color:var(--body); margin:10px 0 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">SYSTEMS &middot; CH.10 DIGEST (PART 3)</p>
+  <h1>Joins, Grouping, and What Batch Jobs Produce</h1>
+  <p class="lead">Part 2 gave us a cluster that can run a mapper and a reducer over files. This part asks the practical questions: how do you join two datasets when there are no indexes, how do you cope when one key is wildly more popular than the rest, what do you do with the output of a batch job, and how does all this compare with the parallel databases that existed long before Hadoop? It stops right before the section called "Beyond MapReduce", which is the next part.</p>
+
+  <h2>In one line</h2>
+  <p>Joins and groupings in a batch job are all about getting every record that shares a key into the same place, either by sorting and sending them to a reducer, or by making smart assumptions about the data so a mapper can do the join alone; and the best place to put the result is a fresh set of immutable files, not a live database.</p>
+
+  <h2>The big idea</h2>
+  <p>A database answers "give me the user with ID 4821" with an index lookup. A batch job has no such luxury: it reads whole files from start to end. So when a batch job needs to combine two datasets, it doesn't ask questions one record at a time. It <strong>reorganizes the data so that everything about the same key ends up side by side</strong>, then does the combining in a simple loop with no network calls. That one move explains reduce-side joins, grouping, and even the fix for hot keys. The second half of this part is about the other end of the pipeline: what a job produces (search indexes, read-only database files) and why "write new files, never poke a live database" keeps things safe and easy to redo. The part closes by comparing Hadoop's approach with massively parallel processing (MPP) databases, which solved a lot of these same problems years earlier.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Join</span>: combining records from two datasets that refer to each other, such as an event that holds a user ID with the user record that has that ID. The source focuses on equi-joins, where the match is "these two fields are equal" (databases can do other kinds of joins too).</li>
+    <li><span class="keyterm-term">Full table scan</span>: reading every record rather than looking up a few through an index. Terrible for finding one record, perfectly reasonable when you want an aggregate over most of the data.</li>
+    <li><span class="keyterm-term">Activity events / clickstream</span>: a log of what logged-in users did on a site. The source treats it as the big "fact table" side of the join; the user database is a "dimension".</li>
+    <li><span class="keyterm-term">Sort-merge join</span>: a reduce-side join where mappers tag records with the join key, the framework sorts them, and the reducer merges the sorted records from both sides.</li>
+    <li><span class="keyterm-term">Secondary sort</span>: arranging the reducer's input so that, within one key, records arrive in a chosen order (for example the user record first, then the events by timestamp).</li>
+    <li><span class="keyterm-term">Sessionization</span>: grouping all the events of one user (or session) together to see the sequence of what they did.</li>
+    <li><span class="keyterm-term">Hot key / linchpin object</span>: a key with vastly more related records than average (a celebrity account with millions of followers).</li>
+    <li><span class="keyterm-term">Skew / hot spot</span>: one reducer getting far more records than the others, so the whole job waits on it.</li>
+    <li><span class="keyterm-term">Reduce-side join</span>: the join logic runs in the reducers; mappers only prepare the data.</li>
+    <li><span class="keyterm-term">Map-side join</span>: a cut-down job with no reducers and no sorting; each mapper reads input and writes output, doing the join itself, which requires assumptions about the inputs.</li>
+    <li><span class="keyterm-term">Broadcast hash join</span>: a map-side join where a small dataset is loaded entirely into an in-memory hash table in every mapper of the big dataset.</li>
+    <li><span class="keyterm-term">Partitioned hash join</span>: a map-side join where both inputs are already split the same way by the same key and hash function, so each mapper loads only one slice of the small side (Hive calls it a bucketed map join).</li>
+    <li><span class="keyterm-term">Map-side merge join</span>: a map-side join where both inputs are partitioned the same way <em>and</em> sorted by the key, so a mapper can merge them like a reducer would.</li>
+    <li><span class="keyterm-term">Search index (term dictionary and postings list)</span>: a lookup structure from a keyword to the list of document IDs containing it.</li>
+    <li><span class="keyterm-term">Human fault tolerance</span>: the ability to recover from mistakes in code by rolling back and rerunning, because inputs weren't damaged.</li>
+    <li><span class="keyterm-term">MPP database</span> (massively parallel processing): a database that runs analytic SQL queries in parallel across a cluster of machines (the source names Teradata, Gamma and Tandem NonStop SQL as early examples).</li>
+    <li><span class="keyterm-term">Schema-on-read</span>: storing data raw and leaving its interpretation to whoever reads it, the opposite of fixing a schema before loading.</li>
+    <li><span class="keyterm-term">Preemption</span>: a scheduler terminating a lower-priority task to free resources for a higher-priority one.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>Grounding first. In an ordinary database, relationships between records (a foreign key, a document reference, an edge in a graph) are followed by index lookups: find the one user row, then the next. MapReduce has no concept of indexes in the usual sense. When you give a job some files it reads <em>all</em> of them, which a database would call a full table scan. For fetching one record that would be outrageously wasteful, but for analytics, where you want a number computed over a huge share of the records, scanning everything (in parallel across machines) is quite reasonable. So when this part says "join" in a batch setting, it means <em>resolve every occurrence of an association in the dataset at once</em>, for all users together, not look up one user. Keep that picture in mind: it's the whole dataset or nothing.</p>
+
+  <h3>The running example: events and users</h3>
+  <p>The source uses a join between a log of user activity events (huge, each row holds a user ID and what they did) and a database of user profiles (smaller, includes things like date of birth). The goal: figure out which pages are popular with which age groups. The events only carry the user ID, and copying the full profile into every event would be wasteful, so you must join.</p>
+  <p>The naive way is to loop through the events and, for each, ask the user database over the network. The source gives three reasons this is bad: throughput gets capped by network round trips, a local cache only helps depending on how the data is distributed, and running many such queries in parallel can overwhelm the database. It also makes the job <strong>nondeterministic</strong>, since the remote data may change while you're reading it. The principle the source states: for good batch throughput, computation should be as local as possible to one machine, and random-access network requests per record are too slow.</p>
+  <p>The better way: take a copy of the user database (for example pulled from a backup through an ETL process) and drop it into the same distributed filesystem as the event log. Now both are just files, and MapReduce can bring matching records together.</p>
+
+  <h3>Reduce-side sort-merge join</h3>
+  <p>Remember the mapper's job: pull a key and value out of each record. Here you run two kinds of mappers. One set reads activity events and emits <code>(user ID, event)</code>. Another set reads the user file and emits <code>(user ID, date of birth)</code>. The framework partitions all that output by key and sorts it. The effect: for each user ID, the user's record and all of their events end up adjacent in one reducer's input. With a <strong>secondary sort</strong>, you can arrange for the user record to come first, then the events in timestamp order.</p>
+  <p>The reducer then runs once per user ID. The first value is the date of birth, which it holds in a local variable, and then it loops over the remaining events, emitting pairs of (URL viewed, viewer's age in years). A follow-up job can then compute the age distribution per URL. Because the reducer sees one user at a time it only holds one user record in memory and never touches the network. This is a <strong>sort-merge join</strong>: mapper output is sorted by key, then reducers merge the sorted lists from both sides.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">REDUCE-SIDE SORT-MERGE JOIN</text>
+      <text x="20" y="48" fill="#7A7A80" font-size="10">two input files</text>
+      <rect x="20" y="56" width="120" height="50" rx="6" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="80" y="76" fill="#F2EFE9" font-size="10" text-anchor="middle">user file</text>
+      <text x="80" y="92" fill="#7A7A80" font-size="9" text-anchor="middle">u1,1990  u2,2001</text>
+      <rect x="20" y="130" width="120" height="50" rx="6" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="80" y="150" fill="#F2EFE9" font-size="10" text-anchor="middle">event log</text>
+      <text x="80" y="166" fill="#7A7A80" font-size="9" text-anchor="middle">u2,/a  u1,/b  u2,/c</text>
+      <line x1="140" y1="81" x2="200" y2="81" stroke="#7A7A80"/>
+      <line x1="140" y1="155" x2="200" y2="155" stroke="#7A7A80"/>
+      <rect x="200" y="56" width="110" height="50" rx="6" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="255" y="78" fill="#C8453A" font-size="10" text-anchor="middle">mapper A</text>
+      <text x="255" y="94" fill="#7A7A80" font-size="9" text-anchor="middle">key = user ID</text>
+      <rect x="200" y="130" width="110" height="50" rx="6" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="255" y="152" fill="#C8453A" font-size="10" text-anchor="middle">mapper B</text>
+      <text x="255" y="168" fill="#7A7A80" font-size="9" text-anchor="middle">key = user ID</text>
+      <line x1="310" y1="81" x2="360" y2="110" stroke="#7A7A80"/>
+      <line x1="310" y1="155" x2="360" y2="125" stroke="#7A7A80"/>
+      <rect x="360" y="90" width="100" height="50" rx="6" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="410" y="112" fill="#F2EFE9" font-size="10" text-anchor="middle">partition</text>
+      <text x="410" y="128" fill="#F2EFE9" font-size="10" text-anchor="middle">+ sort</text>
+      <line x1="460" y1="115" x2="490" y2="115" stroke="#7A7A80"/>
+      <rect x="490" y="56" width="135" height="130" rx="6" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="557" y="76" fill="#C8453A" font-size="10" text-anchor="middle">REDUCER input</text>
+      <text x="500" y="98" fill="#6FCF97" font-size="9.5">u1: [1990]</text>
+      <text x="500" y="112" fill="#C9C7C1" font-size="9.5">    [/b]</text>
+      <text x="500" y="134" fill="#6FCF97" font-size="9.5">u2: [2001]</text>
+      <text x="500" y="148" fill="#C9C7C1" font-size="9.5">    [/a, /c]</text>
+      <text x="500" y="172" fill="#7A7A80" font-size="9">profile first, then events</text>
+      <text x="320" y="224" fill="#C9C7C1" font-size="10" text-anchor="middle">reducer: remember the profile, loop over the events,</text>
+      <text x="320" y="240" fill="#C9C7C1" font-size="10" text-anchor="middle">emit (url, viewer age). No network calls anywhere.</text>
+      <text x="320" y="272" fill="#7A7A80" font-size="9.5" text-anchor="middle">green = the single profile record; the join key does the "addressing"</text>
+    </svg>
+    <figcaption>Fig 1. Two kinds of mapper make the same key; sorting lines the records up for the reducer. (My own sketch with made-up rows.)</figcaption>
+  </figure>
+
+  <h3>Bringing related data together: keys as addresses</h3>
+  <p>A mental model the source offers: think of mappers as <em>sending messages</em> to reducers. The key works like a destination address. It's not an IP address, just an arbitrary string, but everything with the same key is delivered to the same place, namely a single call to the reducer. (That's a mental model, not a literal description of the network protocol.)</p>
+  <p>What you gain is a clean split. The messy physical part (getting the data to the right machine) belongs to the framework, and your reducer is ordinary, single-threaded logic that can run at high throughput with low memory. The source contrasts this with typical database use, where a data fetch sits deep inside application code. A bonus: because MapReduce handles all the communication, it also shields your code from partial failures like another node crashing, by transparently retrying failed tasks.</p>
+
+  <h3>GROUP BY and sessionization</h3>
+  <p>Grouping uses the very same pattern. Set up the mappers so the key they emit is the thing you group by; the partition and sort brings all records with that key to one reducer; the reducer aggregates. The source lists typical aggregations: counting records per group (<code>COUNT(*)</code>), summing a field (<code>SUM</code>), or picking the top k records by some ranking. So joining and grouping look quite similar on MapReduce.</p>
+  <p><strong>Sessionization</strong> is a grouping where the key is a session cookie or user ID. If you have several web servers, one user's events are scattered across different servers' log files; grouping on the user identifier collects them in one place (while different users spread across different partitions) so you can see the order of actions. The source says this can be used for A/B testing (did users shown the new site version buy more?) or judging whether a marketing activity is worthwhile.</p>
+
+  <h3>Handling skew</h3>
+  <p>"Bring all records with the same key to the same place" breaks down when one key has an enormous share of the records. In a social network most users have a few hundred connections while a few celebrities have millions of followers. Those are hot keys. If one reducer gets all of a celebrity's records it does far more work than the rest. And since a job only finishes when all its reducers finish, <strong>everything downstream waits for the slowest reducer</strong>.</p>
+  <p>The source describes three compensations (they are tool-specific techniques, not universal defaults):</p>
+  <ul>
+    <li><strong>Pig's skewed join</strong>: first run a sampling job to discover the hot keys. In the real join, mappers send records for a hot key to one of several reducers chosen at random (instead of the usual deterministic hash of the key). The other join input's records for that key are replicated to all reducers handling it. Cost: copying the other side several times.</li>
+    <li><strong>Crunch's sharded join</strong>: similar, but you name the hot keys explicitly instead of sampling.</li>
+    <li><strong>Hive's skewed join</strong>: hot keys are declared in table metadata and stored in separate files, and joins on them use a map-side join (next section).</li>
+  </ul>
+  <p>For <em>grouping</em> a hot key you can use two stages: stage one sends records to a random reducer, so each reducer aggregates a subset of the hot key's records into a compact value; stage two combines those partial values into one per key. This works for aggregations where combining partial answers is possible (counts and sums are natural; the source mentions it generally for aggregating).</p>
+
+  <figure>
+    <svg viewBox="0 0 640 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">HOT KEY: PLAIN vs TWO-STAGE</text>
+      <text x="20" y="46" fill="#7A7A80" font-size="10">plain: hash(key) picks the reducer</text>
+      <rect x="20" y="56" width="180" height="22" rx="4" fill="#C8453A"/>
+      <text x="30" y="71" fill="#0A0A0B" font-size="9.5" font-weight="700">reducer 1: celebrity (1000)</text>
+      <rect x="20" y="84" width="20" height="14" rx="3" fill="#6FCF97"/>
+      <text x="48" y="95" fill="#7A7A80" font-size="9">reducer 2: 3</text>
+      <rect x="20" y="104" width="20" height="14" rx="3" fill="#6FCF97"/>
+      <text x="48" y="115" fill="#7A7A80" font-size="9">reducer 3: 3</text>
+      <text x="230" y="71" fill="#7A7A80" font-size="9.5">everyone waits for reducer 1</text>
+      <text x="20" y="152" fill="#7A7A80" font-size="10">two-stage: spread the hot key, then combine</text>
+      <rect x="20" y="162" width="62" height="22" rx="4" fill="#6FCF97"/>
+      <rect x="90" y="162" width="62" height="22" rx="4" fill="#6FCF97"/>
+      <rect x="160" y="162" width="62" height="22" rx="4" fill="#6FCF97"/>
+      <rect x="230" y="162" width="62" height="22" rx="4" fill="#6FCF97"/>
+      <text x="20" y="200" fill="#7A7A80" font-size="9">stage 1: random reducers each count ~250</text>
+      <line x1="320" y1="173" x2="380" y2="173" stroke="#7A7A80"/>
+      <rect x="380" y="160" width="150" height="26" rx="4" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="455" y="177" fill="#C8453A" font-size="10" text-anchor="middle">stage 2: add up = 1000</text>
+      <text x="320" y="236" fill="#7A7A80" font-size="9.5" text-anchor="middle">numbers are invented for illustration</text>
+    </svg>
+    <figcaption>Fig 2. Spreading a hot key across reducers, then merging the partial results. (My own sketch.)</figcaption>
+  </figure>
+
+  <h3>Map-side joins</h3>
+  <p>The joins so far are <strong>reduce-side</strong>: the mappers merely prepare data and the reducers join. The upside is that you don't need to assume anything about the inputs. The downside is cost: sorting, copying to reducers and merging can be expensive, and depending on memory buffers, data may be written to disk several times along the way.</p>
+  <p>If you can make assumptions about your data, you can use a <strong>map-side join</strong>: a cut-down job with no reducers and no sorting, where each mapper reads one input block and writes one output file. Three variants, in order of how strong the assumption is:</p>
+  <ol>
+    <li><strong>Broadcast hash join</strong>: one input is small enough to fit in memory. Each mapper (there is one per block of the large input) first loads the whole small dataset into a hash table, then scans its piece of the large input and looks each key up. The "broadcast" is each mapper reading the entire small input; "hash" is the table. The source says Pig calls this a replicated join, Hive a MapJoin, and it's also used in query engines like Impala. Variant: store the small side as a read-only index on local disk; the hot parts stay in the OS page cache, giving near in-memory lookup speed without the data needing to fit in memory.</li>
+    <li><strong>Partitioned hash join</strong>: both inputs are partitioned the same way (same key, same hash function, same number of partitions). The source's example splits by the last decimal digit of the user ID, so mapper 3 loads only users ending in 3 and scans only events for users ending in 3. Each hash table is smaller. This works well when the inputs came from earlier jobs that already grouped them that way.</li>
+    <li><strong>Map-side merge join</strong>: inputs are partitioned the same way <em>and sorted by the same key</em>. Then size doesn't matter; the mapper reads both files in ascending key order and matches records like a reducer would. If this is possible, earlier jobs probably produced that layout; it could have been done in their reduce stage, but a separate map-only job makes sense if the sorted, partitioned data is useful for other things too.</li>
+  </ol>
+
+  <figure>
+    <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">THE THREE MAP-SIDE JOINS</text>
+      <rect x="20" y="36" width="190" height="150" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="115" y="56" fill="#F2EFE9" font-size="10.5" font-weight="700" text-anchor="middle">BROADCAST HASH</text>
+      <text x="115" y="80" fill="#C9C7C1" font-size="9.5" text-anchor="middle">assumes: one side small</text>
+      <text x="115" y="100" fill="#C9C7C1" font-size="9.5" text-anchor="middle">every mapper loads</text>
+      <text x="115" y="114" fill="#C9C7C1" font-size="9.5" text-anchor="middle">ALL of the small side</text>
+      <text x="115" y="134" fill="#C9C7C1" font-size="9.5" text-anchor="middle">into a hash table</text>
+      <text x="115" y="170" fill="#6FCF97" font-size="9.5" text-anchor="middle">fewest assumptions</text>
+      <rect x="225" y="36" width="190" height="150" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="320" y="56" fill="#F2EFE9" font-size="10.5" font-weight="700" text-anchor="middle">PARTITIONED HASH</text>
+      <text x="320" y="80" fill="#C9C7C1" font-size="9.5" text-anchor="middle">assumes: same partitioning</text>
+      <text x="320" y="100" fill="#C9C7C1" font-size="9.5" text-anchor="middle">mapper N loads only</text>
+      <text x="320" y="114" fill="#C9C7C1" font-size="9.5" text-anchor="middle">slice N of the small side</text>
+      <text x="320" y="170" fill="#C9C7C1" font-size="9.5" text-anchor="middle">smaller tables</text>
+      <rect x="430" y="36" width="190" height="150" rx="8" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="525" y="56" fill="#C8453A" font-size="10.5" font-weight="700" text-anchor="middle">MERGE</text>
+      <text x="525" y="80" fill="#C9C7C1" font-size="9.5" text-anchor="middle">assumes: same partitioning</text>
+      <text x="525" y="94" fill="#C9C7C1" font-size="9.5" text-anchor="middle">AND sorted by the key</text>
+      <text x="525" y="114" fill="#C9C7C1" font-size="9.5" text-anchor="middle">walk both files in order,</text>
+      <text x="525" y="128" fill="#C9C7C1" font-size="9.5" text-anchor="middle">no memory limit</text>
+      <text x="525" y="170" fill="#C8453A" font-size="9.5" text-anchor="middle">strongest assumptions</text>
+      <text x="320" y="214" fill="#7A7A80" font-size="9.5" text-anchor="middle">the more you know about the data's layout, the less work the job does</text>
+    </svg>
+    <figcaption>Fig 3. Each step down trades flexibility for speed. (My own sketch.)</figcaption>
+  </figure>
+
+  <h3>Why the join choice affects the next job</h3>
+  <p>The output layout differs: a reduce-side join's output is partitioned and sorted by the join key; a map-side join's output is partitioned and sorted the same way as the large input (one map task per block of the large input, whichever map-side variant). Because map-side joins assume things about size, sorting and partitioning, you need to know the physical layout of datasets, not just their encoding and directory name: how many partitions, and by which keys they're split and sorted. In the Hadoop world, the source says this metadata is often kept in HCatalog and the Hive metastore.</p>
+
+  <h3>The output of batch workflows</h3>
+  <p>Why run all these jobs? The source separates two kinds of database work. Transaction processing (OLTP) looks up a few records by key through indexes. Analytics scans many records and produces reports. Batch processing is neither: it is closer to analytics because it scans large inputs, but the output often isn't a report, it's some other structure.</p>
+  <p><strong>Search indexes.</strong> Google's original use of MapReduce was building its search index, as a workflow of 5 to 10 jobs (the source notes Google later moved away from MapReduce for that). A full-text index is, at heart, a term dictionary (look up a keyword) plus postings lists (the document IDs containing it); real indexes carry more data for ranking, spelling and synonyms. In a batch build, mappers split the documents up, each reducer builds the index for its partition, and index files are written to the distributed filesystem. Since querying an index is read-only, these files are immutable once built. When documents change you can rebuild everything and swap wholesale (costly if little changed, but easy to reason about: documents in, indexes out), or build incrementally the way Lucene writes new segments and merges them in the background (more on that in Chapter 11).</p>
+  <p><strong>Key-value stores and ML outputs.</strong> Batch jobs also build classifiers (spam filters, anomaly detection) and recommendation systems (people you may know, related products). The output is often a database the web app queries by key, such as user ID to suggested friends. Getting it there is the question.</p>
+  <p>The obvious route is to write to the production database from inside a mapper or reducer, one record at a time. It works if the network allows it, but the source gives three reasons it's a bad idea:</p>
+  <ol>
+    <li>A network request per record is orders of magnitude slower than batch throughput, even with client-side batching.</li>
+    <li>Many parallel tasks writing at once can overwhelm the database and hurt its query performance, spreading trouble to other systems.</li>
+    <li>MapReduce normally gives an all-or-nothing result: if the job succeeds, the output is as if every task ran exactly once (even if some were retried); if it fails, there is no output. Writes to an external system are visible side effects you can't hide that way, so partial results can leak, and task retries and speculative execution complicate it.</li>
+  </ol>
+  <p>The better pattern: <strong>build a brand-new database inside the job</strong> and write it as files to the output directory, like the search index. Those files are immutable and can be bulk-loaded into read-only servers. Examples named in the source: Voldemort, Terrapin, ElephantDB, and HBase bulk loading. Because the stores are read-only, the data structures are simple (no write-ahead log needed). The source's Voldemort description: the server keeps answering from the old files while the new ones are copied over; when the copy completes, it atomically switches to the new files; if something is wrong, it can switch back, since the old files are still there.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 210" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">TWO WAYS TO GET BATCH RESULTS INTO A SERVING DATABASE</text>
+      <text x="20" y="48" fill="#C8453A" font-size="10">risky: write row by row from tasks</text>
+      <rect x="20" y="58" width="90" height="30" rx="5" fill="#0E0E10" stroke="#C8453A"/><text x="65" y="77" fill="#C9C7C1" font-size="9.5" text-anchor="middle">task 1..N</text>
+      <line x1="110" y1="73" x2="220" y2="73" stroke="#C8453A" stroke-dasharray="4 3"/>
+      <rect x="220" y="58" width="120" height="30" rx="5" fill="#0E0E10" stroke="#C8453A"/><text x="280" y="77" fill="#C9C7C1" font-size="9.5" text-anchor="middle">live database</text>
+      <text x="360" y="77" fill="#7A7A80" font-size="9.5">slow, overloads it, partial results visible</text>
+      <text x="20" y="130" fill="#6FCF97" font-size="10">better: write immutable files, then switch</text>
+      <rect x="20" y="140" width="90" height="30" rx="5" fill="#0E0E10" stroke="#6FCF97"/><text x="65" y="159" fill="#C9C7C1" font-size="9.5" text-anchor="middle">batch job</text>
+      <line x1="110" y1="155" x2="150" y2="155" stroke="#6FCF97"/>
+      <rect x="150" y="140" width="120" height="30" rx="5" fill="#0E0E10" stroke="#6FCF97"/><text x="210" y="159" fill="#C9C7C1" font-size="9.5" text-anchor="middle">new files (v2)</text>
+      <line x1="270" y1="155" x2="310" y2="155" stroke="#6FCF97"/>
+      <rect x="310" y="140" width="130" height="30" rx="5" fill="#0E0E10" stroke="#6FCF97"/><text x="375" y="159" fill="#C9C7C1" font-size="9.5" text-anchor="middle">read-only server</text>
+      <text x="460" y="150" fill="#7A7A80" font-size="9.5">serves v1 while copying,</text>
+      <text x="460" y="164" fill="#7A7A80" font-size="9.5">switches to v2 at the end,</text>
+      <text x="460" y="178" fill="#7A7A80" font-size="9.5">can switch back</text>
+    </svg>
+    <figcaption>Fig 4. Build the output as files first, publish second. (My own sketch.)</figcaption>
+  </figure>
+
+  <h3>The philosophy of batch output</h3>
+  <p>This is the Unix philosophy again: a program reads input, writes output, leaves the input untouched, replaces any previous output, and has no other side effects. You can rerun it as often as you like. Treating inputs as immutable and avoiding external side effects gives performance and, per the source, several maintainability wins:</p>
+  <ul>
+    <li><strong>Roll back and rerun.</strong> If a bug produced bad output, deploy the old code and rerun, or keep old output in another directory and point back at it. A database with read-write transactions doesn't work this way: rolling back buggy code does nothing to the bad data already written. The source calls recovering from buggy code <em>human fault tolerance</em>.</li>
+    <li><strong>Faster feature development</strong>, since mistakes aren't irreversible.</li>
+    <li><strong>Safe automatic retries.</strong> A failed task is rerun on the same input; a bug will keep crashing until the job fails after a few attempts, while a transient fault is tolerated. This is safe because inputs are immutable and failed tasks' output is discarded.</li>
+    <li><strong>Reuse of the same files</strong> by several jobs, including monitoring jobs that check whether output looks sane (for instance by comparing with the previous run).</li>
+    <li><strong>Logic separated from wiring</strong> (input and output directories), so one team writes a job and another decides where and when to run it.</li>
+  </ul>
+  <p>One difference from Unix: Unix tools assume untyped text and spend effort parsing it (remember <code>{print $7}</code>). On Hadoop, structured formats such as Avro and Parquet remove much of that parsing and support schema evolution (recall Chapter 4).</p>
+
+  <h3>Comparing Hadoop to distributed databases</h3>
+  <p>The source's summary line: Hadoop is somewhat like a distributed Unix, with HDFS as the filesystem and MapReduce as a quirky Unix process that always runs a sort between its map and reduce phases. And it was not new in algorithms: MPP databases had implemented parallel joins and processing a decade earlier. The headline difference: MPP databases focus on running analytic SQL in parallel, whereas MapReduce plus a distributed filesystem is closer to a general-purpose operating system that runs arbitrary programs.</p>
+  <h3>Diversity of storage</h3>
+  <p>Databases make you fit data into a model (relational, documents). Files are just bytes, in any encoding: text, images, video, sensor readings, genome sequences. So Hadoop made it possible to dump data in first and decide how to process it later; MPP databases usually require careful up-front modeling of data and queries. The source argues that making data available quickly, even in a raw, awkward form, is often more valuable than agonizing over the ideal model, similar to a data warehouse's value in bringing data from many parts of an organization together (an idea sometimes called a <em>data lake</em>). The catch is that interpretation becomes the consumer's problem (<strong>schema-on-read</strong>). That can be an advantage when producers and consumers are different teams; the source's slogan for it is the "sushi principle": raw data is better. A common use: dump raw data into the filesystem, clean and transform it with jobs, then load it into an MPP warehouse. Modeling still happens, just as a separate, decoupled step.</p>
+  <h3>Diversity of processing models</h3>
+  <p>MPP databases are tightly integrated, so they can be well tuned for the queries they were designed for, and SQL is expressive and friendly to analyst tools. But not all processing fits SQL: recommendation systems, relevance ranking in search, image analysis and other application-specific work (feature engineering, language models, fraud-risk functions) need code. MapReduce let engineers run their own code at scale; Hive built SQL on top of it, but you can also write jobs that don't look like SQL at all. People later found MapReduce too limiting or slow for some work, and other processing models appeared on Hadoop (next part). All of them can share one cluster and the same files, so you don't copy data into a different specialized system for each kind of work. The ecosystem includes HBase (random-access OLTP style) and Impala (MPP-style analytics), which use HDFS but not MapReduce.</p>
+  <h3>Designing for frequent faults</h3>
+  <p>Batch jobs are less sensitive to faults than online systems because users aren't waiting and the job can be rerun. Most MPP databases abort a whole query if a node dies, and rerun it; queries are short, so that's cheap, and they like to keep data in memory (hash joins). MapReduce retries at the granularity of a single task and writes eagerly to disk, partly for fault tolerance and partly assuming the data won't fit in memory anyway. Task-level recovery makes fault-free runs slower but pays off for big, long jobs likely to hit at least one failure.</p>
+  <p>Is that really worth it, if machine failures are rare in most clusters? The source's answer is historical. At Google, batch jobs shared machines with production services, each task had a priority and resource limits, and low-priority tasks could be preempted. The source reports that a MapReduce task running for an hour had roughly a 5% chance of being terminated to make room (more than an order of magnitude higher than hardware or reboot failures), and with 100 tasks of 10 minutes each there's a better than 50% chance that at least one gets killed. So MapReduce tolerates frequent task loss <em>not because hardware is flaky but because arbitrary termination lets the cluster be used more fully</em>. Bound it: those are Google figures from the source, at the time. The source adds that general priority preemption isn't supported in YARN, Mesos or Kubernetes at the time of writing, so where tasks aren't killed so often, MapReduce's design choices make less sense.</p>
+
+  <h2>Why it matters</h2>
+  <p>"Move related data together, then do simple local work" is the idea behind distributed joins everywhere, not just Hadoop. Knowing the reduce-side versus map-side trade-off helps you reason about why a join is slow or fast, and the skew discussion is the same hot-key problem you'll meet again with partitioned databases. And the output pattern (build new, immutable, then switch) is a practical lesson for any system where a pipeline feeds a serving store. It sets up the next part, where the MapReduce execution model itself comes under scrutiny.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Batch jobs have no indexes, so they join by rearranging data: in a reduce-side sort-merge join, mappers key both inputs by the join key, sorting lines them up, and the reducer joins them locally.</li>
+      <li>Grouping, counting, and sessionization use the same pattern: make the group key the mapper's key.</li>
+      <li>Hot keys cause skew; the job waits for the slowest reducer. Fixes include random spreading of the hot key (Pig, Crunch), separate handling (Hive), and two-stage aggregation.</li>
+      <li>Map-side joins skip sorting and reducers but need assumptions: small side (broadcast), same partitioning (partitioned hash), or same partitioning plus sorting (merge).</li>
+      <li>Write batch output as new immutable files and switch over, instead of writing live to a database; it makes rollback, retry and reruns safe.</li>
+      <li>MapReduce tolerates task loss because of how Google shared machines, not because tasks fail constantly everywhere.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Hand-rolled sort-merge join.</strong> In any language, write two mappers (users and events) that emit <code>(user_id, (tag, value))</code> with tag 0 for users and 1 for events. Sort, group by key, and write a reducer that remembers the profile and emits (url, birth year). Done when the output equals a naive dictionary lookup on the same data, including users that never appear in events and events with unknown users (decide, and write down, whether those are dropped).</li>
+      <li><strong>Broadcast hash join.</strong> Rewrite project 1 with no sorting: load the small file into a dictionary and stream the big file. Time both versions on 1 million generated events. Done when you can say which is faster on your machine and why, with the caveat that your machine is one machine, not a cluster.</li>
+      <li><strong>Hot key lab.</strong> Generate counts where one key has 100,000 records and 50 keys have 10. Hash-partition into 4 "reducers" and print the load per reducer. Then add a random salt for the hot key, aggregate per (key, salt), and combine in a second pass. Done when the final counts match and the maximum load drops.</li>
+      <li><strong>Partitioned vs merge join.</strong> Split both inputs into 10 files by user ID mod 10 (and sort each). Join file N with file N only, once with a hash table and once with a two-pointer merge. Done when both match project 1 and the merge version never holds more than one user in memory.</li>
+      <li><strong>Atomic publish.</strong> Have a script build a small key-value file as <code>data.v2</code> in a new directory, then flip a symlink named <code>current</code> to it, with a reader that always opens <code>current</code>. Done when you can roll back by flipping the link, and the reader never sees a half-written file.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Reread "Handling skew" and compare it with the hot-spot discussion in the partitioning chapter. Then think about why the source says jobs that read an immutable input are easy to retry, and what would break if a task also wrote to an outside database.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, written to help you build a mental model quickly. It is not a substitute for the source; verify anything you plan to rely on against the original before using it for real.</p>
+  <ul class="src-list">
+    <li>Martin Kleppmann, <em>Designing Data-Intensive Applications</em> (O'Reilly, 2017), Chapter 10, "Batch Processing." This part covers "Reduce-Side Joins and Grouping" (sort-merge joins, GROUP BY, handling skew), "Map-Side Joins", "The Output of Batch Workflows", "Comparing Hadoop to Distributed Databases" (including "Designing for frequent faults"): printed pages 403 to 418 (PDF pages 425 to 440 of the supplied file). It stops right before "Beyond MapReduce".</li>
+  </ul>
+  <p class="src-note">Flagged for accuracy: (1) The Google preemption figures (about 5% per hour per task, over 50% for 100 tasks of 10 minutes) and the tool statements about YARN, Mesos and Kubernetes are the book's, as of its 2017 publication; they may not describe current systems. (2) Tool names and behaviours (Pig, Crunch, Hive, Voldemort, Terrapin, ElephantDB, HBase, Impala) are as the book describes them, and I did not check current versions. (3) "Two-stage grouping works for counts and sums" is my reading of the book's general statement; the book does not list which aggregations qualify. (4) The Python in the micro-projects is my own sketch; I ran a small version of the join, broadcast join and salted-count ideas on tiny data and the results matched, but nothing was benchmarked at scale. (5) Diagrams are original, with invented values. (6) Nothing outside the supplied chapter was consulted.</p>
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
