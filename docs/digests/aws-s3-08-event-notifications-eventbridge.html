@@ -315,7 +315,7 @@
   <h3>5. Gotchas worth memorising</h3>
   <ul>
     <li><strong>Infinite loops.</strong> The docs warn: if a notification triggers a Lambda that writes back to the same bucket, it can trigger itself. Use two buckets, or a trigger limited to an input prefix.</li>
-    <li><strong>Duplicates and ordering.</strong> Make consumers idempotent; for ordering across events of one object, the <code>sequencer</code> field in the event is there for that purpose (the docs' full guidance is on the AWS Storage Blog post they link).</li>
+    <li><strong>Duplicates and ordering.</strong> Make consumers idempotent; events carry a <code>sequencer</code> field, which is worth reading about for ordering (the docs point to an AWS Storage Blog post for the full guidance, which I did not read).</li>
     <li><strong>Lifecycle deletes</strong> don't raise <code>ObjectRemoved</code> events; use the <code>LifecycleExpiration</code> types.</li>
     <li><strong>Configuration delay.</strong> About five minutes before a change is live, so don't test instantly and conclude it's broken.</li>
     <li><strong>Deleted destinations</strong> leave failed notifications that can block cleanup ("Unable to validate the following destination configurations"); the docs suggest deleting them all together in the console.</li>
