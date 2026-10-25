@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: CloudWatch Dashboards and Cross-Account, Cross-Region Observability</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS CLOUDWATCH &middot; CONCEPT 5 DIGEST</p>
+  <h1>CloudWatch Dashboards and Cross-Account, Cross-Region Observability</h1>
+  <p class="lead">So far we've made metrics, alarms and logs. A dashboard is where you put them on one screen so a human can take them in at a glance. And once your company has more than one AWS account (very common), the next question is how to watch all of them from one place. This digest covers both: building dashboards, and the two CloudWatch features for looking across accounts and Regions.</p>
+
+  <h2>In one line</h2>
+  <p>A CloudWatch dashboard is a customisable page of widgets (graphs, numbers, alarm statuses, log query results, notes) described by a JSON document, and cross-account observability lets a central "monitoring account" see the telemetry of many "source accounts".</p>
+
+  <h2>The big idea</h2>
+  <p>Every piece of CloudWatch we've met answers one question at a time. A dashboard answers a whole situation: "is the checkout flow healthy right now?" You arrange widgets on a grid: a graph of latency, a number for error count, the status of the three alarms that matter, a Logs Insights table of the latest failures, and a text box that says what to do if it goes red. The page is saved under a name and anyone with permission can open it.</p>
+  <p>The second half is about boundaries. Many organisations split their workloads across several AWS accounts for security and billing reasons. That splits monitoring too, unless you connect the accounts. CloudWatch gives two ways: the newer <strong>cross-account observability</strong> (metrics, logs, traces and more, within a Region, using a monitoring account, sinks and links) and the older <strong>cross-account cross-Region console</strong> (mainly dashboards, alarms and metrics, using IAM roles). The docs recommend the newer one when you can use it.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Dashboard</span>: a named, saved page of widgets. Created in the console, with the CLI, or through the <code>PutDashboard</code> API.</li>
+    <li><span class="keyterm-term">Widget</span>: one tile on a dashboard. Types in the dashboard JSON: <code>metric</code>, <code>text</code>, <code>log</code>, <code>alarm</code>, <code>explorer</code>, <code>chart</code>.</li>
+    <li><span class="keyterm-term">Dashboard body</span>: the JSON string that defines the whole dashboard, including each widget's position and properties.</li>
+    <li><span class="keyterm-term">Grid</span>: dashboards use a 24-column layout. A widget has x, y, width and height in grid units.</li>
+    <li><span class="keyterm-term">Dashboard variable</span>: a dropdown on the dashboard (for example, "which Lambda function?") that changes what every widget shows.</li>
+    <li><span class="keyterm-term">Monitoring account</span>: the central account that can view telemetry from other accounts.</li>
+    <li><span class="keyterm-term">Source account</span>: an account that generates telemetry and shares it with a monitoring account.</li>
+    <li><span class="keyterm-term">Sink</span>: the attachment point resource in a monitoring account. Source accounts link to it.</li>
+    <li><span class="keyterm-term">Observability link</span>: the resource, managed by the source account, that represents the connection to a monitoring account.</li>
+    <li><span class="keyterm-term">Observability Access Manager (OAM)</span>: the API and CLI commands behind sinks and links.</li>
+    <li><span class="keyterm-term">Sharing account</span>: in the older console-based approach, an account that shares its CloudWatch data through an IAM role.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>Grounding: why a dashboard is more than a pretty graph</h3>
+  <p>The docs describe three things dashboards are for: a single view of selected metrics and alarms across one or more Regions; an <em>operational playbook</em> (guidance for team members during incidents, which you can put right on the page as text); and a shared, common view of critical measurements so people in an incident are all looking at the same facts. That second use is easy to overlook. A dashboard with a text widget saying "if this graph is red, run the restart runbook" is documentation that sits next to the evidence.</p>
+
+  <h3>1. Widgets: what you can put on a dashboard</h3>
+  <p>From the docs' widget page:</p>
+  <ul>
+    <li><strong>Graph widgets</strong> of one or more metrics: line, stacked area, number, gauge, bar and pie.</li>
+    <li><strong>Number widget</strong>: the latest value (with a sparkline of the trend). Good for "errors in the last 5 minutes".</li>
+    <li><strong>Gauge widget</strong>: a value shown within a range, such as a percentage.</li>
+    <li><strong>Alarm widget</strong>: either a single alarm's graph and status, or an <em>alarm status widget</em>, a grid of alarm names and current states (no graphs), holding up to 100 alarms.</li>
+    <li><strong>Table widget</strong>: raw data points and a summary.</li>
+    <li><strong>Metrics explorer widget</strong>: graphs of many resources sharing a tag or property, which updates as matching resources are created or deleted.</li>
+    <li><strong>Text widget</strong>: a block of Markdown. The playbook tile.</li>
+    <li><strong>Log widget</strong>: shows the results of a Logs Insights query (the JSON <code>type</code> is <code>log</code>).</li>
+    <li><strong>Linked graphs</strong>: link them so zooming one zooms the others.</li>
+  </ul>
+  <p><em>Caveat:</em> the docs also describe a custom widget type that I'm not covering.</p>
+  <p>One practical note from the docs: if a metric hasn't published data in the past 14 days, you can't find it by searching when adding it to a graph, but you can add it manually.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 270" role="img" aria-label="A 24-column dashboard grid with a text widget, number widget, line graph, alarm status widget and a log query widget laid out in rows">
+      <rect x="10" y="10" width="600" height="250" rx="10" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="22" y="30" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#7A7A80">dashboard: checkout-health   (24-column grid, x from 0 to 23)</text>
+      <rect x="22" y="40" width="576" height="36" rx="6" fill="#131316" stroke="#6FCF97"/>
+      <text x="32" y="63" font-family="Inter, sans-serif" font-size="11.5" fill="#F2EFE9">text widget (x 0, width 24): "If errors are red, follow the restart runbook."</text>
+      <rect x="22" y="86" width="140" height="70" rx="6" fill="#131316" stroke="#C8453A"/>
+      <text x="92" y="116" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="20" fill="#C8453A">42</text>
+      <text x="92" y="140" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#C9C7C1">number widget (width 6)</text>
+      <rect x="172" y="86" width="270" height="70" rx="6" fill="#131316" stroke="#C9C7C1"/>
+      <path d="M185 140 L225 128 L265 134 L305 112 L345 120 L385 100 L425 108" fill="none" stroke="#6FCF97" stroke-width="2"/>
+      <text x="307" y="150" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#C9C7C1">line graph (width 12)</text>
+      <rect x="452" y="86" width="146" height="70" rx="6" fill="#131316" stroke="#C9C7C1"/>
+      <text x="525" y="108" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#C9C7C1">alarm status widget</text>
+      <g font-family="JetBrains Mono, monospace" font-size="10">
+        <text x="466" y="126" fill="#6FCF97">OK</text><text x="492" y="126" fill="#C9C7C1">cpu-high</text>
+        <text x="466" y="142" fill="#C8453A">ALARM</text><text x="506" y="142" fill="#C9C7C1">5xx-rate</text>
+      </g>
+      <rect x="22" y="166" width="576" height="84" rx="6" fill="#131316" stroke="#C9C7C1"/>
+      <text x="32" y="186" font-family="Inter, sans-serif" font-size="11.5" fill="#F2EFE9">log widget (width 24): Logs Insights query results</text>
+      <g font-family="JetBrains Mono, monospace" font-size="10" fill="#7A7A80">
+        <text x="32" y="206">14:02:11  ERROR payment timeout  order=8841</text>
+        <text x="32" y="222">14:02:09  ERROR payment timeout  order=8839</text>
+        <text x="32" y="238">14:01:57  WARN  retry limit near  order=8820</text>
+      </g>
+    </svg>
+    <figcaption>Schematic: one dashboard mixing five widget types. Names, numbers and log lines are my own invention.</figcaption>
+  </figure>
+
+  <h3>2. The dashboard body: it's just JSON</h3>
+  <p>Behind every dashboard is a JSON document, the <em>dashboard body</em>. The docs say it can hold between 0 and 500 widget objects, and the <code>widgets</code> array is required (though it can be empty). Each widget has:</p>
+  <ul>
+    <li><code>type</code>: <code>metric</code>, <code>text</code>, <code>log</code>, <code>alarm</code>, <code>explorer</code> or <code>chart</code>.</li>
+    <li><code>x</code> and <code>y</code>: position on the 24-column grid (x is 0 to 23). If you leave them out, the default is the next available position.</li>
+    <li><code>width</code> (1 to 24, default 6) and <code>height</code> (1 to 1000, default 6).</li>
+    <li><code>properties</code>: details that depend on the type. For a metric widget that includes a <code>metrics</code> array, the <code>stat</code>, <code>period</code>, <code>region</code>, and <code>title</code>.</li>
+  </ul>
+  <p>Top-level options include <code>start</code> (for example <code>-PT6H</code> for the last six hours), <code>periodOverride</code> (<code>auto</code> or <code>inherit</code>), and an optional <code>variables</code> array of up to 25 variables.</p>
+  <p>Create or replace one with the CLI. The docs' example shape:</p>
+  <p><code>aws cloudwatch put-dashboard --dashboard-name Dashboard-A --dashboard-body '{"widgets":[{"height":6,"width":6,"y":0,"x":0,"type":"metric","properties":{"view":"timeSeries","stacked":false,"metrics":[["Namespace","CPUUtilization","Environment","Prod","Type","App"]],"region":"us-east-1"}}]}'</code></p>
+  <p>Details from the CLI reference: the dashboard name allows up to 255 characters, using letters, digits, hyphen and underscore. If a dashboard with that name exists it is <em>replaced entirely</em> (not merged). The output has a <code>DashboardValidationMessages</code> list: empty means success, warnings mean it saved but some widgets might not render, errors mean it failed. Tags (up to 50) are only applied on creation. The docs also say "all dashboards in an account are global, not Region-specific", and suggest a tip: build one in the console, then use <strong>Actions, View/edit source</strong> to copy its JSON as a template, and add a text widget to scripted dashboards saying they're managed by script.</p>
+  <p><em>Simplification:</em> a metric widget's <code>metrics</code> array has its own compact format (namespace, metric name, then dimension name/value pairs). The reference page covers it, along with metric math and annotations.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 190" role="img" aria-label="A JSON dashboard body on the left maps to a rendered grid of widgets on the right">
+      <defs><marker id="ah7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#C9C7C1"/></marker></defs>
+      <rect x="15" y="15" width="270" height="160" rx="8" fill="#0A0A0B" stroke="#7A7A80"/>
+      <g font-family="JetBrains Mono, monospace" font-size="10.5" fill="#C9C7C1">
+        <text x="25" y="36">{ "widgets": [</text>
+        <text x="35" y="54">{ "type": "text",</text>
+        <text x="45" y="70">"x": 0, "y": 0, "width": 24 },</text>
+        <text x="35" y="90">{ "type": "metric",</text>
+        <text x="45" y="106">"x": 0, "y": 1, "width": 12 },</text>
+        <text x="35" y="126">{ "type": "alarm",</text>
+        <text x="45" y="142">"x": 12, "y": 1, "width": 12 }</text>
+        <text x="25" y="162">] }</text>
+      </g>
+      <path d="M290 95 L330 95" stroke="#C9C7C1" stroke-width="1.5" marker-end="url(#ah7)"/>
+      <rect x="340" y="15" width="265" height="160" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <rect x="350" y="25" width="245" height="34" rx="5" fill="#131316" stroke="#6FCF97"/>
+      <text x="472" y="46" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">text (width 24)</text>
+      <rect x="350" y="68" width="119" height="95" rx="5" fill="#131316" stroke="#C9C7C1"/>
+      <text x="410" y="120" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">metric (12)</text>
+      <rect x="476" y="68" width="119" height="95" rx="5" fill="#131316" stroke="#C8453A"/>
+      <text x="536" y="120" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">alarm (12)</text>
+    </svg>
+    <figcaption>Schematic: the JSON is a layout instruction. Simplified: real widgets also need a properties object.</figcaption>
+  </figure>
+
+  <h3>3. Cross-account observability: monitoring and source accounts</h3>
+  <p>This is the newer feature. The docs say it lets you monitor and troubleshoot applications that span multiple accounts <strong>within a Region</strong>, searching, visualising and analysing metrics, logs, traces, Application Signals services and SLOs, Application Insights applications and Internet Monitor monitors across linked accounts "without account boundaries".</p>
+  <p><strong>The vocabulary:</strong> a <em>monitoring account</em> is the central one. A <em>source account</em> generates telemetry and shares it. A <em>sink</em> is created in the monitoring account (each account can have one sink per Region, managed by the monitoring account). A source account creates an <em>observability link</em> to that sink (managed by the source account).</p>
+
+  <figure>
+    <svg viewBox="0 0 620 240" role="img" aria-label="Three source accounts each with a link to a sink in a central monitoring account which contains a dashboard">
+      <defs><marker id="ah8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#C9C7C1"/></marker></defs>
+      <g font-family="JetBrains Mono, monospace" font-size="11">
+        <rect x="15" y="20" width="170" height="52" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+        <text x="100" y="42" text-anchor="middle" fill="#F2EFE9">source: prod-app</text>
+        <text x="100" y="60" text-anchor="middle" fill="#7A7A80" font-size="10">metrics, logs, traces</text>
+        <rect x="15" y="94" width="170" height="52" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+        <text x="100" y="116" text-anchor="middle" fill="#F2EFE9">source: prod-data</text>
+        <text x="100" y="134" text-anchor="middle" fill="#7A7A80" font-size="10">metrics, logs</text>
+        <rect x="15" y="168" width="170" height="52" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+        <text x="100" y="190" text-anchor="middle" fill="#F2EFE9">source: staging</text>
+        <text x="100" y="208" text-anchor="middle" fill="#7A7A80" font-size="10">metrics only</text>
+      </g>
+      <rect x="360" y="20" width="245" height="200" rx="12" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="482" y="42" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#C8453A">monitoring account</text>
+      <rect x="378" y="62" width="70" height="40" rx="6" fill="#131316" stroke="#6FCF97"/>
+      <text x="413" y="86" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#6FCF97">sink</text>
+      <rect x="465" y="62" width="125" height="148" rx="6" fill="#131316" stroke="#C9C7C1"/>
+      <text x="527" y="84" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#F2EFE9">dashboard</text>
+      <text x="527" y="104" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#C9C7C1">graphs from all</text>
+      <text x="527" y="118" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#C9C7C1">source accounts</text>
+      <text x="527" y="138" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#C9C7C1">Insights queries</text>
+      <text x="527" y="152" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#C9C7C1">across accounts</text>
+      <g stroke="#C9C7C1" stroke-width="1.3" marker-end="url(#ah8)">
+        <path d="M187 46 L376 78"/><path d="M187 120 L376 90"/><path d="M187 194 L376 98"/>
+      </g>
+      <text x="280" y="228" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#7A7A80">each arrow = an observability link, created from the source account</text>
+      <path d="M449 82 L463 82" stroke="#C9C7C1" stroke-width="1.3" marker-end="url(#ah8)"/>
+    </svg>
+    <figcaption>Schematic: sources link to the sink; the monitoring account then reads across them. Account names are invented.</figcaption>
+  </figure>
+
+  <p><strong>Rules and numbers from the docs:</strong></p>
+  <ul>
+    <li>Each monitoring account can be linked to as many as 100,000 source accounts; each source account can share with as many as five monitoring accounts.</li>
+    <li>A source account can also be a monitoring account, but it then sends only its own data onward, not its sources' data.</li>
+    <li>Both sides pick telemetry types. If the monitoring account allows more types than the source shares, the link works and only the types selected on both sides flow. If the source selects more than the monitoring account allows, link creation <em>fails</em> and nothing is shared.</li>
+    <li>A metric name doesn't show up in the monitoring account console until that metric emits new data points after the link is created.</li>
+    <li>You remove a link from the source account; to delete a sink you must first remove all links to it.</li>
+    <li>Sharing can be everything, or filtered: a subset of metric namespaces or a subset of log groups.</li>
+    <li>The docs recommend linking via AWS Organizations so new accounts are onboarded automatically, and recommend a new dedicated account as the monitoring account. They also describe a CloudFormation template or URL method for setup.</li>
+    <li>The docs state cross-account observability has no extra cost for logs and metrics, and the first trace copy is free. I'm not quoting anything else about price.</li>
+  </ul>
+  <p><strong>What you can do from the monitoring account</strong> (docs): graph metrics from source accounts (one graph can mix accounts), create alarms in the monitoring account that watch source-account metrics, view log events and run a single Logs Insights query across log groups in many source accounts, and see source-account nodes in an X-Ray trace map.</p>
+
+  <h3>4. Cross-account dashboards in the JSON</h3>
+  <p>Two optional properties make a widget point elsewhere: <code>accountId</code> (which account the widget or metric lives in; default is the signed-in account) and <code>region</code> (default is the console's current Region). They can be set on the whole widget or per metric, so one metric math expression can combine EC2 CPU from account A in us-east-1 and account B in eu-west-1. The docs show the same <code>accountId</code>/<code>region</code> properties on alarm and Logs Insights widgets.</p>
+
+  <h3>5. The older option: the cross-account cross-Region console</h3>
+  <p>This predates the above. A <em>sharing account</em> creates an IAM role (named <code>CloudWatch-CrossAccountSharingRole</code> in the docs) that trusts the monitoring account; the monitoring account gets a service role (<code>ServiceRoleForCloudWatchCrossAccountV2</code>). You then get an account selector in the console and can build dashboards from many accounts and Regions.</p>
+  <ul>
+    <li>Cross-Region works automatically for metrics and dashboards in one account: no extra steps.</li>
+    <li>The docs list real limits of this older approach: it does not give cross-account or cross-Region visibility for <strong>logs</strong>, and it does not support creating alarms on metrics in other accounts or Regions from a monitoring account. They also say you cannot create an alarm in one Region that watches a metric in a different Region.</li>
+    <li>Sharing grants read-only access to every user who has matching permissions, so the docs warn to specify only accounts you know and trust.</li>
+  </ul>
+  <p>This is why the docs steer you to cross-account observability when you can use it: it covers logs and alarms in monitoring accounts, which the older one doesn't.</p>
+
+  <div class="card">
+    <p><strong>Quick chooser (simplification).</strong> Need logs or alarms across accounts in one Region: cross-account observability (sinks and links). Only need metric graphs on a dashboard spanning accounts and Regions: either works, but the docs recommend observability where possible. Need a dashboard spanning Regions inside one account: nothing to set up, just set <code>region</code> per metric.</p>
+    <p><em>Caveat:</em> "within a Region" in the observability docs means the sink and links are per Region; the docs' own dashboard section says cross-account dashboards can combine Regions. I haven't worked out exactly how those two statements combine in practice, so test before relying on it.</p>
+  </div>
+
+  <h3>6. Permissions and cost hygiene</h3>
+  <ul>
+    <li>To view dashboards you need <code>cloudwatch:GetDashboard</code> and <code>cloudwatch:ListDashboards</code>; to create or modify, <code>cloudwatch:PutDashboard</code>; to delete, <code>cloudwatch:DeleteDashboards</code>. Alternatively the AdministratorAccess or CloudWatchFullAccess policies.</li>
+    <li>For cross-account observability, setting up a sink needs the <code>oam:CreateSink</code>-style permissions listed in the docs; viewing needs <code>oam:Get*</code> and <code>oam:List*</code> plus permission to see the resource types.</li>
+    <li>From the Insights docs: a Logs Insights widget re-runs its query on every refresh, and queries are charged by data scanned, so don't put a heavy query on a fast-refreshing dashboard.</li>
+  </ul>
+
+  <h2>Why it matters</h2>
+  <p>During an incident, nobody wants to hunt for the right graph. A prepared dashboard is the shortest path from "something's wrong" to "this is where". And once an organisation grows past one account, the ability to see everything from one monitoring account is often the difference between having observability and having ten separate islands.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>A dashboard is a JSON document: widgets on a 24-column grid, up to 500 widgets, saved by name and replaced whole on update.</li>
+      <li>Text widgets make dashboards into playbooks; alarm status widgets give a one-glance health grid (up to 100 alarms).</li>
+      <li>Cross-account observability: sources link to a sink in a monitoring account; sharing is the overlap of what each side selects.</li>
+      <li><code>accountId</code> and <code>region</code> on a widget or metric point it at another account or Region.</li>
+      <li>The older cross-account console doesn't cover logs or alarms on other accounts' metrics; the newer feature does.</li>
+    </ul>
+  </div>
+
+  <h2>Recall questions</h2>
+  <ol>
+    <li>What happens if you run put-dashboard twice with the same name and different bodies?</li>
+    <li>What are x and width measured in, and how many units wide is the dashboard?</li>
+    <li>Who creates an observability link: the monitoring account or the source account? Who manages the sink?</li>
+    <li>A source account shares logs, metrics and traces, but the monitoring account only allows logs and metrics. What happens? What about the reverse?</li>
+    <li>Why would you choose cross-account observability over the older cross-account console for a team that needs cross-account log queries?</li>
+  </ol>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Hand-write a dashboard.</strong> Take the docs' <code>put-dashboard</code> example, change the namespace and metric to ones from your earlier digests (such as your custom metric namespace), and run it. <em>Done when:</em> the dashboard opens in the console and <code>DashboardValidationMessages</code> was an empty list.</li>
+      <li><strong>Make a playbook tile.</strong> Add a text widget at the top with three lines of Markdown ("What this shows / When it is red / First thing to try"). <em>Done when:</em> someone who has never seen your project could act on it.</li>
+      <li><strong>Round trip.</strong> Build a dashboard in the console, copy its JSON via View/edit source, change the title and width of one widget, and push it with a new name through the CLI. <em>Done when:</em> the two dashboards differ in exactly the ways you intended.</li>
+      <li><strong>Alarm status grid.</strong> Add an alarm status widget listing your alarms from the alarms digest, then use <code>set-alarm-state</code> to flip one. <em>Done when:</em> you've seen the widget's tile change state.</li>
+      <li><strong>Log tile.</strong> Add a Logs Insights widget with a small query against your lab log group from the previous digests. <em>Done when:</em> the table renders and you've noted what changes if the dashboard auto-refreshes (it re-runs the query).</li>
+      <li><strong>Paper design (no second account needed).</strong> Sketch an organisation with three accounts and decide which is the monitoring account, what each source shares, and which log groups you'd filter out of sharing. <em>Done when:</em> you can write the sentence "the link works and shares X" or "the link fails because Y" for two different configurations. If you do have two accounts and want to try it, follow the docs' console setup for monitoring and source accounts.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Read the dashboard variables page (a dropdown that retargets every widget is a big time-saver), and the "Explore related telemetry" page. Next up in this track is the CloudWatch agent and Embedded Metric Format, which is how a lot of the data on these dashboards actually gets produced.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the official documentation. Verify anything you plan to rely on (limits, CLI syntax, pricing, permissions, console steps) against the live pages below. AWS docs change over time; these pages were read in October 2026.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Dashboards.html" target="_blank" rel="noopener">Using Amazon CloudWatch dashboards</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/create-and-work-with-widgets.html" target="_blank" rel="noopener">Using widgets on CloudWatch dashboards</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/CloudWatch-Dashboard-Body-Structure.html" target="_blank" rel="noopener">Dashboard Body Structure and Syntax</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/cloudwatch/put-dashboard.html" target="_blank" rel="noopener">AWS CLI reference: cloudwatch put-dashboard</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Unified-Cross-Account.html" target="_blank" rel="noopener">CloudWatch cross-account observability</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Unified-Cross-Account-Setup.html" target="_blank" rel="noopener">Link monitoring accounts with source accounts</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Cross-Account-Cross-Region.html" target="_blank" rel="noopener">Cross-account cross-Region CloudWatch console</a></li>
+  </ul>
+  <p class="src-note">Flagged: no pricing is quoted beyond the docs' statement that cross-account observability adds no extra cost for logs and metrics. I did not read the dashboard variables page, the sharing page, or the OAM API reference, so those are only named. I did not read the Markdown or text widget property details. The relationship between "within a Region" (observability docs) and cross-Region dashboards is noted as unresolved. The CLI example is the docs' own example shape; the SVGs, account names and sample log lines are my own illustrations, and the micro-projects have not been run against a live account.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
