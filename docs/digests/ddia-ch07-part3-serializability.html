@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DDIA: Ch.7 Serializability (Part 3, final)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+  pre { background:#0A0A0B; border:1px solid var(--hairline); border-radius:8px; padding:14px 16px; overflow-x:auto; font-family:"JetBrains Mono",monospace; font-size:11.5px; line-height:1.5; color:var(--body); margin:10px 0 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">SYSTEMS &middot; CH.7 DIGEST (PART 3, FINAL)</p>
+  <h1>Serializability: Serial Execution, Two-Phase Locking, and SSI</h1>
+  <p class="lead">Part 2 ended on a depressing note: weak isolation levels leave bugs like write skew and phantoms, and the usual advice from researchers has been the same since the 1970s, which is "use serializable isolation". This final part is about how a database actually delivers that: running transactions literally one at a time, locking everything it touches, or letting transactions run optimistically and checking at commit time. It ends with the chapter's own summary, which makes a nice checklist of every anomaly we've met.</p>
+
+  <h2>In one line</h2>
+  <p>Serializable isolation makes concurrent transactions behave as if they ran one at a time, and databases get there by three routes with different costs: actual serial execution (fast but narrow), two-phase locking (safe but slow under contention), and serializable snapshot isolation (optimistic, with a small penalty over snapshot isolation).</p>
+
+  <h2>The big idea</h2>
+  <p>Weak isolation levels are hard to understand, are implemented inconsistently across databases, and are hard to test, because concurrency bugs only appear on unlucky timing. Serializability is the cure: if each transaction is correct when run alone, it stays correct when run concurrently, because the database prevents all the race conditions. It isn't more widely used because each implementation pays a price. You can remove concurrency entirely (single thread), you can block conservatively (locks), or you can proceed optimistically and abort on conflict. Which one fits depends on your workload: how fast and short your transactions are, how much contention there is, and how much data fits in memory.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Serializable isolation</span>: the result is the same as if transactions had executed one at a time, even though they may run in parallel.</li>
+    <li><span class="keyterm-term">Actual serial execution</span>: literally running one transaction at a time on a single thread.</li>
+    <li><span class="keyterm-term">Interactive transaction</span>: one where the application sends statements one at a time and waits for results between them.</li>
+    <li><span class="keyterm-term">Stored procedure</span>: the whole transaction's code submitted to the database ahead of time, so it runs without network round trips.</li>
+    <li><span class="keyterm-term">Two-phase locking (2PL)</span>: locks are acquired as the transaction runs and all released at the end (commit or abort). Not the same as two-phase commit (2PC), which is about distributed transactions in Chapter 9.</li>
+    <li><span class="keyterm-term">Shared / exclusive lock</span>: shared mode for reading (many holders allowed); exclusive mode for writing (one holder, nobody else).</li>
+    <li><span class="keyterm-term">Deadlock</span>: transactions each waiting on a lock the other holds.</li>
+    <li><span class="keyterm-term">Predicate lock</span>: a lock on all objects (even not-yet-existing ones) matching a search condition.</li>
+    <li><span class="keyterm-term">Index-range lock (next-key lock)</span>: a cheaper, coarser approximation of a predicate lock attached to an index.</li>
+    <li><span class="keyterm-term">Pessimistic / optimistic concurrency control</span>: wait when something might go wrong, versus proceed and check at commit.</li>
+    <li><span class="keyterm-term">SSI (serializable snapshot isolation)</span>: snapshot isolation plus an algorithm for detecting serialization conflicts and aborting transactions.</li>
+    <li><span class="keyterm-term">Premise</span>: a fact a transaction read and based its writes on (such as "two doctors are on call").</li>
+    <li><span class="keyterm-term">Phantom</span>: a write that changes the result of another transaction's earlier search.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>Grounding first. The goal of serializable isolation is a promise you can state in one sentence: whatever the database lets happen, there is some order of running the transactions one at a time that would have produced the same result. If you can assume that, you can reason about each transaction on its own. The source describes it as the strongest isolation level, one that prevents all the race conditions of the previous part. So the question is only: at what cost, and which route?</p>
+
+  <h3>Route 1: actual serial execution</h3>
+  <p>Remove concurrency entirely: one transaction at a time, on a single thread. By definition that's serializable. It looked silly for decades, since multi-threading was thought essential for performance, but around 2007 designers decided it was feasible, for two reasons per the source: RAM became cheap enough to keep the whole active dataset in memory (no waiting on disk), and designers realized OLTP transactions are usually short, with few reads and writes, while long analytic queries are read-only and can run on a snapshot outside the serial loop. The source names VoltDB/H-Store, Redis and Datomic as implementing it. The ceiling is one CPU core's throughput, but it avoids all locking overhead.</p>
+  <p><strong>Stored procedures.</strong> Early designs imagined a whole user flow (search flights, pick seats, enter passenger details, pay) as one transaction. Humans are slow, so transactions that wait for user input would pile up idle. Almost all OLTP apps keep transactions short, committing within one HTTP request. But even then, the usual interactive style (query, read result, query again) spends most time in network round trips. A single-threaded database can't afford to wait on the network, so such systems require the whole transaction to be submitted ahead of time as a <strong>stored procedure</strong> that runs with no waiting for network or disk when data is in memory.</p>
+  <p>Stored procedures have a bad reputation (the source gives reasons): each vendor has its own archaic language (PL/SQL, T-SQL, PL/pgSQL); code in the database is harder to debug, version, deploy, test and monitor; and a database is often shared by many application servers, so one badly written procedure hurts more. These can be overcome: VoltDB uses Java or Groovy, Datomic uses Java or Clojure, and Redis uses Lua. VoltDB even replicates by running the same stored procedure on each replica, which requires the procedures to be <em>deterministic</em> (it provides special deterministic APIs for things like the current time).</p>
+  <p><strong>Partitioning.</strong> To go beyond one core, partition the data so each transaction touches only one partition; each partition gets its own thread, and throughput scales with cores. Cross-partition transactions need lock-step coordination and are vastly slower; the source cites VoltDB reporting about 1,000 cross-partition writes per second, far below single-partition throughput and not improved by adding machines. Whether this works depends on data shape: key-value data partitions easily; data with many secondary indexes needs much cross-partition coordination.</p>
+  <p>The source's summary of when serial execution works: each transaction must be small and fast (one slow one stalls everyone); the active dataset must fit in memory (rarely used data could be moved to disk, but accessing it would slow things badly); write throughput must fit a single core, or be partitionable without cross-partition coordination; and cross-partition transactions are possible but have a hard limit.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">INTERACTIVE TRANSACTION vs STORED PROCEDURE</text>
+      <g font-size="9.5">
+        <text x="20" y="48" fill="#7A7A80">interactive: app and database talk back and forth</text>
+        <rect x="20" y="56" width="90" height="24" fill="#0E0E10" stroke="#C9C7C1"/><text x="65" y="72" fill="#F2EFE9" text-anchor="middle">query 1</text>
+        <rect x="140" y="56" width="90" height="24" fill="#0E0E10" stroke="#C8453A"/><text x="185" y="72" fill="#C8453A" text-anchor="middle">wait..</text>
+        <rect x="260" y="56" width="90" height="24" fill="#0E0E10" stroke="#C9C7C1"/><text x="305" y="72" fill="#F2EFE9" text-anchor="middle">query 2</text>
+        <rect x="380" y="56" width="90" height="24" fill="#0E0E10" stroke="#C8453A"/><text x="425" y="72" fill="#C8453A" text-anchor="middle">wait..</text>
+        <rect x="500" y="56" width="90" height="24" fill="#0E0E10" stroke="#C9C7C1"/><text x="545" y="72" fill="#F2EFE9" text-anchor="middle">commit</text>
+        <text x="20" y="116" fill="#7A7A80">stored procedure: whole transaction sent once, runs back-to-back</text>
+        <rect x="20" y="124" width="570" height="24" fill="#0E0E10" stroke="#6FCF97"/><text x="305" y="140" fill="#6FCF97" text-anchor="middle">read, decide, write, commit (no network inside)</text>
+        <text x="20" y="184" fill="#C9C7C1">with one thread, idle waiting would waste the only core</text>
+      </g>
+      <text x="320" y="214" fill="#7A7A80" font-size="9" text-anchor="middle">my own sketch</text>
+    </svg>
+    <figcaption>Fig 1. Why single-threaded databases want the whole transaction up front.</figcaption>
+  </figure>
+
+  <h3>Route 2: two-phase locking (2PL)</h3>
+  <p>For about 30 years this was the one widely used serializability algorithm. (The source flags: 2PL is <em>not</em> 2PC.) It strengthens the lock idea behind dirty-write prevention. Many transactions may read an object at the same time, but as soon as anyone wants to write, access must be exclusive:</p>
+  <ul>
+    <li>If A has read an object, B wanting to write it must wait for A to commit or abort.</li>
+    <li>If A has written an object, B wanting to read it must wait for A to finish. (Reading an old version isn't acceptable under 2PL.)</li>
+  </ul>
+  <p>So under 2PL, writers block writers <em>and</em> readers, and readers block writers, unlike snapshot isolation's mantra. In return it provides serializability and protects against everything discussed earlier, including lost updates and write skew. The source says it is used for the serializable level in MySQL (InnoDB) and SQL Server, and for the repeatable read level in DB2.</p>
+  <p><strong>Mechanics.</strong> Each object has a lock in shared or exclusive mode. To read: acquire shared (many holders allowed unless someone holds exclusive). To write: acquire exclusive (no other holder of any kind). Read-then-write: upgrade shared to exclusive. And once acquired, hold the lock until the transaction ends. That is the "two phases": acquiring while executing, releasing all at the end. With so many locks, <strong>deadlocks</strong> are easy: A waits for B and B waits for A. The database detects them and aborts one so the others proceed; the application must retry.</p>
+  <p><strong>Performance.</strong> The big downside, and the reason it wasn't used by everyone from the 1970s. Throughput and response times are significantly worse than under weak isolation, partly from the overhead of locks but mostly from reduced concurrency: if two transactions might race, one waits. Traditional databases don't bound transaction duration (they were built for interactive use), so waits can be unbounded, and queues form around popular objects. Latency can be unstable and slow at high percentiles under contention; one slow or lock-heavy transaction can grind everything down. Deadlocks are much more frequent than under lock-based read committed, and each abort means redoing work.</p>
+
+  <h3>Predicate locks and index-range locks</h3>
+  <p>A subtle point: to prevent phantoms the database must lock things that <em>don't exist yet</em>. In the booking example, if one transaction searched for bookings of room 123 from noon to 1 p.m., no other transaction may insert a conflicting booking meanwhile (bookings for other rooms or other times are fine). A <strong>predicate lock</strong> does this: like a shared/exclusive lock but attached to all objects matching a search condition. To read objects matching a condition you take a shared predicate lock on the condition (waiting if anyone holds an exclusive lock on a matching object). To insert, update or delete, you check whether the old or new value matches any existing predicate lock and wait if so. Because it covers objects not yet in the database, 2PL with predicate locks prevents write skew and other races and is serializable.</p>
+  <p>But checking many predicate locks is slow, so most 2PL databases implement <strong>index-range locking</strong> (next-key locking), a safe approximation: lock a larger set than the predicate. For room 123 from noon to 1 p.m. you could lock all of room 123's bookings via an index on <code>room_id</code>, or a time range via a time index, or all rooms for that time. Any write that matches the original predicate also matches the bigger lock, so it's safe, though less precise (it may block more than necessary). If no suitable index exists, the fallback is a shared lock on the whole table, safe but bad for performance.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">PREDICATE LOCK vs INDEX-RANGE LOCK</text>
+      <rect x="20" y="36" width="600" height="110" rx="8" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="30" y="56" fill="#7A7A80" font-size="9.5">all bookings (by room)</text>
+      <g stroke="#7A7A80" fill="#131316"><rect x="40" y="66" width="100" height="40"/><rect x="140" y="66" width="100" height="40"/><rect x="240" y="66" width="100" height="40"/><rect x="340" y="66" width="100" height="40"/><rect x="440" y="66" width="100" height="40"/></g>
+      <g font-size="9" text-anchor="middle" fill="#C9C7C1"><text x="90" y="90">room 121</text><text x="190" y="90">room 122</text><text x="290" y="90" fill="#C8453A" font-weight="700">room 123</text><text x="390" y="90">room 124</text><text x="490" y="90">room 125</text></g>
+      <rect x="244" y="112" width="92" height="22" fill="#C8453A" opacity="0.8"/><text x="290" y="127" fill="#0A0A0B" font-size="9" text-anchor="middle" font-weight="700">12:00-13:00 (predicate)</text>
+      <rect x="240" y="62" width="100" height="48" fill="none" stroke="#6FCF97" stroke-width="2" stroke-dasharray="4 3"/>
+      <text x="320" y="170" fill="#C9C7C1" font-size="10" text-anchor="middle">predicate lock: exactly "room 123, 12:00-13:00"</text>
+      <text x="320" y="188" fill="#6FCF97" font-size="10" text-anchor="middle">index-range lock: green box = all of room 123 (bigger, cheaper, still safe)</text>
+      <text x="320" y="210" fill="#7A7A80" font-size="9" text-anchor="middle">my own illustration</text>
+    </svg>
+    <figcaption>Fig 2. Locking a bit more than needed keeps phantoms out at a lower bookkeeping cost.</figcaption>
+  </figure>
+
+  <h3>Route 3: serializable snapshot isolation (SSI)</h3>
+  <p>The chapter has painted "a bleak picture": the serializable options either don't perform (2PL) or don't scale (serial execution), while the fast levels allow races. Are they fundamentally at odds? Perhaps not. SSI, first described in 2008, provides full serializability with only a small penalty over snapshot isolation. The source says PostgreSQL has used it for its serializable level since version 9.1, and FoundationDB uses a similar algorithm. Being young, it is still proving itself, but may be fast enough to become a default.</p>
+  <p><strong>Pessimistic versus optimistic.</strong> 2PL is pessimistic: if anything might go wrong, wait. Serial execution is pessimism taken to the extreme (one lock on the whole database, compensated by making transactions fast). SSI is <strong>optimistic</strong>: transactions go ahead anyway, and at commit the database checks whether isolation was violated; if so the transaction aborts and is retried. Optimistic control does badly under high contention (many aborts, and retries add load when near capacity), and well when there's spare capacity and moderate contention. Commutative atomic operations (like counter increments) can reduce contention. SSI sits on top of snapshot isolation: reads come from a consistent snapshot, and an added algorithm detects serialization conflicts among writes.</p>
+  <p><strong>Decisions based on an outdated premise.</strong> The pattern from write skew: read some data, decide, write. Under snapshot isolation, the thing you read may be out of date by commit time. The database can't see how your code uses a query result, so it must assume any change to the result may invalidate the transaction's writes. Two cases to detect:</p>
+  <ol>
+    <li><strong>Reading a stale MVCC version</strong> (an uncommitted write was ignored at read time but has committed since). The database tracks when a transaction ignores another's writes due to visibility rules; at commit, if any of those ignored writes have become committed, abort. Why wait until commit? A read-only transaction wouldn't need to abort, the other transaction may still abort, and at read time the database doesn't know whether you'll write. Waiting avoids unnecessary aborts and keeps long read-only snapshots workable.</li>
+    <li><strong>Writes that affect earlier reads</strong> (another transaction modifies data after you read it). Using an index (or the table, if there's no index), the database records which transactions have recently read a key range, e.g. <code>shift_id = 1234</code>. When a transaction writes, it looks up recent readers of the affected data and notifies them that their read may be outdated. This is like an index-range lock, except it doesn't block; it's a <em>tripwire</em>. In the source's example, two transactions both read and write the on-call doctors; each notifies the other. The first to commit succeeds (the other's write hasn't taken effect yet); when the second tries to commit, the conflicting write has been committed, so it must abort. The database can forget a transaction's read information once it and all concurrent transactions have finished.</li>
+  </ol>
+
+  <figure>
+    <svg viewBox="0 0 640 240" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">SSI TRIPWIRE ON THE ON-CALL EXAMPLE</text>
+      <g font-size="9.5">
+        <text x="40" y="48" fill="#7A7A80">txn 42</text><text x="360" y="48" fill="#7A7A80">txn 43</text>
+        <rect x="40" y="56" width="260" height="26" fill="#0E0E10" stroke="#7A7A80"/><text x="50" y="73" fill="#C9C7C1">read shift 1234 (index marks reader 42)</text>
+        <rect x="360" y="56" width="260" height="26" fill="#0E0E10" stroke="#7A7A80"/><text x="370" y="73" fill="#C9C7C1">read shift 1234 (index marks reader 43)</text>
+        <rect x="40" y="94" width="260" height="26" fill="#0E0E10" stroke="#C8453A"/><text x="50" y="111" fill="#C8453A">write alice off call -> tells 43: stale</text>
+        <rect x="360" y="94" width="260" height="26" fill="#0E0E10" stroke="#C8453A"/><text x="370" y="111" fill="#C8453A">write bob off call -> tells 42: stale</text>
+        <rect x="40" y="140" width="260" height="26" fill="#0E0E10" stroke="#6FCF97"/><text x="50" y="157" fill="#6FCF97">commit: OK (43 not committed yet)</text>
+        <rect x="360" y="140" width="260" height="26" fill="#0E0E10" stroke="#C8453A"/><text x="370" y="157" fill="#C8453A">commit: ABORT, retry later</text>
+      </g>
+      <text x="320" y="196" fill="#C9C7C1" font-size="10" text-anchor="middle">on retry, 43 sees alice already off call, so bob stays on</text>
+      <text x="320" y="224" fill="#7A7A80" font-size="9" text-anchor="middle">my own sketch of the idea; real implementations track more detail</text>
+    </svg>
+    <figcaption>Fig 3. No one waited; one transaction paid at commit time. (Simplified.)</figcaption>
+  </figure>
+
+  <p><strong>Performance of SSI.</strong> Tracking granularity is a trade-off: detailed tracking means precise aborts but more bookkeeping; coarse tracking is faster but aborts more than needed. PostgreSQL uses theory showing some overwritten reads are still serializable to reduce unnecessary aborts. Compared with 2PL, transactions don't wait for each other's locks, so latency is much more predictable, and read-only queries run on a snapshot without locks. Compared with serial execution, it isn't limited to one core: FoundationDB distributes conflict detection over several machines, scaling to very high throughput while allowing transactions across partitions. The abort rate matters: a read-write transaction that runs long is likely to conflict, so SSI wants fairly short read-write transactions (long read-only ones may be fine), though the source thinks it's probably less sensitive to slow transactions than 2PL or serial execution.</p>
+
+  <h3>The chapter in review (its Summary)</h3>
+  <ul>
+    <li>Transactions let an application pretend certain concurrency problems and faults don't exist: a large class of errors becomes a simple abort and retry. Simple single-record access might manage without them; complex access patterns benefit hugely, and denormalized data in particular goes out of sync without them.</li>
+    <li><strong>Dirty reads</strong>: prevented by read committed and stronger. <strong>Dirty writes</strong>: prevented by almost all implementations. <strong>Read skew</strong>: prevented by snapshot isolation (usually MVCC). <strong>Lost updates</strong>: some snapshot-isolation implementations prevent them automatically, others need manual locks like <code>SELECT FOR UPDATE</code>. <strong>Write skew</strong>: only serializable isolation prevents it. <strong>Phantom reads</strong>: snapshot isolation prevents straightforward ones, but phantoms in write-skew situations need things like index-range locks.</li>
+    <li>Weak levels protect against some anomalies and leave the rest to you; only serializable protects against all. Three implementations: serial execution (simple and effective if transactions are fast and throughput fits one core); two-phase locking (the standard for decades, but with performance problems); SSI (newer, optimistic, mostly avoids the downsides).</li>
+    <li>This chapter looked at a single machine; distributed transactions raise new difficulties, taken up in the next two chapters.</li>
+  </ul>
+
+  <h2>Why it matters</h2>
+  <p>When you pick an isolation level, set up a database, or debug an intermittent data-corruption bug, you are choosing between these trade-offs. It also explains common production symptoms: sudden latency cliffs under lock contention, deadlock-retry loops, "could not serialize access" errors that must be retried. And it gives you a mental model for why "just make it serializable" is not free.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Serializable means the outcome matches some one-at-a-time order of the transactions; only it prevents write skew and phantoms across the board.</li>
+      <li>Serial execution works when transactions are short, data fits in memory, and writes fit one core (or partition cleanly); it needs stored procedures.</li>
+      <li>2PL uses shared/exclusive locks held to the end of the transaction, with predicate or index-range locks for phantoms; readers and writers block each other, deadlocks happen, latency suffers under contention.</li>
+      <li>SSI runs on snapshot isolation, detects outdated premises via stale-read and write-after-read tripwires, and aborts at commit; no blocking, but high contention means more aborts.</li>
+      <li>All three routes make the application retry aborts; design for that.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Serial executor.</strong> Build a single-threaded loop that takes stored-procedure-style functions from a queue and runs each to completion against an in-memory dictionary. Done when 100,000 queued increments from many producers give the exact right total and you can explain why no locks were needed.</li>
+      <li><strong>Lock table.</strong> Implement shared/exclusive locks with upgrade, and detect a deadlock by finding a cycle in a wait-for graph. Done when two transactions locking A then B and B then A are detected and one is aborted.</li>
+      <li><strong>Phantom guard.</strong> For a booking table keyed by (room, start), add a range lock on a room before the availability check. Done when two concurrent bookings of overlapping times for the same room cannot both commit but different rooms still proceed in parallel.</li>
+      <li><strong>Tiny SSI.</strong> On top of a snapshot-based store, record which transactions read which key range, add a tripwire on writes, and check at commit. Done when the on-call scenario aborts exactly one of two concurrent transactions, and a read-only transaction never aborts. (My own quick sketch of the idea does this for two transactions; a real one needs much more care.)</li>
+      <li><strong>Contention test.</strong> Run your lock-based and optimistic versions with 1% and 90% of transactions touching one hot key; plot throughput and abort counts. Done when you can state, with your own numbers, where each one hurts.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Find out which of the three routes your own database uses at its highest isolation level, and what error you get when a serialization conflict occurs. Chapter 8 next examines what goes wrong in distributed systems, which complicates everything in this chapter.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, written to help you build a mental model quickly. It is not a substitute for the source; verify anything you plan to rely on against the original before using it for real.</p>
+  <ul class="src-list">
+    <li>Martin Kleppmann, <em>Designing Data-Intensive Applications</em> (O'Reilly, 2017), Chapter 7, "Transactions": "Serializability" (Actual Serial Execution, Two-Phase Locking, Serializable Snapshot Isolation) and the chapter's "Summary": printed pages 251 to 267 (PDF pages 273 to 289 of the supplied file).</li>
+  </ul>
+  <p class="src-note">Flagged for accuracy: (1) Product statements (VoltDB, Redis, Datomic, InnoDB, SQL Server, DB2, PostgreSQL 9.1 SSI, FoundationDB) and the "about 1,000 cross-partition writes per second" figure are the book's, as of 2017; verify against current documentation. (2) The claim "2PL gives worse performance than weak isolation" is the book's general statement; actual impact depends on contention. (3) The SSI figure and tripwire sketch are simplified; real implementations track more (the book only outlines the algorithm). (4) My lock-table and tripwire scripts were quick sketches I ran on tiny cases; they are not correct implementations. (5) Diagrams are original with invented values. (6) Nothing outside the supplied chapter was consulted.</p>
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
