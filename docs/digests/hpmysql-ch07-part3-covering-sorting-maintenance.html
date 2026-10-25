@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>High Performance MySQL: Covering Indexes, Sorting, Redundancy and Maintenance (Part 3)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">SQL &middot; CH.7 DIGEST (PART 3, FINAL)</p>
+  <h1>Covering Indexes, Index Sorting, Redundant Indexes and Maintenance</h1>
+  <p class="lead">Parts 1 and 2 were about what an index is and how to shape one. This last part is about getting paid back for that work: answering a query from the index alone, letting the index do your sorting, cleaning out indexes that cost more than they give, and keeping the whole thing healthy. It ends with the chapter's own three-principle summary.</p>
+
+  <h2>In one line</h2>
+  <p>An index is judged by the whole query (finding rows, ordering them, and supplying the columns), and every index you add also has a running cost, so you tidy and maintain them on purpose.</p>
+
+  <h2>The big idea</h2>
+  <p>The common beginner rule is "index the columns in your WHERE clause." That's only the first third of the story. A query also has to produce its rows in some order, and it has to hand back some columns. If the index can supply all three (the lookup, the order, and the columns), the server never touches the table's rows at all. That's the dream.</p>
+  <p>But indexes aren't free. Each one is extra data that every insert, update and delete has to keep in sync. So the other half of this part is housekeeping: spotting duplicate, redundant and unused indexes, and keeping statistics and physical layout in good shape so the optimizer (the part of MySQL that picks a query plan) keeps making good choices.</p>
+  <p>This part covers the rest of the chapter: "Covering Indexes," "Using Index Scans for Sorts," "Redundant and Duplicate Indexes," "Unused Indexes," "Index and Table Maintenance," and the chapter Summary. It also finishes one line from the previous part, "When Primary Key Order Is Worse," which I'll mention briefly below.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Covering index</span>: an index that contains every column a query needs, so the query can be answered without reading the table row. Example: the query <code>SELECT region, city ... WHERE region = 5</code> is covered by an index on <code>(region, city)</code>.</li>
+    <li><span class="keyterm-term">Filesort</span>: MySQL's name for sorting rows itself because no index gave them in the right order. Despite the name it does not always use a file; the source says it goes to disk only when the data can't be sorted in memory.</li>
+    <li><span class="keyterm-term">EXPLAIN</span>: a statement that shows the plan MySQL intends to use for a query, without returning the query's rows. The <code>Extra</code> column has notes like <code>Using index</code> or <code>Using filesort</code>.</li>
+    <li><span class="keyterm-term">Leftmost prefix</span>: the first column, or first few columns in order, of a multicolumn index. An index on <code>(a, b, c)</code> can serve lookups on <code>a</code> or <code>(a, b)</code>, but not on <code>b</code> alone.</li>
+    <li><span class="keyterm-term">Duplicate index</span>: the same type of index on the same columns in the same order.</li>
+    <li><span class="keyterm-term">Redundant index</span>: an index that a different, longer B-tree index already covers as a leftmost prefix. An index on <code>(A)</code> is redundant if <code>(A, B)</code> exists.</li>
+    <li><span class="keyterm-term">Unused index</span>: an index the server never picks for any query.</li>
+    <li><span class="keyterm-term">Invisible index</span>: a MySQL 8.0 feature. The index still exists and is still maintained, but the optimizer ignores it.</li>
+    <li><span class="keyterm-term">Index statistics</span>: the summary numbers (like estimated distinct values) the optimizer uses to guess how many rows a query will touch.</li>
+    <li><span class="keyterm-term">Fragmentation</span>: pages that are poorly filled and/or stored out of order on disk, so reads do more work than they should.</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <p>Hold on to one picture from Part 2: in InnoDB, a secondary index's leaf entries hold the indexed columns <em>plus the primary key value</em>. Almost every trick in this part follows from "what is physically sitting in the index leaves, and in what order?"</p>
+  <p>A note on how I checked things. The book's examples use the Sakila sample database, and I don't reproduce them. I built small made-up tables on a local MySQL 8.0 server and ran <code>EXPLAIN</code> myself, so every plan I quote below is mine, from that one version and those one small tables. Treat them as direction, not as promises about your server. The source itself says (in a footnote about sorting) that the optimizer may not do what you expect and you should always check with <code>EXPLAIN</code>.</p>
+
+  <h3>0. A quick tail from last time: when key order hurts</h3>
+  <p>Part 2 taught that inserting in primary key order is usually good for InnoDB. The closing note of that section says the opposite can bite under heavy concurrency: if many sessions insert at once, they all land at the top end of the key, which becomes a hot spot where they contend for locks, and the <code>AUTO_INCREMENT</code> counter has its own locking, which the source says you can tune with <code>innodb_autoinc_lock_mode</code> (or by redesigning the table or application). <em>Simplification:</em> I'm only relaying the source's one-paragraph warning. How much this matters depends on your server version and workload, and I did not test it.</p>
+
+  <h3>1. Covering indexes</h3>
+  <p>Normally an index helps you <em>find</em> rows, then MySQL jumps to the table to read the row's other columns. But the index leaves already hold the indexed values. If those are all the columns the query asks for, the jump is pointless. An index that holds everything a query needs is a <strong>covering index</strong>, and EXPLAIN shows <code>Using index</code> in the <code>Extra</code> column when MySQL answers from one.</p>
+  <p>The source lists why this tends to be a big win:</p>
+  <ul>
+    <li><strong>Less data to read.</strong> Index entries are usually much smaller than whole rows. That matters when the data is cached (less to copy around) and when it isn't (smaller indexes fit in memory better).</li>
+    <li><strong>Less random I/O.</strong> Indexes are sorted by value, at least within a page, so a range of index entries is read more sequentially than fetching each matching row from a scattered location.</li>
+    <li><strong>Saves a second lookup in InnoDB.</strong> Because InnoDB secondary indexes carry the primary key, a secondary index that covers the query avoids going back into the primary key tree.</li>
+  </ul>
+  <p>Two boundaries worth naming. First, per the source, only B-tree indexes can act as covering indexes. Second, a trap on naming: <code>Using index</code> in <code>Extra</code> (covered query) is a completely different thing from <code>type: index</code> in the <code>type</code> column (the access method, a full scan of an index). The source has a footnote warning about exactly this mix-up.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 260" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="ar1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#C9C7C1"/></marker></defs>
+      <text x="320" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">NOT COVERED vs COVERED (INNODB SECONDARY INDEX)</text>
+      <text x="160" y="46" fill="#C8453A" font-size="11" font-weight="700" text-anchor="middle">SELECT region, city</text>
+      <text x="160" y="60" fill="#7A7A80" font-size="10" text-anchor="middle">index = (region) only</text>
+      <rect x="40" y="76" width="110" height="64" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="95" y="98" fill="#F2EFE9" font-size="10" text-anchor="middle">index leaf</text>
+      <text x="95" y="116" fill="#C9C7C1" font-size="10" text-anchor="middle">region | pk</text>
+      <rect x="200" y="76" width="110" height="64" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="255" y="98" fill="#F2EFE9" font-size="10" text-anchor="middle">table row</text>
+      <text x="255" y="116" fill="#C9C7C1" font-size="10" text-anchor="middle">has city</text>
+      <line x1="150" y1="108" x2="198" y2="108" stroke="#C9C7C1" marker-end="url(#ar1)"/>
+      <text x="175" y="160" fill="#C9C7C1" font-size="10" text-anchor="middle">1 extra hop per matching row</text>
+      <text x="160" y="190" fill="#C8453A" font-size="10" text-anchor="middle">Extra: (nothing special)</text>
+      <line x1="320" y1="40" x2="320" y2="230" stroke="rgba(242,239,233,0.10)"/>
+      <text x="480" y="46" fill="#6FCF97" font-size="11" font-weight="700" text-anchor="middle">SELECT region, city</text>
+      <text x="480" y="60" fill="#7A7A80" font-size="10" text-anchor="middle">index = (region, city)</text>
+      <rect x="400" y="76" width="160" height="64" rx="8" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="480" y="98" fill="#F2EFE9" font-size="10" text-anchor="middle">index leaf</text>
+      <text x="480" y="116" fill="#C9C7C1" font-size="10" text-anchor="middle">region | city | pk</text>
+      <text x="480" y="160" fill="#6FCF97" font-size="10" text-anchor="middle">everything needed is already here</text>
+      <text x="480" y="190" fill="#6FCF97" font-size="10" text-anchor="middle">Extra: Using index</text>
+      <text x="320" y="246" fill="#7A7A80" font-size="10" text-anchor="middle">the primary key rides along in every InnoDB secondary index leaf</text>
+    </svg>
+    <figcaption>Why a covering index skips the table (a mental model; real pages hold many entries each).</figcaption>
+  </figure>
+
+  <h3>InnoDB's "free" extra column</h3>
+  <p>The source points out that in most storage engines an index can only cover a query that uses columns in the index. InnoDB goes a step further: since the primary key is stored in every secondary index leaf, the primary key column counts as an extra, invisible member of every secondary index. I checked this on a made-up <code>shop_orders</code> table with 20,000 rows and an index only on <code>region</code> (primary key <code>id</code>):</p>
+  <ul>
+    <li><code>EXPLAIN SELECT region, id ... WHERE region = 5</code> showed <code>key: idx_region</code> and <code>Extra: Using index</code>. Covered, even though <code>id</code> isn't in the index definition.</li>
+    <li><code>EXPLAIN SELECT region, city ... WHERE region = 5</code> showed the same index but no <code>Using index</code>, because <code>city</code> isn't available there.</li>
+    <li>After <code>ALTER TABLE shop_orders ADD KEY idx_region_city (region, city)</code>, the same query switched to the new index with <code>Using index</code>.</li>
+  </ul>
+  <p><em>Simplification:</em> "add the SELECT columns to the index" is the idea, not a rule. The redundancy section below shows the cost: a wider index is bigger, and it makes inserts slower.</p>
+
+  <h3>2. Using an index to sort</h3>
+  <p>MySQL can produce ordered results two ways: sort the rows itself (a filesort), or read an index, which is already sorted. You can spot the plan: <code>Using filesort</code> in <code>Extra</code> means it sorted; its absence on an <code>ORDER BY</code> query means the index order was used.</p>
+  <p>A catch the source stresses: reading rows through an index, when the index doesn't cover the query, means one row lookup per index entry. That's mostly random I/O, so it is usually slower than a sequential table scan, particularly when the workload is I/O-bound. Index ordering pays off best when the query is covered, or when a <code>LIMIT</code> means only a few rows are ever fetched (the source calls <code>ORDER BY</code> plus <code>LIMIT</code> one of the most important uses).</p>
+  <p>The rules the source gives for when the index order can be used:</p>
+  <ul>
+    <li>The <code>ORDER BY</code> columns must match the index order and all go in the same direction (all ascending or all descending), and form a leftmost prefix of the index.</li>
+    <li>If the query joins several tables, it works only when every <code>ORDER BY</code> column belongs to the first table in the join order.</li>
+    <li>Exception: if the <code>WHERE</code> (or join) gives a <em>constant</em> for the leading column(s), those columns "fill the gap" and the <code>ORDER BY</code> can start later in the index.</li>
+  </ul>
+  <p>Here is what I saw on a made-up <code>ev</code> table (30,000 rows) with one index <code>(day, user_id, kind)</code>. Each row is a different <code>WHERE ... ORDER BY</code> shape:</p>
+  <div class="card">
+    <p style="margin-bottom:8px"><code>WHERE day = const ORDER BY user_id, kind</code> &rarr; no filesort. The constant fills the first column; the rest is a leftmost prefix of what remains.</p>
+    <p style="margin-bottom:8px"><code>WHERE day = const ORDER BY user_id DESC, kind ASC</code> &rarr; <code>Using filesort</code>. Mixed directions.</p>
+    <p style="margin-bottom:8px"><code>WHERE day = const ORDER BY kind</code> &rarr; <code>Using filesort</code>. <code>user_id</code> is skipped, so there's a gap.</p>
+    <p style="margin-bottom:8px"><code>WHERE day = const ORDER BY user_id, pad</code> &rarr; <code>Using filesort</code>. <code>pad</code> isn't in the index.</p>
+    <p style="margin-bottom:8px"><code>WHERE day = const AND user_id IN (1,2) ORDER BY kind</code> &rarr; <code>Using filesort</code>. The source says a multi-value equality behaves like a range for sorting.</p>
+    <p style="margin-bottom:8px"><code>WHERE day = const ORDER BY user_id DESC, kind DESC</code> &rarr; <code>Backward index scan</code>, no filesort. All columns descending reads the index backwards.</p>
+    <p style="margin-bottom:0"><code>ORDER BY day, user_id LIMIT 10</code> (no WHERE) &rarr; used the index, no filesort.</p>
+  </div>
+  <p>One result went the other way from the book's text, and it's worth being honest about. In the source's example, a range on the first column followed by an <code>ORDER BY</code> on later columns can't use the index order. In my test, <code>WHERE day &gt; const ORDER BY user_id, kind</code> chose a full table scan plus a filesort, which is consistent with the rule, but I can't separate "can't use the index for sorting" from "the optimizer judged a scan cheaper on a table this small." Small tables bend the optimizer's choices, which is another reason the source tells you to verify with EXPLAIN on your own data.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 270" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">INDEX (day, user_id, kind): CAN IT SORT FOR YOU?</text>
+      <rect x="40" y="36" width="560" height="44" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <rect x="50" y="44" width="150" height="28" rx="4" fill="#131316" stroke="#6FCF97"/><text x="125" y="63" fill="#6FCF97" font-size="11" text-anchor="middle">day = const</text>
+      <rect x="215" y="44" width="150" height="28" rx="4" fill="#131316" stroke="#C9C7C1"/><text x="290" y="63" fill="#C9C7C1" font-size="11" text-anchor="middle">user_id</text>
+      <rect x="380" y="44" width="150" height="28" rx="4" fill="#131316" stroke="#C9C7C1"/><text x="455" y="63" fill="#C9C7C1" font-size="11" text-anchor="middle">kind</text>
+      <text x="320" y="100" fill="#7A7A80" font-size="10" text-anchor="middle">the constant fills column 1, so ORDER BY can begin at column 2</text>
+      <text x="48" y="130" fill="#6FCF97" font-size="11">&#10003; ORDER BY user_id, kind</text>
+      <text x="48" y="152" fill="#6FCF97" font-size="11">&#10003; ORDER BY user_id DESC, kind DESC (read backwards)</text>
+      <text x="48" y="174" fill="#C8453A" font-size="11">&#10007; ORDER BY kind (skips user_id)</text>
+      <text x="48" y="196" fill="#C8453A" font-size="11">&#10007; ORDER BY user_id DESC, kind ASC (mixed directions)</text>
+      <text x="48" y="218" fill="#C8453A" font-size="11">&#10007; ORDER BY user_id, pad (pad not in index)</text>
+      <text x="320" y="252" fill="#7A7A80" font-size="10" text-anchor="middle">checkmarks = what my EXPLAIN runs showed on one MySQL 8.0 test table</text>
+    </svg>
+    <figcaption>The "fill the gap" idea in one picture. Verify on your own data; plans depend on version and table size.</figcaption>
+  </figure>
+
+  <h3>A version note on mixed directions</h3>
+  <p>The source suggests that if you need mixed sort directions, a trick is to store a reversed or negated value. That is the book's advice. Beyond the source, I tried MySQL 8.0's descending index syntax: after <code>ALTER TABLE ev ADD KEY idx_mixed (day, user_id DESC, kind ASC)</code>, the mixed-direction query used it with no filesort, but only once I forced it with <code>FORCE INDEX</code>. Left alone, the optimizer kept the old index on my tiny table. I'm flagging this as my own observation on one version, not something the chapter claims.</p>
+
+  <h3>3. Duplicate and redundant indexes</h3>
+  <p>Every index must be maintained separately and the optimizer considers each of them when planning, so extra ones cost both disk space and time. The source distinguishes two kinds:</p>
+  <ul>
+    <li><strong>Duplicate</strong>: same index type, same columns, same order. The source says MySQL lets you create them (it only warns). Sometimes it happens accidentally: declare a column <code>PRIMARY KEY</code>, add <code>UNIQUE(id)</code>, and add <code>INDEX(id)</code>, and you've made three indexes, because primary key and unique constraints are implemented with indexes. I confirmed on 8.0 that <code>SHOW INDEX</code> lists three separate indexes (<code>PRIMARY</code>, <code>id</code>, <code>id_2</code>) for that table. The source adds that different <em>types</em> (say a regular key plus a full-text key on one column) aren't really duplicates.</li>
+    <li><strong>Redundant</strong>: an index on <code>(A)</code> when <code>(A, B)</code> exists is redundant, because <code>(A, B)</code> already works as an index on <code>A</code>. An index on <code>(B, A)</code> or on <code>(B)</code> is <em>not</em> redundant, since <code>B</code> isn't the leftmost prefix. Per the source, this prefix redundancy applies to B-tree indexes only, and different index types are not redundant with B-trees.</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">IF YOU ALREADY HAVE INDEX (A, B) ...</text>
+      <rect x="40" y="40" width="170" height="52" rx="8" fill="#0E0E10" stroke="#C9C7C1"/><text x="125" y="62" fill="#F2EFE9" font-size="11" text-anchor="middle">(A)</text><text x="125" y="80" fill="#C8453A" font-size="10" text-anchor="middle">redundant (prefix)</text>
+      <rect x="235" y="40" width="170" height="52" rx="8" fill="#0E0E10" stroke="#C9C7C1"/><text x="320" y="62" fill="#F2EFE9" font-size="11" text-anchor="middle">(A, B)</text><text x="320" y="80" fill="#C8453A" font-size="10" text-anchor="middle">duplicate</text>
+      <rect x="430" y="40" width="170" height="52" rx="8" fill="#0E0E10" stroke="#6FCF97"/><text x="515" y="62" fill="#F2EFE9" font-size="11" text-anchor="middle">(B, A)  or  (B)</text><text x="515" y="80" fill="#6FCF97" font-size="10" text-anchor="middle">different, not redundant</text>
+      <rect x="40" y="120" width="560" height="84" rx="8" fill="#131316" stroke="rgba(242,239,233,0.10)"/>
+      <text x="56" y="144" fill="#C9C7C1" font-size="11">Exception from the source: you may keep (A) on purpose if</text>
+      <text x="56" y="164" fill="#C9C7C1" font-size="11">widening it makes a hot query slower (bigger index), and</text>
+      <text x="56" y="184" fill="#C9C7C1" font-size="11">remember InnoDB treats an index on (A) as (A, primary key).</text>
+    </svg>
+    <figcaption>Redundant is about leftmost prefixes of B-tree indexes.</figcaption>
+  </figure>
+
+  <h3>When a "redundant" index earns its keep</h3>
+  <p>The source's case: a table of one million users, about 20,000 per <code>state_id</code>, with an index on <code>state_id</code>. A count query on one state was fast with it. A second query selecting <code>state_id, city, address</code> was slow, so extending the index to <code>(state_id, city, address)</code> to cover it sped that one up but made the count query a bit slower (the wide index is bigger to scan). Keeping <em>both</em> indexes made both queries fast, at the price of slower writes: the source measured inserting a million rows taking noticeably longer with both indexes than with one. I'm deliberately not repeating its benchmark numbers; the lesson is the direction. A redundant index can be a deliberate trade of write speed for read speed, and extending an index is not always free for the queries that used the narrow version.</p>
+  <p>There's a second warning from the source that I found surprising and tested. Because InnoDB appends the primary key to every secondary index, an index on <code>(a)</code> is really <code>(a, id)</code>. So <code>WHERE a = 5 ORDER BY id</code> gets its order for free. If you "extend" to <code>(a, b)</code> it becomes <code>(a, b, id)</code> and the order by <code>id</code> is lost. On a made-up <code>ext</code> table, my <code>EXPLAIN</code> showed no special <code>Extra</code> with index <code>(a)</code> and <code>Using filesort</code> after swapping it for <code>(a, b)</code>. Same query, same results, new sort step.</p>
+
+  <h3>Finding and removing them safely</h3>
+  <ul>
+    <li>You can write queries against <code>INFORMATION_SCHEMA</code>, but the source recommends an easier route: <code>pt-duplicate-key-checker</code> from Percona Toolkit, which examines table structures and suggests duplicate or redundant indexes. (I did not install or run it.)</li>
+    <li>Validate planned changes carefully; the source names <code>pt-upgrade</code> (also Percona Toolkit) for comparing behaviour. I didn't run it either.</li>
+    <li>In MySQL 8.0 you can mark an index <strong>invisible</strong> first. I tried it: <code>ALTER TABLE ev ALTER INDEX idx_day INVISIBLE</code> made <code>SHOW INDEX</code> report <code>Visible: NO</code>, and EXPLAIN then used a different index for the same query. <code>ALTER INDEX idx_day VISIBLE</code> turns it back on instantly, with no rebuild. That makes "hide, watch, then drop" a much safer sequence than dropping and hoping.</li>
+  </ul>
+
+  <h3>4. Unused indexes</h3>
+  <p>Beyond duplicates, some indexes are simply never chosen by any query. The source calls them dead weight and suggests dropping them, with one caveat in a footnote: some indexes exist to enforce uniqueness, so they matter even if no query reads them.</p>
+  <p>To find them, the source uses the <code>sys</code> schema view over Performance Schema data (the Chapter 3 topic): <code>SELECT * FROM sys.schema_unused_indexes;</code> lists schema, table and index name. I ran it. On my throwaway database it listed several indexes I'd only touched with <code>EXPLAIN</code>, and after I actually ran a real <code>SELECT COUNT(*)</code> that used <code>idx_region</code>, that index dropped off the list. Two lessons from that. One, EXPLAIN alone doesn't count as use in what I saw. Two, the list is only as trustworthy as the observation window: an index that serves a once-a-month report looks unused if the server has only been up for a week. I believe these counters reset when the server restarts, but that detail is from my own use of the view, not from the chapter, so confirm it in the MySQL docs for your version.</p>
+
+  <h3>5. Index and table maintenance</h3>
+  <p>The source says maintenance has three goals: find and fix corruption, keep index statistics accurate, and reduce fragmentation.</p>
+
+  <h3>Corruption</h3>
+  <p>Corruption is when a table or index is damaged, from hardware faults or bugs. Symptoms the source lists: wrong query results, duplicate-key errors when there's no duplicate, even lockups or crashes. The tools: <code>CHECK TABLE</code> to test (not every storage engine supports it), <code>REPAIR TABLE</code> to fix (again engine-dependent), or a "no-op" <code>ALTER TABLE &lt;table&gt; ENGINE=INNODB</code> to rebuild, or dump and reload. If damage is in the row data or system area rather than an index, those may not work and you may have to restore from backup.</p>
+  <p>The source is blunt about InnoDB: corruption there means something is seriously wrong, most likely bad hardware or memory, or an admin action like copying live files outside MySQL (it names backing up with <code>rsync</code> as a typical mistake), and only rarely an InnoDB bug. It says a normal query shouldn't be able to corrupt InnoDB, and that you should find the cause instead of merely repairing, or it may come back. It points to the <code>innodb_force_recovery</code> setting for recovery; I didn't test that and the source defers to the MySQL manual for details. I ran <code>CHECK TABLE</code> on a healthy table and got <code>status OK</code>, which is the happy path only.</p>
+
+  <h3>Statistics</h3>
+  <p>The optimizer is cost-based, and the main cost it estimates is how much data a query will access. It estimates row counts from index statistics. If those are missing or stale, plans can get worse. The fix is <code>ANALYZE TABLE</code>, which regenerates them. <code>SHOW INDEX FROM &lt;table&gt;</code> shows each index's <strong>Cardinality</strong> (the engine's estimate of distinct values). On my <code>ext</code> table, after analysis, the primary key showed a cardinality near the row count and index <code>(a, b)</code> showed <code>a</code> around 50 (I'd generated 50 values) and the combination higher. The primary key's number was close to, but not exactly, my 10,000 rows, which is a nice reminder these are estimates.</p>
+  <p>How InnoDB gets them, per the source: it samples a few random index pages and assumes the rest looks similar. The sample size variable it names, <code>innodb_stats_sample_pages</code>, has a default of 8 in the book. Be aware that this is version-specific: on my 8.0 server, that name wasn't what I looked at; I queried <code>innodb_stats_persistent_sample_pages</code> (20 here) and <code>innodb_stats_transient_sample_pages</code> (8 here). I'm flagging this as a boundary: the chapter's variable name and default may not match your version, so check the docs for yours.</p>
+  <p>The source also gives a performance warning: InnoDB recalculates statistics when a table is first opened, on <code>ANALYZE TABLE</code>, when the table size changes a lot, and also as a side effect of some <code>INFORMATION_SCHEMA</code> queries, <code>SHOW TABLE STATUS</code>, <code>SHOW INDEX</code>, and a client with autocompletion on. On big, busy or slow-disk servers that can create heavy load and locking, and you can't look at the statistics without disturbing them. The source's remedy is turning off <code>innodb_stats_on_metadata</code>. (On my server it was already <code>0</code>, so this is another place where defaults vary by version.)</p>
+
+  <h3>Fragmentation</h3>
+  <p>B-tree leaf pages perform best when tightly packed and physically in order. If not, they're <strong>fragmented</strong>, and range scans and full index scans can be many times slower, especially covered ones. Data storage has three flavors, per the source:</p>
+  <ul>
+    <li><strong>Row fragmentation</strong>: one row stored in pieces in different places, which hurts even single-row reads.</li>
+    <li><strong>Intra-row fragmentation</strong> (the source's label): logically sequential pages or rows aren't sequential on disk, which hurts full scans and clustered range scans.</li>
+    <li><strong>Free space fragmentation</strong>: lots of empty space in pages, so the server reads data it doesn't need.</li>
+  </ul>
+  <p>The fixes: <code>OPTIMIZE TABLE</code>, dump and reload, or the no-op <code>ALTER TABLE &lt;table&gt; ENGINE=&lt;engine&gt;</code> for engines without <code>OPTIMIZE</code>. When I ran <code>OPTIMIZE TABLE</code> on an InnoDB table in 8.0, MySQL answered with a note: "Table does not support optimize, doing recreate + analyze instead." In other words, it rebuilt the table, which is the same idea. A real caveat: rebuilding a big table is heavy work. Chapter 6's online schema change tools (the earlier digest) are the safer way to think about doing it on a live system; the chapter itself doesn't say more here.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="320" y="20" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">THE MAINTENANCE TOOLBOX: SYMPTOM TO COMMAND</text>
+      <rect x="30" y="40" width="185" height="150" rx="8" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="122" y="62" fill="#C8453A" font-size="11" font-weight="700" text-anchor="middle">ODD ERRORS</text>
+      <text x="122" y="84" fill="#C9C7C1" font-size="10" text-anchor="middle">wrong results,</text><text x="122" y="98" fill="#C9C7C1" font-size="10" text-anchor="middle">phantom dup keys</text>
+      <text x="122" y="128" fill="#F2EFE9" font-size="11" text-anchor="middle">CHECK TABLE</text><text x="122" y="146" fill="#7A7A80" font-size="10" text-anchor="middle">then find the cause</text>
+      <rect x="228" y="40" width="185" height="150" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="320" y="62" fill="#C8453A" font-size="11" font-weight="700" text-anchor="middle">BAD PLANS</text>
+      <text x="320" y="84" fill="#C9C7C1" font-size="10" text-anchor="middle">stale or missing</text><text x="320" y="98" fill="#C9C7C1" font-size="10" text-anchor="middle">row estimates</text>
+      <text x="320" y="128" fill="#F2EFE9" font-size="11" text-anchor="middle">ANALYZE TABLE</text><text x="320" y="146" fill="#7A7A80" font-size="10" text-anchor="middle">SHOW INDEX to peek</text>
+      <rect x="426" y="40" width="185" height="150" rx="8" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="518" y="62" fill="#C8453A" font-size="11" font-weight="700" text-anchor="middle">SLOW SCANS</text>
+      <text x="518" y="84" fill="#C9C7C1" font-size="10" text-anchor="middle">sparse or</text><text x="518" y="98" fill="#C9C7C1" font-size="10" text-anchor="middle">out-of-order pages</text>
+      <text x="518" y="128" fill="#F2EFE9" font-size="11" text-anchor="middle">OPTIMIZE TABLE</text><text x="518" y="146" fill="#7A7A80" font-size="10" text-anchor="middle">or rebuild via ALTER</text>
+      <text x="320" y="216" fill="#7A7A80" font-size="10" text-anchor="middle">commands are the source's; on large live tables check the load they cause first</text>
+    </svg>
+    <figcaption>Three symptoms, three tools (a mental map, not a maintenance schedule).</figcaption>
+  </figure>
+
+  <h3>6. The chapter's summary: three principles</h3>
+  <p>The source ends the chapter with three ideas, and I find they tie all three parts of this chapter together:</p>
+  <ol>
+    <li><strong>Single-row access is slow.</strong> Reading a whole block to use one row wastes work (the source says this holds even on SSDs, though they handle random I/O better). Prefer reading blocks full of rows you actually need.</li>
+    <li><strong>Reading ranges in order is fast.</strong> Sequential reads avoid seeks, and data that's already in the order you want needs no follow-up sort, and <code>GROUP BY</code> doesn't need to sort and group rows first.</li>
+    <li><strong>Index-only access is fast.</strong> If the index has every needed column, the engine skips the row lookups, which are the slow single-row accesses from principle one.</li>
+  </ol>
+  <p>The source links these to a three-star ranking (from another book) mentioned at the beginning of the chapter: a query's index earns a star for grouping relevant rows together, one for ordering them as needed, and one for containing all the columns. You'd like three stars, but the source admits it's often impractical: it might take too many indexes, or be impossible (its example is ordering by one column ascending and another descending). Then you settle for the best you can, or look at denormalization or summary tables.</p>
+  <p>The closing advice I'd underline: reason from how indexes work instead of using slogans like "put the most selective column first" or "index every column in the WHERE clause." And judge your schema by response time. Find slow or load-heavy queries, then ask for each: does it examine too many rows, sort after retrieval or use temporary tables, do random I/O, or fetch full rows only to get columns missing from the index? If a better index doesn't help, a rewrite of the query may; that's where Chapter 8 starts.</p>
+
+  <h2>Why it matters</h2>
+  <p>This is the part of the chapter you'll use on an ordinary Tuesday. A slow list page is often "ordered and limited by something an index could have given for free." A bloated write path is often "five indexes, two of them redundant." A plan that suddenly flipped is sometimes "statistics went stale." Having words for these (covered, filesort, redundant, invisible, cardinality) lets you read an <code>EXPLAIN</code> and say what's happening, and it sets up Chapter 8, which is about reading plans and rewriting queries.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>A covering index answers a query from the index alone (<code>Using index</code>). In InnoDB the primary key is an automatic extra column in every secondary index.</li>
+      <li><code>Using index</code> (Extra) and <code>type: index</code> are different things.</li>
+      <li>An index can supply sorted output only for matching direction and a leftmost prefix, where constants can fill earlier gaps. Otherwise expect a filesort.</li>
+      <li>Redundant means a B-tree prefix of another index. Sometimes you keep one deliberately, trading write speed for read speed. Hide with INVISIBLE (8.0) before dropping.</li>
+      <li>Maintenance has three jobs: <code>CHECK TABLE</code> for corruption, <code>ANALYZE TABLE</code> for statistics, <code>OPTIMIZE TABLE</code> (or a rebuild) for fragmentation.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Covering-index detective.</strong> Make a table with a few hundred thousand rows (a recursive CTE can generate them), an index on one column, and a query selecting that column plus a second one. Run <code>EXPLAIN</code>, add the second column to the index, run it again, and write down what changed in <code>key</code> and <code>Extra</code>. Then select the primary key instead of the second column and see why that case is already covered. Done when you can explain each <code>Extra</code> value.</li>
+      <li><strong>Sort-order matrix.</strong> Create an index on three columns and write ten <code>WHERE ... ORDER BY</code> variants (constants in the first column, a skipped column, mixed directions, an <code>IN</code>, a range, a column outside the index). Predict <code>Using filesort</code> yes or no before each <code>EXPLAIN</code>, then score yourself. Bonus: try a <code>DESC</code> column in the index definition (MySQL 8.0) and check whether you need <code>FORCE INDEX</code> to see it used.</li>
+      <li><strong>Redundancy audit script.</strong> Write a short script (any language) that reads <code>SHOW INDEX FROM</code> output for one table and flags any B-tree index whose columns are a leftmost prefix of another index. Test it on a table you deliberately made with <code>(a)</code>, <code>(a, b)</code>, and <code>(b, a)</code>. Done when it flags only <code>(a)</code>.</li>
+      <li><strong>The invisible-index experiment.</strong> Make an index invisible, run your key queries with <code>EXPLAIN</code>, and note which plan changes. Make it visible again. Write a one-paragraph "safe to drop or not" verdict, naming at least one query you didn't test that could still depend on it.</li>
+      <li><strong>The write-cost meter.</strong> Time inserting 200,000 rows into a table with one index, then the same table with three extra overlapping indexes. Record both timings and the ratio. Done when you've repeated each run at least three times and noticed how noisy the numbers are (a good lesson in why the source preaches measurement).</li>
+      <li><strong>Maintenance checkup.</strong> On a scratch table, run <code>CHECK TABLE</code>, <code>ANALYZE TABLE</code>, <code>SHOW INDEX</code> and <code>OPTIMIZE TABLE</code>, and read every line of each output. Delete half the rows first, then check the table's size before and after <code>OPTIMIZE TABLE</code> (<code>information_schema.TABLES</code> has the data length columns). Done when you can say what each command reported and why.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Re-read the sorting section with the chapter's own <code>rental</code> table open, and try each query shape on your own data. Then start Chapter 8, which picks up exactly where this chapter ends: "if no index helps, can the query be rewritten so one does?"</p>
+
+  <h2>Sources &amp; verify</h2>
+  <ul class="src-list">
+    <li><em>High Performance MySQL</em>, 4th Edition, Chapter 7, "Indexing for High Performance." This digest (Part 3, final) covers the printed pages 178 to 190 (PDF pages 200 to 212 of the source file): the closing paragraph of "When Primary Key Order Is Worse," then "Covering Indexes," "Using Index Scans for Sorts," "Redundant and Duplicate Indexes," "Unused Indexes," "Index and Table Maintenance" (corruption, statistics, fragmentation), and the chapter "Summary."</li>
+    <li>Everything labelled "I ran," "my table," or "I tried" comes from small made-up tables on a local MySQL 8.0.46 server I used while writing (tables named <code>shop_orders</code>, <code>ev</code>, <code>ext</code>, <code>dup_demo</code>). None of it reproduces the book's Sakila examples, tables or benchmark figures.</li>
+  </ul>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the book; verify anything you plan to rely on (exact <code>EXPLAIN</code> output, optimizer behaviour, variable names and defaults) against the book or the MySQL documentation for your version. <strong>Beyond the source, my own observations:</strong> descending index definitions and <code>FORCE INDEX</code>, the sys view's behaviour after real use versus EXPLAIN, the <code>OPTIMIZE TABLE</code> recreate note, the stats variable names on 8.0, and the "counters reset at restart" belief are not claims from the chapter. <strong>Simplifications flagged above:</strong> the covering-index diagram, the toolbox map, and "add columns to the index." <strong>Not tested, taken on the source's word:</strong> the lock-contention and <code>innodb_autoinc_lock_mode</code> remarks, Percona Toolkit tools, <code>innodb_force_recovery</code>, REPAIR TABLE, and the benchmark direction in the state_id example. The source's benchmark numbers are intentionally not repeated. One thing I could not confirm from my test: the source says creating a duplicate index only produces a warning; I saw the three indexes get created but did not capture the warning text.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
