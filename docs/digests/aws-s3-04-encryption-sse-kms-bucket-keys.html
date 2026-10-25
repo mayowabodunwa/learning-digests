@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S3 Encryption: SSE-S3, SSE-KMS, DSSE-KMS, SSE-C and Bucket Keys</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+  pre { background: var(--panel); border: 1px solid var(--hairline); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 16px; }
+  pre code { background: none; padding: 0; font-size: 12.5px; line-height: 1.55; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS S3 &middot; CONCEPT 4 DIGEST</p>
+  <h1>S3 Encryption: SSE-S3, SSE-KMS, DSSE-KMS, SSE-C and Bucket Keys</h1>
+  <p class="lead">Every new object in S3 is encrypted at rest without you doing anything. The real choice is who holds the keys: S3 itself, AWS KMS where you get policies and an audit trail, two layers of KMS-based encryption, or a key you bring yourself. Bucket Keys then exist to keep the KMS option from getting expensive.</p>
+
+  <h2>In one line</h2>
+  <p>S3 server-side encryption has four mutually exclusive flavours (SSE-S3, SSE-KMS, DSSE-KMS, SSE-C) that differ in who manages the keys and how many encryption layers apply, and S3 Bucket Keys are a cost-saving layer on top of SSE-KMS.</p>
+
+  <h2>The big idea</h2>
+  <p>"Encryption at rest" means data is scrambled on the disks where it's stored. With server-side encryption, S3 does the scrambling when it writes your object and the unscrambling when you read it. The docs say that as long as your request is authenticated and you have permission, you access encrypted and unencrypted objects the same way. Presigned URLs, listings, all of it works the same.</p>
+  <p>So the question this digest answers isn't "is my data encrypted?" (for new objects the docs say yes, by default) but "who controls the key?" That decides who can read the data, what shows up in audit logs, and what it costs. I'll go option by option, then look at default encryption settings, Bucket Keys, and the order of operations when you want to change things.</p>
+  <p>Simplification label: this digest covers server-side encryption only. Client-side encryption (you encrypt before uploading) is a separate approach I haven't covered, and I don't quote any prices.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Encryption at rest</span>: protecting stored data so it's unreadable without the right key.</li>
+    <li><span class="keyterm-term">Server-side encryption (SSE)</span>: encryption done by the service that receives the data, here S3, at the object level as it writes to disk.</li>
+    <li><span class="keyterm-term">Key</span>: the secret used to scramble and unscramble data.</li>
+    <li><span class="keyterm-term">Data key</span>: a key used to encrypt the object's actual data. In SSE-KMS each object normally gets its own.</li>
+    <li><span class="keyterm-term">Envelope encryption</span>: encrypting your data with a data key, then encrypting that data key with a more protected key.</li>
+    <li><span class="keyterm-term">AWS KMS</span>: AWS Key Management Service, a managed service for creating and controlling keys.</li>
+    <li><span class="keyterm-term">KMS key</span>: the protected key inside KMS that wraps data keys. Either an AWS managed key or a customer managed key.</li>
+    <li><span class="keyterm-term">AWS managed key (aws/s3)</span>: a KMS key AWS creates in your account for S3 the first time you use SSE-KMS without naming a key.</li>
+    <li><span class="keyterm-term">Customer managed key</span>: a symmetric KMS key you create and control (policies, rotation, disabling).</li>
+    <li><span class="keyterm-term">Encryption context</span>: unencrypted key-value pairs attached to an encryption operation; decryption must supply the same ones. Useful for tracking in audit logs.</li>
+    <li><span class="keyterm-term">Default encryption configuration</span>: a bucket setting that says how objects are encrypted when the upload request doesn't say.</li>
+    <li><span class="keyterm-term">S3 Bucket Key</span>: a short-lived bucket-level key that cuts the number of calls S3 makes to KMS.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>0. Grounding: the baseline is already on</h3>
+  <p>The docs state that S3 applies SSE-S3 as the base level of encryption for every bucket, and that since January 5, 2023 all new object uploads are automatically encrypted at no additional cost and with no impact on performance. SSE-S3 is the default configuration for every bucket. You change that in one of two ways:</p>
+  <ul>
+    <li>Per request: put encryption information in the upload request (SSE-KMS, DSSE-KMS or SSE-C are allowed there).</li>
+    <li>Per bucket: change the bucket's default encryption configuration (SSE-KMS or DSSE-KMS are allowed there; SSE-C is not supported as a default).</li>
+  </ul>
+  <p>If an upload request carries encryption info, S3 uses it. If it doesn't, S3 uses the bucket default. One object can only have one type of server-side encryption at a time.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 300" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">FOUR SSE OPTIONS: WHO HOLDS THE KEY?</text>
+      <rect x="20" y="40" width="135" height="200" rx="10" fill="#0E0E10" stroke="#6FCF97" stroke-width="1.3"/>
+      <text x="87" y="66" fill="#6FCF97" font-size="12" font-weight="700" text-anchor="middle">SSE-S3</text>
+      <text x="87" y="92" fill="#C9C7C1" font-size="9.5" text-anchor="middle">keys: S3 manages</text>
+      <text x="87" y="112" fill="#C9C7C1" font-size="9.5" text-anchor="middle">layers: 1</text>
+      <text x="87" y="132" fill="#C9C7C1" font-size="9.5" text-anchor="middle">you do: nothing</text>
+      <text x="87" y="170" fill="#7A7A80" font-size="9" text-anchor="middle">the default</text>
+      <text x="87" y="186" fill="#7A7A80" font-size="9" text-anchor="middle">no extra fee</text>
+      <rect x="165" y="40" width="135" height="200" rx="10" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.3"/>
+      <text x="232" y="66" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">SSE-KMS</text>
+      <text x="232" y="92" fill="#C9C7C1" font-size="9.5" text-anchor="middle">keys: in AWS KMS</text>
+      <text x="232" y="112" fill="#C9C7C1" font-size="9.5" text-anchor="middle">layers: 1</text>
+      <text x="232" y="132" fill="#C9C7C1" font-size="9.5" text-anchor="middle">you do: key policy</text>
+      <text x="232" y="170" fill="#7A7A80" font-size="9" text-anchor="middle">audit in CloudTrail</text>
+      <text x="232" y="186" fill="#7A7A80" font-size="9" text-anchor="middle">KMS charges apply</text>
+      <rect x="310" y="40" width="135" height="200" rx="10" fill="#0E0E10" stroke="#F2EFE9" stroke-width="1.3"/>
+      <text x="377" y="66" fill="#F2EFE9" font-size="12" font-weight="700" text-anchor="middle">DSSE-KMS</text>
+      <text x="377" y="92" fill="#C9C7C1" font-size="9.5" text-anchor="middle">keys: KMS + S3</text>
+      <text x="377" y="112" fill="#C9C7C1" font-size="9.5" text-anchor="middle">layers: 2</text>
+      <text x="377" y="132" fill="#C9C7C1" font-size="9.5" text-anchor="middle">you do: key policy</text>
+      <text x="377" y="170" fill="#7A7A80" font-size="9" text-anchor="middle">no Bucket Keys</text>
+      <text x="377" y="186" fill="#7A7A80" font-size="9" text-anchor="middle">higher cost, latency</text>
+      <rect x="455" y="40" width="145" height="200" rx="10" fill="#0E0E10" stroke="#C8453A" stroke-width="1.3"/>
+      <text x="527" y="66" fill="#C8453A" font-size="12" font-weight="700" text-anchor="middle">SSE-C</text>
+      <text x="527" y="92" fill="#C9C7C1" font-size="9.5" text-anchor="middle">keys: you supply</text>
+      <text x="527" y="112" fill="#C9C7C1" font-size="9.5" text-anchor="middle">layers: 1</text>
+      <text x="527" y="132" fill="#C9C7C1" font-size="9.5" text-anchor="middle">you do: keep every key</text>
+      <text x="527" y="170" fill="#7A7A80" font-size="9" text-anchor="middle">HTTPS only</text>
+      <text x="527" y="186" fill="#7A7A80" font-size="9" text-anchor="middle">blocked by default now</text>
+      <text x="310" y="268" fill="#7A7A80" font-size="10" text-anchor="middle">an object has exactly one of these at a time</text>
+    </svg>
+    <figcaption>Fig 1. Left to right: less control and less work, to more control and more work.</figcaption>
+  </figure>
+
+  <h3>1. SSE-S3: keys managed by S3</h3>
+  <p>Each object is encrypted with a unique key, and that key is itself encrypted with a root key that S3 rotates regularly. The docs describe it as using 256-bit AES (the encryption-options page says AES-256, the SSE-S3 page says AES-GCM). There are no additional fees for SSE-S3, though requests to configure default encryption cost the usual request charges.</p>
+  <ul>
+    <li>To ask for it explicitly, send the header <code>x-amz-server-side-encryption: AES256</code>. S3 echoes the header back in responses.</li>
+    <li>Don't send encryption headers on GET or HEAD for SSE-S3 objects (or SSE-KMS ones): the docs say you'll get an HTTP 400.</li>
+    <li>Encryption covers object data only, not object metadata.</li>
+    <li>A bucket policy can deny uploads that lack the header (the docs show a condition on <code>s3:x-amz-server-side-encryption</code> not equal to <code>AES256</code>), but the docs warn that such a deny can also block services that deliver objects without the header, such as some log deliveries.</li>
+  </ul>
+
+  <h3>2. SSE-KMS: keys in AWS KMS</h3>
+  <p>With SSE-KMS you get more control: you can view separate keys, edit key policies, and follow key use in AWS CloudTrail. Two key types:</p>
+  <ul>
+    <li><strong>AWS managed key (<code>aws/s3</code>):</strong> used by default if you don't name a key. S3 creates it in your account the first time you add an SSE-KMS object. Objects encrypted this way can't be shared cross-account.</li>
+    <li><strong>Customer managed key:</strong> you create it (it must be a symmetric encryption key), and you control policies, rotation and disabling. Needed if you want cross-account access. The docs recommend a fully qualified key ARN rather than an alias in cross-account cases, because an alias resolves in the requester's account.</li>
+  </ul>
+  <p>Rules and limits from the docs: the KMS key must be in the same Region as the bucket; S3 supports only symmetric encryption KMS keys; and additional AWS KMS charges apply. Requests for KMS-encrypted objects must use TLS and be signed.</p>
+
+  <p><strong>How envelope encryption works here</strong> (the docs' workflow, in my words):</p>
+  <ol>
+    <li>On write, S3 asks KMS for a data key. KMS returns the plaintext data key plus a copy encrypted under your KMS key.</li>
+    <li>S3 encrypts the object with the data key, discards the plaintext key from memory as soon as it can, and stores the encrypted data key as metadata beside the object.</li>
+    <li>On read, S3 sends the encrypted data key to KMS to be decrypted, uses the returned plaintext key to decrypt the object, and discards it again.</li>
+  </ol>
+
+  <figure>
+    <svg viewBox="0 0 620 270" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="b1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#7A7A80"/></marker></defs>
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">SSE-KMS WRITE PATH (ENVELOPE ENCRYPTION)</text>
+      <rect x="20" y="70" width="130" height="64" rx="8" fill="#0E0E10" stroke="#F2EFE9"/>
+      <text x="85" y="98" fill="#F2EFE9" font-size="11.5" text-anchor="middle" font-weight="700">You upload</text>
+      <text x="85" y="116" fill="#7A7A80" font-size="9.5" text-anchor="middle">PutObject</text>
+      <rect x="245" y="70" width="130" height="64" rx="8" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="310" y="98" fill="#6FCF97" font-size="11.5" text-anchor="middle" font-weight="700">S3</text>
+      <text x="310" y="116" fill="#7A7A80" font-size="9.5" text-anchor="middle">encrypts the data</text>
+      <rect x="470" y="70" width="130" height="64" rx="8" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="535" y="98" fill="#C8453A" font-size="11.5" text-anchor="middle" font-weight="700">AWS KMS</text>
+      <text x="535" y="116" fill="#7A7A80" font-size="9.5" text-anchor="middle">holds the KMS key</text>
+      <line x1="152" y1="102" x2="243" y2="102" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#b1)"/>
+      <line x1="377" y1="88" x2="468" y2="88" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#b1)"/>
+      <line x1="468" y1="118" x2="377" y2="118" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#b1)"/>
+      <text x="422" y="80" fill="#7A7A80" font-size="9" text-anchor="middle">1 give me a data key</text>
+      <text x="422" y="136" fill="#7A7A80" font-size="9" text-anchor="middle">2 plain + wrapped copy</text>
+      <rect x="170" y="180" width="280" height="56" rx="8" fill="#131316" stroke="#7A7A80"/>
+      <text x="310" y="204" fill="#F2EFE9" font-size="11" text-anchor="middle">stored on disk: encrypted object</text>
+      <text x="310" y="222" fill="#7A7A80" font-size="10" text-anchor="middle">+ wrapped data key as metadata</text>
+      <line x1="310" y1="136" x2="310" y2="178" stroke="#7A7A80" stroke-width="1.5" marker-end="url(#b1)"/>
+      <text x="326" y="160" fill="#7A7A80" font-size="9">3 plain key dropped</text>
+    </svg>
+    <figcaption>Fig 2. The KMS key never leaves KMS; S3 only ever holds the plaintext data key briefly.</figcaption>
+  </figure>
+
+  <p><strong>Permissions.</strong> For SSE-KMS, uploading needs <code>kms:GenerateDataKey</code> on the key, downloading needs <code>kms:Decrypt</code>, and a multipart upload needs both. Note what that means: having S3 permission to a bucket isn't enough to read SSE-KMS objects; you also need access on the key. The docs also advise restricting customer managed key policies to only the principals and services that need them.</p>
+  <p><strong>Auditing.</strong> CloudTrail logs the KMS operations (for example <code>GenerateDataKey</code> and <code>Decrypt</code>), so you can see who used which key. The AWS console for KMS doesn't support the auditing, per the docs, but the KMS API does.</p>
+  <p><strong>Encryption context.</strong> By default S3 uses the object ARN as the encryption context, or the bucket ARN if Bucket Keys are on. You can add one more pair with the <code>x-amz-server-side-encryption-context</code> header, but because the context isn't encrypted, don't put secrets in it.</p>
+  <p><strong>Requiring KMS.</strong> A bucket policy can deny <code>s3:PutObject</code> unless the request names a KMS key (the docs show a <code>Null</code> condition on the KMS key ID header). If a request says <code>aws:kms</code> without a key ID, S3 assumes the AWS managed key.</p>
+  <p><strong>Two gotchas in the docs.</strong> A server-access-log destination bucket must use SSE-S3, because with SSE-KMS default encryption S3 might deliver log objects encrypted with a key you can't access. And with default encryption set to SSE-KMS or DSSE-KMS, you're subject to KMS requests-per-second quotas.</p>
+
+  <h3>3. DSSE-KMS: two layers</h3>
+  <p>Dual-layer encryption applies two independent layers of AES-256. First, your data is encrypted with a KMS-generated data key; then the already-encrypted data is encrypted again with a separate S3-managed key. The docs position it for compliance regimes that require multilayer encryption, and note that it costs more and adds slightly higher latency. The KMS key must be in the same Region as the bucket, and <strong>S3 Bucket Keys aren't supported with DSSE-KMS</strong>. A bucket policy can require it with a condition value of <code>aws:kms:dsse</code>.</p>
+
+  <h3>4. SSE-C: you bring the key</h3>
+  <p>With SSE-C, you supply your own key in each request and S3 does the encryption work, but <em>never stores your key</em>. The consequences, straight from the docs' considerations list:</p>
+  <ul>
+    <li>You must supply the key every time anyone downloads the object, and you track which key goes with which object. Lose the key and you lose the object.</li>
+    <li>You must use HTTPS. S3 rejects HTTP requests with SSE-C, and the docs say to treat a key sent over HTTP as compromised.</li>
+    <li>In a versioned bucket, each version can have its own key, so you track keys per version.</li>
+    <li>It isn't supported in the S3 console, and objects encrypted with SSE-C can't be natively decrypted by AWS managed services.</li>
+    <li>It can't be the bucket default.</li>
+  </ul>
+  <p><strong>Recent change worth knowing:</strong> the docs say that starting April 2026, SSE-C is disabled by default for all new general purpose buckets, and for existing buckets in accounts with no SSE-C encrypted objects. While blocked, upload requests that specify SSE-C are rejected with a 403 <code>AccessDenied</code>. To use it, you must set <code>BlockedEncryptionTypes</code> to <code>NONE</code> in the bucket's encryption configuration with <code>PutBucketEncryption</code>. The docs themselves say most modern workloads use SSE-S3 or SSE-KMS instead.</p>
+
+  <h3>5. S3 Bucket Keys: making SSE-KMS cheaper</h3>
+  <p>Without a Bucket Key, S3 uses an individual KMS data key per object and calls KMS every time a request touches a KMS-encrypted object. For workloads touching millions or billions of objects, that is a lot of KMS requests. With a Bucket Key, KMS generates a short-lived bucket-level key that S3 keeps temporarily and uses to create data keys for new objects, which the docs say can reduce KMS request costs by up to 99 percent. (Treat "up to 99 percent" as a ceiling: the docs say savings depend on the number of requesters, request patterns and object age.)</p>
+  <ul>
+    <li><strong>New objects only.</strong> Objects already in the bucket don't use the Bucket Key; the docs say to use <code>CopyObject</code> to apply it to existing ones.</li>
+    <li><strong>How to turn on:</strong> in the default encryption rule (<code>BucketKeyEnabled</code>), or per request with the header <code>x-amz-server-side-encryption-bucket-key-enabled: true</code> (or false) to override the bucket setting.</li>
+    <li><strong>Policy side effect:</strong> Bucket Keys use the bucket ARN as the encryption context instead of the object ARN, so any IAM or KMS key policy that matches on the object ARN will stop working and needs updating. CloudTrail will also show the bucket ARN and fewer KMS events.</li>
+    <li><strong>Shared only per KMS key:</strong> a Bucket Key is shared only among objects encrypted by the same KMS key. Not supported for DSSE-KMS.</li>
+    <li><strong>Different callers still count:</strong> bucket-level keys are fetched at least once per requester so access is captured in CloudTrail.</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <defs><marker id="b2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#7A7A80"/></marker></defs>
+      <text x="310" y="22" fill="#F2EFE9" font-size="13" font-weight="700" text-anchor="middle">KMS CALLS: WITHOUT vs WITH A BUCKET KEY</text>
+      <rect x="20" y="44" width="280" height="180" rx="10" fill="#0E0E10" stroke="#7A7A80"/>
+      <text x="160" y="66" fill="#F2EFE9" font-size="11" font-weight="700" text-anchor="middle">without Bucket Key</text>
+      <rect x="40" y="86" width="60" height="26" rx="5" fill="#131316" stroke="#7A7A80"/><text x="70" y="103" fill="#C9C7C1" font-size="9" text-anchor="middle">obj A</text>
+      <rect x="40" y="120" width="60" height="26" rx="5" fill="#131316" stroke="#7A7A80"/><text x="70" y="137" fill="#C9C7C1" font-size="9" text-anchor="middle">obj B</text>
+      <rect x="40" y="154" width="60" height="26" rx="5" fill="#131316" stroke="#7A7A80"/><text x="70" y="171" fill="#C9C7C1" font-size="9" text-anchor="middle">obj C</text>
+      <rect x="220" y="110" width="64" height="40" rx="6" fill="#131316" stroke="#C8453A"/><text x="252" y="134" fill="#C8453A" font-size="10" text-anchor="middle">KMS</text>
+      <line x1="102" y1="99" x2="218" y2="120" stroke="#C8453A" marker-end="url(#b2)"/>
+      <line x1="102" y1="133" x2="218" y2="130" stroke="#C8453A" marker-end="url(#b2)"/>
+      <line x1="102" y1="167" x2="218" y2="142" stroke="#C8453A" marker-end="url(#b2)"/>
+      <text x="160" y="204" fill="#C8453A" font-size="10" text-anchor="middle">a KMS call per object request</text>
+      <rect x="320" y="44" width="280" height="180" rx="10" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="460" y="66" fill="#F2EFE9" font-size="11" font-weight="700" text-anchor="middle">with Bucket Key</text>
+      <rect x="340" y="86" width="60" height="26" rx="5" fill="#131316" stroke="#7A7A80"/><text x="370" y="103" fill="#C9C7C1" font-size="9" text-anchor="middle">obj A</text>
+      <rect x="340" y="120" width="60" height="26" rx="5" fill="#131316" stroke="#7A7A80"/><text x="370" y="137" fill="#C9C7C1" font-size="9" text-anchor="middle">obj B</text>
+      <rect x="340" y="154" width="60" height="26" rx="5" fill="#131316" stroke="#7A7A80"/><text x="370" y="171" fill="#C9C7C1" font-size="9" text-anchor="middle">obj C</text>
+      <rect x="430" y="110" width="70" height="40" rx="6" fill="#131316" stroke="#6FCF97"/><text x="465" y="127" fill="#6FCF97" font-size="9" text-anchor="middle">bucket</text><text x="465" y="141" fill="#6FCF97" font-size="9" text-anchor="middle">key (S3)</text>
+      <rect x="530" y="110" width="60" height="40" rx="6" fill="#131316" stroke="#C8453A"/><text x="560" y="134" fill="#C8453A" font-size="10" text-anchor="middle">KMS</text>
+      <line x1="402" y1="99" x2="428" y2="122" stroke="#6FCF97" marker-end="url(#b2)"/>
+      <line x1="402" y1="133" x2="428" y2="130" stroke="#6FCF97" marker-end="url(#b2)"/>
+      <line x1="402" y1="167" x2="428" y2="140" stroke="#6FCF97" marker-end="url(#b2)"/>
+      <line x1="502" y1="130" x2="528" y2="130" stroke="#C8453A" marker-end="url(#b2)"/>
+      <text x="460" y="204" fill="#6FCF97" font-size="10" text-anchor="middle">far fewer KMS calls</text>
+    </svg>
+    <figcaption>Fig 3. My own schematic of the idea: one short-lived bucket-level key stands in for many per-object KMS trips.</figcaption>
+  </figure>
+
+  <h3>6. Default encryption and changing existing objects</h3>
+  <ul>
+    <li>Changing a bucket's default (for example to SSE-KMS) does <em>not</em> change objects already stored. The docs point to S3 Batch Operations (with a Copy action) to rewrite existing objects with a new encryption type, optionally driven by an S3 Inventory list.</li>
+    <li>Changing an object's encryption means creating a new object. In a versioned bucket, that creates a new version, and the role that did it becomes the owner of the new object. In the console, objects over 5 GB need the CLI or SDK for this.</li>
+    <li>S3 doesn't validate the KMS key ID you pass to <code>PutBucketEncryption</code>, so double-check it.</li>
+    <li>Default encryption itself has no additional charge; KMS charges apply for SSE-KMS and DSSE-KMS.</li>
+  </ul>
+  <p>CLI shapes from the docs (placeholders in braces):</p>
+<pre><code>aws s3api put-bucket-encryption --bucket {bucket} \
+  --server-side-encryption-configuration '{
+    "Rules": [{
+      "ApplyServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "aws:kms",
+        "KMSMasterKeyID": "{KMS-Key-ARN}"
+      },
+      "BucketKeyEnabled": true
+    }]
+  }'
+
+aws s3api put-object --bucket {bucket} --key {key} \
+  --server-side-encryption AES256 --body {file}</code></pre>
+
+  <h2>Why it matters</h2>
+  <p>Encryption choices are about access control and accountability as much as secrecy. SSE-S3 asks nothing of you. SSE-KMS adds a second permission check (the key policy) and an audit trail, which is why it's common where you need to say who touched what, and why cross-account sharing needs a customer managed key. Bucket Keys are what keeps SSE-KMS from turning into a KMS bill at scale. And understanding SSE-C's trade-offs explains why AWS now blocks it by default. This leads straight into the next concept, access control, where the key policy and the bucket policy both have a say.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>New objects are encrypted at rest by default with SSE-S3, no extra fee. Your real choice is who manages the key.</li>
+      <li>SSE-KMS adds key policies and CloudTrail auditing; you need both S3 and KMS permissions. Cross-account sharing needs a customer managed key.</li>
+      <li>DSSE-KMS applies two layers and doesn't support Bucket Keys. SSE-C means you hold every key, and it's now blocked by default on new buckets.</li>
+      <li>Bucket Keys cut KMS request traffic for new SSE-KMS objects, and change the encryption context from object ARN to bucket ARN.</li>
+      <li>Changing the default doesn't touch existing objects; rewrite them (Batch Operations copy) if you need to.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <p style="font-size:14px;color:#7A7A80;margin-top:0">Projects 1 and 2 are offline. Projects 3 to 5 use the AWS CLI on a scratch bucket; the KMS ones create a KMS key, which has costs and a deletion waiting period, so use a throwaway key and schedule it for deletion afterwards. I checked the commands against the docs' syntax but haven't run them against a live account.</p>
+    <ol>
+      <li><strong>Envelope encryption toy (offline, ~1.5 hours).</strong> In any language with a crypto library, write a "KMS" class that holds a master key and offers generate_data_key (returns plaintext plus wrapped copy) and decrypt. Write an "S3" that encrypts a file with the data key, stores the wrapped key beside it, and drops the plaintext key. <em>Done when</em> you can round-trip a file and explain why leaking the stored files alone doesn't reveal the content.</li>
+      <li><strong>Decision table (offline, 30 min).</strong> Make a table of the four options with columns: who holds keys, layers, extra fees mentioned in the docs, audit trail, console support, can be bucket default. Fill it from the docs, not memory. <em>Done when</em> every cell cites a docs page.</li>
+      <li><strong>Check the default.</strong> Create a scratch bucket, upload a file with a plain <code>aws s3api put-object</code>, then run <code>aws s3api head-object</code> and look for the <code>ServerSideEncryption</code> field. <em>Done when</em> you've seen AES256 without having asked for it.</li>
+      <li><strong>Switch to SSE-KMS with a Bucket Key.</strong> Create a symmetric KMS key, apply the docs' second <code>put-bucket-encryption</code> example, upload a new object, and check <code>head-object</code> for <code>SSEKMSKeyId</code> and <code>BucketKeyEnabled</code>. Then confirm the earlier object is unchanged. <em>Done when</em> the old and new objects show different encryption types.</li>
+      <li><strong>Break it on purpose.</strong> Using a second IAM identity with S3 access but no KMS permissions (or a policy you tweak to remove <code>kms:Decrypt</code>), try to download the SSE-KMS object. <em>Done when</em> you've seen the access-denied error and can say which permission was missing.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper (optional)</h2>
+  <p>Read "Replicating encrypted objects" in the S3 docs and note how each encryption type behaves across buckets; it comes back in the replication concept. Next in this track: access control, with bucket policies, IAM, ACLs, Block Public Access and access points.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/serv-side-encryption.html">Protecting data with server-side encryption</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingServerSideEncryption.html">Using server-side encryption with Amazon S3 managed keys (SSE-S3)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/specifying-s3-encryption.html">Specifying server-side encryption with SSE-S3</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingKMSEncryption.html">Using server-side encryption with AWS KMS keys (SSE-KMS)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingDSSEncryption.html">Using dual-layer server-side encryption with AWS KMS keys (DSSE-KMS)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/ServerSideEncryptionCustomerKeys.html">Using server-side encryption with customer-provided keys (SSE-C)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucket-key.html">Reducing the cost of SSE-KMS with Amazon S3 Bucket Keys</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/default-bucket-encryption.html">Configuring default encryption</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/s3api/put-bucket-encryption.html">AWS CLI: put-bucket-encryption</a></li>
+  </ul>
+  <p class="src-note">This is a teaching draft, not a substitute for the AWS documentation. Verify anything you rely on against the live docs. Notes on uncertainty: docs read in October 2026; no prices quoted; CLI commands checked against the docs' examples, not run against a live account. The docs are slightly inconsistent in places (the SSE-S3 cipher is described as AES-256 on one page and AES-GCM on another; the default-encryption page has a line saying objects uploaded before default encryption "will not be encrypted", which sits oddly beside the statement that all new uploads are encrypted since 2023; and SSE-C is "not supported for default encryption" while the SSE-C block setting lives in the same PutBucketEncryption configuration). I didn't read the SSE-C request header details, the blocking/unblocking page or the replication-with-encryption page in full.</p>
+
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
