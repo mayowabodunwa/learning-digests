@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: The CloudWatch Agent and Embedded Metric Format</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS CLOUDWATCH &middot; CONCEPT 6 DIGEST</p>
+  <h1>The CloudWatch Agent and Embedded Metric Format</h1>
+  <p class="lead">CloudWatch can see an EC2 instance's CPU out of the box, but it can't see inside the machine: how much memory is used, how full the disk is, what the application wrote to its log file. The CloudWatch agent is the little program you install to fix that. And for code that produces its own numbers (a Lambda function, a container), the Embedded Metric Format lets you publish metrics by simply writing a specially shaped log line. This digest covers both.</p>
+
+  <h2>In one line</h2>
+  <p>The CloudWatch agent collects metrics, logs and traces from inside servers and ships them to CloudWatch, while the Embedded Metric Format (EMF) turns a structured JSON log event into both a log entry and one or more custom metrics.</p>
+
+  <h2>The big idea</h2>
+  <p>In the metrics digest we published numbers with <code>PutMetricData</code>, and in the logs digest we sent text with <code>PutLogEvents</code>. Both are API calls you'd have to write code for. These two features reduce that work in different places:</p>
+  <ul>
+    <li>The <strong>agent</strong> runs on the machine, reads things you configure (system metrics, log files), and sends them for you. You write a JSON configuration file instead of code.</li>
+    <li><strong>EMF</strong> is a format, not a program. If your application prints a JSON line that includes a small <code>_aws</code> block describing which fields are metrics, CloudWatch Logs automatically extracts those fields as metrics. One line gives you the detailed event (searchable in Logs Insights) and the metric (graphable and alarmable).</li>
+  </ul>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">CloudWatch agent</span>: software, open source under the MIT license, that collects metrics, logs and traces from EC2 instances, on-premises servers and containerised apps.</li>
+    <li><span class="keyterm-term">In-guest metric</span>: a metric measured from inside the operating system (such as memory used), as opposed to what AWS can observe from outside the instance.</li>
+    <li><span class="keyterm-term">Agent configuration file</span>: a JSON file telling the agent what to collect and where to send it. Top-level sections: <code>agent</code>, <code>metrics</code>, <code>logs</code>, <code>traces</code>, <code>opentelemetry</code>.</li>
+    <li><span class="keyterm-term"><code>CWAgent</code></span>: the default namespace for metrics the agent publishes (you can choose another).</li>
+    <li><span class="keyterm-term">StatsD / collectd</span>: two protocols that applications and tools use to emit metrics. The agent can receive them.</li>
+    <li><span class="keyterm-term">Instance profile / IAM role</span>: how an EC2 instance gets permissions. The agent uses it to call CloudWatch.</li>
+    <li><span class="keyterm-term">Embedded Metric Format (EMF)</span>: a JSON specification where a log event carries instructions for extracting metrics from itself.</li>
+    <li><span class="keyterm-term">Metric directive</span>: an entry in the <code>CloudWatchMetrics</code> array saying which namespace, dimensions and metrics to extract.</li>
+    <li><span class="keyterm-term">Target member</span>: a top-level field in the JSON that a directive points at, such as the field holding the latency number.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>Grounding: what CloudWatch can and can't see by default</h3>
+  <p>Out of the box, a service like EC2 publishes metrics that AWS can observe from outside, such as CPU utilisation. Things that only the operating system knows, like memory use or disk used percentage, aren't in that set. The agent is how you get them. It also collects logs from files on the machine, which is the usual way application logs reach CloudWatch Logs.</p>
+  <p><em>Simplification:</em> I'm saying "memory and disk aren't in the default set" as the mental model. The docs' wording is that the agent collects "internal system-level metrics" in addition to the metrics for EC2 instances, and it lists the full set on its own page, which I didn't walk through.</p>
+
+  <h3>1. What the agent can collect</h3>
+  <p>From the docs, the agent can:</p>
+  <ul>
+    <li>Collect system-level metrics from EC2 instances across operating systems and from on-premises servers (including hybrid setups and servers not managed by AWS).</li>
+    <li>Receive custom application metrics over <code>StatsD</code> (Linux and Windows Server) or <code>collectd</code> (Linux only).</li>
+    <li>Collect logs from EC2 instances and on-premises servers running Linux or Windows Server (the docs note it doesn't collect from FIFO pipes).</li>
+    <li>Send metrics to CloudWatch, to Amazon Managed Service for Prometheus, or to both.</li>
+    <li>Collect traces from OpenTelemetry or X-Ray client SDKs (from version 1.300025.0) and send them to X-Ray, which saves running a separate trace daemon.</li>
+  </ul>
+  <p>Logs collected by the agent are stored in CloudWatch Logs exactly like other logs. Metrics it collects are billed as custom metrics, so more measurements means a bigger bill; I'm not quoting any prices.</p>
+
+  <figure>
+    <svg viewBox="0 0 620 220" role="img" aria-label="Inside a server, system metrics and log files feed the CloudWatch agent, which uses an IAM role to send metrics to CloudWatch Metrics and logs to CloudWatch Logs">
+      <defs><marker id="ah9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#C9C7C1"/></marker></defs>
+      <rect x="10" y="15" width="330" height="190" rx="12" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="22" y="35" font-family="JetBrains Mono, monospace" font-size="11" fill="#7A7A80">server (EC2 instance or on-premises)</text>
+      <rect x="25" y="50" width="105" height="40" rx="6" fill="#131316" stroke="#7A7A80"/>
+      <text x="77" y="75" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#C9C7C1">memory, disk, CPU</text>
+      <rect x="25" y="100" width="105" height="40" rx="6" fill="#131316" stroke="#7A7A80"/>
+      <text x="77" y="125" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#C9C7C1">app log files</text>
+      <rect x="25" y="150" width="105" height="40" rx="6" fill="#131316" stroke="#7A7A80"/>
+      <text x="77" y="175" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#C9C7C1">StatsD / collectd</text>
+      <rect x="185" y="70" width="140" height="100" rx="10" fill="#131316" stroke="#C8453A"/>
+      <text x="255" y="98" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#C8453A">CloudWatch agent</text>
+      <text x="255" y="120" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#C9C7C1">reads JSON config</text>
+      <text x="255" y="138" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#C9C7C1">uses instance IAM role</text>
+      <g stroke="#C9C7C1" stroke-width="1.3" marker-end="url(#ah9)">
+        <path d="M132 70 L183 100"/><path d="M132 120 L183 120"/><path d="M132 170 L183 140"/>
+      </g>
+      <rect x="440" y="45" width="165" height="55" rx="8" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="522" y="68" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#6FCF97">CloudWatch Metrics</text>
+      <text x="522" y="86" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#C9C7C1">namespace CWAgent (default)</text>
+      <rect x="440" y="120" width="165" height="55" rx="8" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="522" y="143" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#6FCF97">CloudWatch Logs</text>
+      <text x="522" y="161" text-anchor="middle" font-family="Inter, sans-serif" font-size="10" fill="#C9C7C1">log groups and streams</text>
+      <path d="M327 105 L438 76" stroke="#C9C7C1" stroke-width="1.3" marker-end="url(#ah9)"/>
+      <path d="M327 135 L438 148" stroke="#C9C7C1" stroke-width="1.3" marker-end="url(#ah9)"/>
+    </svg>
+    <figcaption>Schematic: the agent is a go-between. The labels are my simplification of what the docs list.</figcaption>
+  </figure>
+
+  <h3>2. Getting the agent running: the four-step flow</h3>
+  <p>The docs give the general flow:</p>
+  <ol>
+    <li><strong>Create IAM roles or users</strong> that let the agent collect and send. For EC2, the prerequisites page walks through creating a role with the AWS managed policy <code>CloudWatchAgentServerPolicy</code>, then attaching it to the instance. For on-premises servers it uses an IAM user with long-term credentials, which the docs flag as a security risk (grant only what's needed and remove the user when finished). If you want the agent to set log retention, the role also needs the <code>logs:PutRetentionPolicy</code> permission.</li>
+    <li><strong>Download the agent package.</strong> (The docs describe command-line, console and Systems Manager installs; supported systems include Linux, Windows and macOS.)</li>
+    <li><strong>Write the configuration file.</strong> You can create it by hand or with a wizard.</li>
+    <li><strong>Install and start the agent.</strong> On an EC2 Linux instance, the docs' start command is <code>sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:&lt;configuration-file-path&gt;</code>. In their words, <code>-a fetch-config</code> makes the agent load the latest configuration file and <code>-s</code> starts it. They also show <code>-c ssm:&lt;parameter-store-name&gt;</code> to read the config from Systems Manager Parameter Store (shown on the on-premises example).</li>
+  </ol>
+  <p><strong>Network requirement.</strong> The server needs to reach the CloudWatch and CloudWatch Logs endpoints. The docs say instances need outbound internet access; in a private subnet that means going through a NAT gateway or VPC endpoints. This ties straight back to the VPC track: a private instance with no NAT and no endpoint won't deliver any data.</p>
+
+  <h3>3. The configuration file</h3>
+  <p>The file is JSON. Per the docs, the recommended Linux path is <code>/opt/aws/amazon-cloudwatch-agent/etc/cloudwatch-agent.json</code>. The parts you'll touch first:</p>
+  <ul>
+    <li><code>agent</code>: global behaviour. <code>metrics_collection_interval</code> defaults to 60 seconds; the docs say values below 60 produce high-resolution metrics. <code>omit_hostname</code> stops the hostname being published as a dimension.</li>
+    <li><code>metrics</code>: <code>namespace</code> (default <code>CWAgent</code>), <code>append_dimensions</code> (adds EC2 dimensions such as <code>InstanceId</code> or <code>AutoScalingGroupName</code>), <code>aggregation_dimensions</code> (roll-ups across instances), and the required <code>metrics_collected</code> where you name sections like <code>cpu</code>, <code>disk</code>, <code>mem</code>, <code>statsd</code>.</li>
+    <li><code>logs</code>: inside <code>logs_collected</code>, a <code>files.collect_list</code> where each entry has a required <code>file_path</code> (globs allowed) and optional <code>log_group_name</code>, <code>log_stream_name</code>, <code>retention_in_days</code>, <code>log_group_class</code>, and <code>filters</code>.</li>
+    <li><code>traces</code>: which trace receivers to listen on (X-Ray, OTLP).</li>
+  </ul>
+  <p>A few specifics worth remembering, all from the docs. The default log stream name is <code>{instance_id}</code>. If you omit <code>log_group_name</code> it's derived from the file path. For retention, omitting it means never expire for new groups. <code>log_group_class</code> can be <code>STANDARD</code> (default) or <code>INFREQUENT_ACCESS</code> and can't be changed after creation (this is the same rule from the logs digest). Filters can <code>include</code> or <code>exclude</code> lines by RE2 regular expression.</p>
+
+  <div class="card">
+    <p><strong>A tiny config in the docs' shape (illustrative, assembled from the documented fields):</strong></p>
+    <p><code>{ "agent": { "metrics_collection_interval": 60 }, "metrics": { "namespace": "MyServers", "metrics_collected": { "mem": { "measurement": ["mem_used_percent"] }, "disk": { "measurement": ["used_percent"], "resources": ["*"] } } }, "logs": { "logs_collected": { "files": { "collect_list": [ { "file_path": "/var/log/myapp/app.log", "log_group_name": "/myapp/app", "retention_in_days": 14 } ] } } } }</code></p>
+    <p>I wrote this example myself from the field descriptions; the metric names <code>mem_used_percent</code> and <code>used_percent</code> follow the docs' naming style (the docs example uses <code>used_percent</code> for disk) but check the "Metrics collected by the CloudWatch agent" page for the exact name list before using it.</p>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 620 170" role="img" aria-label="Four numbered steps: IAM role, download, configure, start">
+      <defs><marker id="ah10" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#C9C7C1"/></marker></defs>
+      <g font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle">
+        <rect x="10" y="40" width="130" height="80" rx="10" fill="#0E0E10" stroke="#C8453A"/><text x="75" y="70" fill="#C8453A">1. IAM role</text><text x="75" y="92" fill="#C9C7C1" font-size="10">CloudWatchAgent</text><text x="75" y="106" fill="#C9C7C1" font-size="10">ServerPolicy</text>
+        <rect x="165" y="40" width="130" height="80" rx="10" fill="#0E0E10" stroke="#C9C7C1"/><text x="230" y="70" fill="#F2EFE9">2. download</text><text x="230" y="92" fill="#C9C7C1" font-size="10">agent package</text>
+        <rect x="320" y="40" width="130" height="80" rx="10" fill="#0E0E10" stroke="#C9C7C1"/><text x="385" y="70" fill="#F2EFE9">3. configure</text><text x="385" y="92" fill="#C9C7C1" font-size="10">JSON file or wizard</text>
+        <rect x="475" y="40" width="130" height="80" rx="10" fill="#0E0E10" stroke="#6FCF97"/><text x="540" y="70" fill="#6FCF97">4. start</text><text x="540" y="92" fill="#C9C7C1" font-size="10">fetch-config -s</text>
+      </g>
+      <g stroke="#C9C7C1" stroke-width="1.3" marker-end="url(#ah10)"><path d="M142 80 L163 80"/><path d="M297 80 L318 80"/><path d="M452 80 L473 80"/></g>
+      <text x="310" y="152" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" fill="#7A7A80">order follows the docs' general flow; the role comes first because the agent needs it to send anything</text>
+    </svg>
+    <figcaption>Schematic: the agent setup flow.</figcaption>
+  </figure>
+
+  <h3>4. Embedded Metric Format: a log line that is also a metric</h3>
+  <p>Now the second tool. The docs describe EMF as a way to generate custom metrics <em>asynchronously</em> by writing logs to CloudWatch Logs. CloudWatch extracts the metrics for you, so you can graph and alarm on them, while the full detailed event stays available to Logs Insights queries. It is aimed at short-lived things like Lambda functions and containers, where you don't want separate metric-publishing code or a daemon to maintain.</p>
+  <p>Two practical consequences from the docs. You don't need <code>cloudwatch:PutMetricData</code> permission, only <code>logs:PutLogEvents</code>. And you are charged for log ingestion and storage plus the custom metrics generated.</p>
+
+  <h3>5. Anatomy of an EMF document</h3>
+  <p>The log event message must be a valid JSON object with nothing before or after it. It needs an <code>_aws</code> object containing <code>CloudWatchMetrics</code>, an array of metric directives. The docs' example is a good one to study:</p>
+  <p><code>{ "_aws": { "Timestamp": 1574109732004, "CloudWatchMetrics": [ { "Namespace": "lambda-function-metrics", "Dimensions": [["functionVersion"]], "Metrics": [ { "Name": "time", "Unit": "Milliseconds", "StorageResolution": 60 } ] } ] }, "functionVersion": "$LATEST", "time": 100, "requestId": "989ffbf8-9ace-4817-a57c-e4dd734019ee" }</code></p>
+  <p>Read it in layers:</p>
+  <ul>
+    <li><code>Timestamp</code> (milliseconds since 1970 UTC): the docs say it must be no more than 14 days in the past or 2 hours in the future, otherwise the metrics aren't published.</li>
+    <li><code>Namespace</code>: where the metric lands.</li>
+    <li><code>Dimensions</code>: an array of dimension sets (each an array of key names). The named keys must also be top-level fields in the JSON, with string values. A set can have up to 30 keys, and every dimension set creates a separate metric in CloudWatch.</li>
+    <li><code>Metrics</code>: for each, a <code>Name</code> pointing at a top-level numeric field (or an array of numbers, up to 100 values), an optional <code>Unit</code> (defaults to None), and an optional <code>StorageResolution</code> (1 for high resolution, 60 for standard, with 60 the default).</li>
+    <li>Everything else, like <code>requestId</code> above, is just ordinary log data. It's not a dimension unless the directive says so.</li>
+  </ul>
+
+  <figure>
+    <svg viewBox="0 0 620 230" role="img" aria-label="One JSON log line splits into a stored log event and an extracted metric">
+      <defs><marker id="ah11" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#C9C7C1"/></marker></defs>
+      <rect x="10" y="50" width="250" height="130" rx="10" fill="#131316" stroke="#C9C7C1"/>
+      <g font-family="JetBrains Mono, monospace" font-size="10.5">
+        <text x="20" y="72" fill="#7A7A80">one JSON log line</text>
+        <text x="20" y="92" fill="#C8453A">"_aws": { namespace, dims,</text>
+        <text x="20" y="108" fill="#C8453A">   metric names }</text>
+        <text x="20" y="128" fill="#6FCF97">"functionVersion": "$LATEST"</text>
+        <text x="20" y="146" fill="#6FCF97">"time": 100</text>
+        <text x="20" y="164" fill="#C9C7C1">"requestId": "989f..."</text>
+      </g>
+      <rect x="360" y="20" width="250" height="75" rx="10" fill="#0E0E10" stroke="#C9C7C1"/>
+      <text x="485" y="44" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#F2EFE9">CloudWatch Logs event</text>
+      <text x="485" y="64" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#C9C7C1">whole line kept, including requestId</text>
+      <text x="485" y="80" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#C9C7C1">searchable with Logs Insights</text>
+      <rect x="360" y="135" width="250" height="75" rx="10" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="485" y="159" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#6FCF97">CloudWatch metric</text>
+      <text x="485" y="179" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#C9C7C1">lambda-function-metrics / time</text>
+      <text x="485" y="195" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#C9C7C1">dimension functionVersion</text>
+      <path d="M262 100 L358 62" stroke="#C9C7C1" stroke-width="1.4" marker-end="url(#ah11)"/>
+      <path d="M262 130 L358 170" stroke="#C9C7C1" stroke-width="1.4" marker-end="url(#ah11)"/>
+      <text x="310" y="218" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="#7A7A80">requestId is not listed in Dimensions, so it stays out of the metric's identity</text>
+    </svg>
+    <figcaption>Schematic: one write, two outcomes. Based on the docs' own example document.</figcaption>
+  </figure>
+
+  <p><strong>Limits and rules to remember</strong> (docs): a single log event is limited to 1 MB; a log event must not contain more than 100 metric definitions in total, or CloudWatch extracts no metrics from it; a numeric array target can't have more than 100 members, or no metrics are extracted from that event; targets must be top-level fields and cannot be nested objects; invalid names, namespaces or dimension sets cause those particular metrics to be skipped rather than the whole event failing (for dimension sets, others in the same directive are unaffected). Failures can be tracked via metrics in the <code>AWS/Logs</code> namespace. Delivery is at least once, so duplicates may occasionally occur.</p>
+  <p><strong>The cost trap.</strong> The docs are blunt: if you put a high-cardinality field such as <code>requestId</code> into <code>Dimensions</code>, EMF will by design create a custom metric for each unique combination. That is the same cardinality warning as in the metric filter digest. Keep identifiers as plain fields, and use only low-cardinality fields (function version, operation name, environment) as dimensions.</p>
+  <p><em>Caveat:</em> the docs list Embedded metric format as a Standard log class feature only (not supported on Infrequent Access).</p>
+
+  <h3>6. Getting EMF into CloudWatch</h3>
+  <ul>
+    <li><strong>Client libraries.</strong> AWS publishes open-source libraries that build and send EMF for you. I didn't read the per-language pages.</li>
+    <li><strong>PutLogEvents.</strong> Generate the JSON yourself, following the specification, and send it with the API.</li>
+    <li><strong>Via the CloudWatch agent.</strong> Add <code>"logs": { "metrics_collected": { "emf": { } } }</code> to the agent config so it listens on a socket (the docs say the default is <code>tcp:25888</code>, and their manual example writes to a UDP socket on the same port). Requirements from the docs: the agent must be version 1.230621.0 or later, each event must include a <code>LogGroupName</code> key (inside <code>_aws</code> in their example) so the agent knows the log group, and each event must be on a single line with no newline characters.</li>
+    <li><strong>Lambda.</strong> The docs say you don't need to install the agent to send EMF logs from Lambda functions. They add a caveat: Lambda timeouts aren't handled automatically, so if the function times out before metrics are flushed, that invocation's metrics are not captured.</li>
+  </ul>
+
+  <h3>7. Agent or EMF or PutMetricData: which when?</h3>
+  <div class="card">
+    <p><strong>Agent:</strong> you own a server (EC2 or on-premises) and want OS-level metrics and log files collected without changing application code.</p>
+    <p><strong>EMF:</strong> your code already logs, or runs somewhere short-lived like Lambda or containers, and you want metrics plus rich searchable context from the same line.</p>
+    <p><strong>PutMetricData:</strong> you want direct control of one metric without logs involved.</p>
+    <p><em>Simplification:</em> these overlap. The agent itself can also receive EMF and StatsD, and EMF libraries can send through the agent. Treat this as a first-pass guide, not a rule.</p>
+  </div>
+
+  <h2>Why it matters</h2>
+  <p>Most real alarms in the alarms digest need data that CloudWatch doesn't collect by default: memory pressure, disk filling up, application-level counters. The agent and EMF are the two most common ways that data arrives. They are also where bills surprise people, because each extra measurement or dimension combination can be another billed custom metric.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>The agent runs on the server, reads a JSON config, and ships metrics and logs; it needs an IAM role (CloudWatchAgentServerPolicy on EC2) and network access to CloudWatch.</li>
+      <li>Agent metrics land in the CWAgent namespace by default and are billed as custom metrics.</li>
+      <li>EMF is a JSON log line with an <code>_aws</code> block that tells CloudWatch which fields to turn into metrics.</li>
+      <li>Only put low-cardinality fields in Dimensions; every dimension set makes its own metric.</li>
+      <li>EMF needs <code>logs:PutLogEvents</code>, not <code>cloudwatch:PutMetricData</code>; Lambda needs no agent.</li>
+    </ul>
+  </div>
+
+  <h2>Recall questions</h2>
+  <ol>
+    <li>Name three kinds of data the agent can collect and ship.</li>
+    <li>What does <code>-a fetch-config -s</code> do in the start command?</li>
+    <li>In an EMF document, how does CloudWatch know which fields are metrics and which are dimensions?</li>
+    <li>Why is putting <code>requestId</code> in <code>Dimensions</code> a bad idea?</li>
+    <li>You run a private-subnet instance with the agent and see no data. Name two networking things to check.</li>
+  </ol>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Write a valid EMF line by hand.</strong> Start from the docs' example document, change the namespace, metric name and unit, and add one extra non-dimension field. Check it against the rules list above. <em>Done when:</em> you can explain, field by field, whether each ends up as a metric, a dimension, or just log data.</li>
+      <li><strong>Send it with PutLogEvents.</strong> Put your EMF line into a lab log group using <code>aws logs put-log-events</code> (timestamps in milliseconds; see the logs digest). Note that the EMF spec has its own <code>Timestamp</code> inside <code>_aws</code>. <em>Done when:</em> the metric appears under your namespace in the console (allow a little time) and you can find the same event in Logs Insights.</li>
+      <li><strong>Break it on purpose.</strong> Reference a metric name that has no matching top-level field, or nest the value one level down. <em>Done when:</em> you've observed that the metric doesn't appear, and you can point to the spec rule that explains why.</li>
+      <li><strong>Count the cost of a dimension.</strong> On paper, take an EMF directive with one dimension set of <code>Operation</code> (5 values) and <code>Environment</code> (2 values). Work out how many distinct metrics that creates for one metric name, then what happens if you add <code>requestId</code>. <em>Done when:</em> your answer matches the docs' rule that each dimension set combination is a separate metric.</li>
+      <li><strong>Install the agent on a lab instance.</strong> Create the IAM role with CloudWatchAgentServerPolicy, attach it, install the package, write a small config with one metric section and one log file, and start it with the docs' fetch-config command. <em>Done when:</em> a <code>CWAgent</code> (or your chosen) namespace shows up in the console and your log file's lines appear in a log group. Delete the instance and log group afterwards.</li>
+      <li><strong>Agent-fed EMF (stretch).</strong> Add <code>"emf": { }</code> to the agent's logs section and send one line to port 25888 as in the docs' bash example. <em>Done when:</em> the event lands in the log group named in <code>LogGroupName</code> and the metric appears.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Read the page listing every metric the agent can collect, then the EMF alarm recommendations page (linked from the spec), then the client library pages for your language. Next in this track is EventBridge.</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the official documentation. Verify anything you plan to rely on (limits, CLI syntax, pricing, permissions, console steps) against the live pages below. AWS docs change over time; these pages were read in October 2026.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Install-CloudWatch-Agent.html" target="_blank" rel="noopener">Collect metrics, logs, and traces using the CloudWatch agent</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/prerequisites.html" target="_blank" rel="noopener">CloudWatch agent prerequisites (IAM roles, network)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/start-CloudWatch-Agent-on-premise-SSM-onprem.html" target="_blank" rel="noopener">Starting the CloudWatch agent</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-Configuration-File-Details.html" target="_blank" rel="noopener">Manually create or edit the CloudWatch agent configuration file</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Embedded_Metric_Format.html" target="_blank" rel="noopener">Embedding metrics within logs</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Embedded_Metric_Format_Specification.html" target="_blank" rel="noopener">Specification: Embedded metric format</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Embedded_Metric_Format_Generation.html" target="_blank" rel="noopener">Publishing logs with the embedded metric format</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Embedded_Metric_Format_Generation_CloudWatch_Agent.html" target="_blank" rel="noopener">Using the CloudWatch agent to send embedded metric format logs</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch_Logs_Log_Classes.html" target="_blank" rel="noopener">Log classes (EMF is Standard class only)</a></li>
+  </ul>
+  <p class="src-note">Flagged: no pricing is quoted. The wizard, the Systems Manager install path, and the per-OS metric lists were not read; I only name them. Two attempted page fetches (an IAM-roles page and a command-line install page) returned no usable content and I did not use them; the IAM details come from the prerequisites page and the start command from the "Starting the CloudWatch agent" page. The docs' numeric value range for EMF metric targets is garbled in my fetch, so I haven't quoted it; check the spec. The agent docs list valid <code>retention_in_days</code> values that differ slightly from the CLI list in the logs digest, so check the live page before copying either. The sample agent config is my own assembly of documented fields, and the SVGs are my own illustrations. The micro-projects have not been run against a live account.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa &middot; LinkedIn<br>
+      @mayowa.bodunwa &middot; Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
