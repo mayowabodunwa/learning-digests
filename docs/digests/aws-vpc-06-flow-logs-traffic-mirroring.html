@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS: VPC Flow Logs and Traffic Mirroring</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0A0A0B;
+    --card: #0E0E10;
+    --panel: #131316;
+    --hairline: rgba(242,239,233,0.10);
+    --ink: #F2EFE9;
+    --body: #C9C7C1;
+    --muted: #7A7A80;
+    --accent: #C8453A;
+    --green: #6FCF97;
+    --footer-muted: #D8D5CD;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--body);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 20px 40px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    font-size: 17px;
+    color: var(--body);
+    margin: 0 0 40px;
+    max-width: 56ch;
+  }
+  h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    color: var(--ink);
+    margin: 46px 0 14px;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 28px 0 8px;
+  }
+  p { margin: 0 0 14px; font-size: 15.5px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 8px; font-size: 15.5px; }
+  strong { color: var(--ink); font-weight: 600; }
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92em;
+    color: var(--ink);
+    background: rgba(242,239,233,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  a { color: #E7A79C; text-decoration: underline; text-decoration-color: rgba(231,167,156,0.4); }
+  a:hover { text-decoration-color: #E7A79C; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin: 18px 0;
+  }
+  .box {
+    border-left: 3px solid var(--accent);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px 22px;
+    margin: 20px 0 8px;
+  }
+  .box.green { border-left-color: var(--green); }
+  .box h2 { margin-top: 0; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .box.green h2 { color: var(--green); }
+  .box:not(.green) h2 { color: var(--accent); }
+  .box ol, .box ul { margin-bottom: 0; }
+  figure {
+    margin: 22px 0;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 18px 16px 14px;
+  }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .keyterm-term { color: var(--ink); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  hr.rule { border: none; border-top: 1px solid var(--hairline); margin: 40px 0; }
+  footer {
+    margin-top: 52px;
+    padding-top: 28px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  footer img {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+  }
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--footer-muted);
+    line-height: 1.7;
+  }
+  .footer-text .name { color: var(--ink); font-weight: 700; font-size: 13.5px; display: block; margin-bottom: 2px; }
+  .src-list li { font-size: 14px; }
+  .src-note { font-size: 13.5px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">AWS VPC &middot; CONCEPT 6 DIGEST</p>
+  <h1>VPC Flow Logs and Traffic Mirroring</h1>
+  <p class="lead">Two ways to see what your network is actually doing: Flow Logs keep a ledger of who talked to whom, and Traffic Mirroring hands a copy of the real packets to a tool that can open them.</p>
+
+  <h2>In one line</h2>
+  <p>Flow Logs record <em>metadata</em> about traffic (addresses, ports, bytes, accept or reject) and publish it to CloudWatch Logs, S3 or Firehose; Traffic Mirroring copies the <em>packets themselves</em> to a monitoring target for deep inspection.</p>
+
+  <h2>The big idea</h2>
+  <p>When something can't connect, you usually have a guess (security group? NACL? route?) but no evidence. Flow Logs give you evidence at the level of "this source tried this destination port and the answer was REJECT". They're cheap to reason about, they don't touch the traffic path, and they're what you reach for first. Traffic Mirroring is the heavier tool: it duplicates real packets, in full or truncated, to an appliance you run, so you can look inside the traffic (for threat detection, content inspection, or debugging a protocol). Think receipt versus security camera: a flow log is the receipt that says a transaction happened, a mirror is the camera footage.</p>
+
+  <h2>Key terms</h2>
+  <ul>
+    <li><span class="keyterm-term">Flow log</span>: a configuration that captures information about IP traffic going to and from network interfaces and publishes it as records.</li>
+    <li><span class="keyterm-term">Flow log record</span>: one line describing a flow within one time window. A flow is characterised by a 5-tuple (source address, destination address, source port, destination port, protocol) per network interface.</li>
+    <li><span class="keyterm-term">Aggregation interval</span>: the window during which packets of a flow are rolled up into one record. Maximum 10 minutes by default, or optionally 1 minute.</li>
+    <li><span class="keyterm-term">Subscription</span>: the docs' word for the delivery path and permissions that send flow logs to a destination.</li>
+    <li><span class="keyterm-term">ENI</span>: elastic network interface, the virtual network card that flow logs and mirrors attach to.</li>
+    <li><span class="keyterm-term">ACCEPT / REJECT</span>: the action field on a record. REJECT includes traffic blocked by security groups or network ACLs.</li>
+    <li><span class="keyterm-term">Traffic mirror source / target / filter / session</span>: the four building blocks of Traffic Mirroring. Source is the ENI to copy from, target is where copies go, filter says which traffic, session ties the three together.</li>
+    <li><span class="keyterm-term">VXLAN</span>: an encapsulation format. Mirrored packets are wrapped in a VXLAN header so they can be carried to the target.</li>
+    <li><span class="keyterm-term">Out-of-band</span>: the monitoring tool sits beside the traffic, not in its path.</li>
+  </ul>
+
+  <h2>How it works</h2>
+
+  <h3>Grounding: observing a network you can't plug into</h3>
+  <p>In a physical data center you could clip a device onto a switch to watch traffic. In a VPC there is no physical wire, so AWS exposes observation as features of the virtual network. The two features differ in how much they capture and what they cost you. Per the docs, flow log data is collected outside the path of your traffic, so it doesn't affect throughput or latency. Traffic Mirroring is likewise described as sending traffic to out-of-band appliances.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Flow logs versus traffic mirroring">
+      <rect x="30" y="85" width="110" height="60" rx="8" fill="#131316" stroke="#F2EFE9"/>
+      <text x="85" y="112" fill="#F2EFE9" font-family="monospace" font-size="11" text-anchor="middle">instance</text>
+      <text x="85" y="130" fill="#7A7A80" font-family="monospace" font-size="10" text-anchor="middle">its ENI</text>
+      <rect x="260" y="25" width="170" height="60" rx="8" fill="#0E0E10" stroke="#6FCF97"/>
+      <text x="345" y="50" fill="#6FCF97" font-family="monospace" font-size="11" text-anchor="middle">Flow Logs</text>
+      <text x="345" y="68" fill="#C9C7C1" font-family="monospace" font-size="10" text-anchor="middle">metadata records</text>
+      <rect x="260" y="145" width="170" height="60" rx="8" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="345" y="170" fill="#C8453A" font-family="monospace" font-size="11" text-anchor="middle">Traffic Mirroring</text>
+      <text x="345" y="188" fill="#C9C7C1" font-family="monospace" font-size="10" text-anchor="middle">copies of packets</text>
+      <rect x="500" y="25" width="120" height="60" rx="8" fill="#131316" stroke="#F2EFE9" stroke-opacity="0.4"/>
+      <text x="560" y="50" fill="#C9C7C1" font-family="monospace" font-size="10" text-anchor="middle">CloudWatch Logs</text>
+      <text x="560" y="66" fill="#C9C7C1" font-family="monospace" font-size="10" text-anchor="middle">S3 / Firehose</text>
+      <rect x="500" y="145" width="120" height="60" rx="8" fill="#131316" stroke="#F2EFE9" stroke-opacity="0.4"/>
+      <text x="560" y="172" fill="#C9C7C1" font-family="monospace" font-size="10" text-anchor="middle">monitoring</text>
+      <text x="560" y="188" fill="#C9C7C1" font-family="monospace" font-size="10" text-anchor="middle">appliance</text>
+      <path d="M140 105 L260 60" stroke="#6FCF97" fill="none"/>
+      <path d="M140 125 L260 170" stroke="#C8453A" fill="none"/>
+      <path d="M430 55 L500 55" stroke="#6FCF97" fill="none"/>
+      <path d="M430 175 L500 175" stroke="#C8453A" fill="none"/>
+    </svg>
+    <figcaption>Both watch the same network interface, but they produce very different things.</figcaption>
+  </figure>
+
+  <h3>1. Flow Logs: what you configure</h3>
+  <p><strong>Where you attach one.</strong> A flow log can be created for a VPC, a subnet, or a network interface. For a subnet or VPC, every network interface in it is monitored, including ones launched later (a new log stream or file appears once traffic flows on the new interface). You can also log interfaces that other AWS services created, such as load balancers, RDS, ElastiCache, Redshift, WorkSpaces, NAT gateways and transit gateways. For an individual network interface you must use the EC2 console or API.</p>
+  <p><strong>What you choose.</strong> Three things: the resource, the traffic type (ACCEPT, REJECT or ALL), and the destination. Destinations are CloudWatch Logs, S3, or Data Firehose. Pricing is the "vended logs" charges described on the CloudWatch pricing page; I'm not quoting numbers.</p>
+  <p><strong>CLI shape</strong> (from the reference page's example, with placeholder IDs):</p>
+  <div class="card"><code>aws ec2 create-flow-logs --resource-type VPC --resource-ids vpc-0123456789abcdef0 --traffic-type ALL --log-destination-type s3 --log-destination arn:aws:s3:::my-flow-log-bucket/vpc-logs/ --max-aggregation-interval 60</code></div>
+  <p>For CloudWatch Logs you instead pass <code>--log-group-name</code> plus <code>--deliver-logs-permission-arn</code> (an IAM role that lets EC2 publish). The reference lists <code>--max-aggregation-interval</code> as 60 or 600 seconds, default 600.</p>
+  <p><strong>Timing.</strong> Not real time. After you create one it can take several minutes to start. After the aggregation window closes, delivery typically takes about 5 minutes to CloudWatch Logs and about 10 to S3, on a best-effort basis. Nitro-based instances always use 1 minute or less, whatever maximum you set.</p>
+  <p><strong>Immutable.</strong> Once created you can't change a flow log's configuration or record format (not even the IAM role); delete it and create a new one. Deleting stops new records but leaves existing data in the destination.</p>
+
+  <h3>2. Reading a flow log record</h3>
+  <p>The default format is the version 2 fields, in this order: <code>version account-id interface-id srcaddr dstaddr srcport dstport protocol packets bytes start end action log-status</code>. It's one text line with space-separated fields. You can't change the default format; to add or reorder fields you specify a custom format (at least one field).</p>
+  <p>Here's a made-up record in that shape (documentation addresses, fake IDs), followed by a reading of it:</p>
+  <div class="card"><code>2 123456789012 eni-0a1b2c3d4e5f60718 198.51.100.23 10.0.1.15 51514 22 6 12 1860 1761400000 1761400060 REJECT OK</code></div>
+  <ul>
+    <li>Version 2, in account 123456789012, on that interface.</li>
+    <li>Source <code>198.51.100.23</code> port 51514 to destination <code>10.0.1.15</code> port 22. Protocol 6 is the IANA number for TCP (the docs say protocol is the IANA number).</li>
+    <li>12 packets and 1,860 bytes in the window, start and end in Unix seconds.</li>
+    <li><code>REJECT</code> with <code>OK</code> log status. Someone tried SSH and something said no. Per the docs REJECT covers security groups or NACLs not allowing it, and also packets arriving after a connection closed.</li>
+  </ul>
+  <p>The <code>log-status</code> values are OK, NODATA (no traffic in the window) and SKIPDATA (some records skipped because of internal capacity or error).</p>
+  <p><strong>Useful extra fields</strong> available in custom formats (all from the fields table): <code>vpc-id</code>, <code>subnet-id</code>, <code>instance-id</code>, <code>tcp-flags</code> (a bitmask: FIN 1, SYN 2, RST 4, SYN-ACK 18; flags can be OR-ed together over the window), <code>pkt-srcaddr</code> and <code>pkt-dstaddr</code> (the original packet addresses when an intermediate layer such as a NAT gateway is involved), <code>flow-direction</code> (ingress or egress) and <code>traffic-path</code> (how egress traffic leaves: same-VPC resource, internet gateway, virtual private gateway, peering, and so on). A "-" means not applicable or couldn't be computed. Some metadata fields are described as best-effort approximations.</p>
+  <p><em>Simplification:</em> I describe "a record" as "one connection attempt". It isn't. A record is one flow's activity within one window on one interface, so one long connection can span many records, and a flow crossing two interfaces appears on both.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Anatomy of a flow log record">
+      <g font-family="monospace" font-size="10" text-anchor="middle">
+        <rect x="10" y="40" width="70" height="34" rx="4" fill="#131316" stroke="#F2EFE9" stroke-opacity="0.4"/><text x="45" y="61" fill="#C9C7C1">version</text>
+        <rect x="84" y="40" width="70" height="34" rx="4" fill="#131316" stroke="#F2EFE9" stroke-opacity="0.4"/><text x="119" y="61" fill="#C9C7C1">account</text>
+        <rect x="158" y="40" width="70" height="34" rx="4" fill="#131316" stroke="#F2EFE9" stroke-opacity="0.4"/><text x="193" y="61" fill="#C9C7C1">interface</text>
+        <rect x="232" y="40" width="70" height="34" rx="4" fill="#131316" stroke="#6FCF97"/><text x="267" y="61" fill="#6FCF97">srcaddr</text>
+        <rect x="306" y="40" width="70" height="34" rx="4" fill="#131316" stroke="#6FCF97"/><text x="341" y="61" fill="#6FCF97">dstaddr</text>
+        <rect x="380" y="40" width="58" height="34" rx="4" fill="#131316" stroke="#6FCF97"/><text x="409" y="61" fill="#6FCF97">srcport</text>
+        <rect x="442" y="40" width="58" height="34" rx="4" fill="#131316" stroke="#6FCF97"/><text x="471" y="61" fill="#6FCF97">dstport</text>
+        <rect x="504" y="40" width="58" height="34" rx="4" fill="#131316" stroke="#6FCF97"/><text x="533" y="61" fill="#6FCF97">protocol</text>
+        <rect x="566" y="40" width="64" height="34" rx="4" fill="#131316" stroke="#F2EFE9" stroke-opacity="0.4"/><text x="598" y="61" fill="#C9C7C1">packets</text>
+        <rect x="10" y="90" width="58" height="34" rx="4" fill="#131316" stroke="#F2EFE9" stroke-opacity="0.4"/><text x="39" y="111" fill="#C9C7C1">bytes</text>
+        <rect x="72" y="90" width="58" height="34" rx="4" fill="#131316" stroke="#F2EFE9" stroke-opacity="0.4"/><text x="101" y="111" fill="#C9C7C1">start</text>
+        <rect x="134" y="90" width="58" height="34" rx="4" fill="#131316" stroke="#F2EFE9" stroke-opacity="0.4"/><text x="163" y="111" fill="#C9C7C1">end</text>
+        <rect x="196" y="90" width="70" height="34" rx="4" fill="#131316" stroke="#C8453A"/><text x="231" y="111" fill="#C8453A">action</text>
+        <rect x="270" y="90" width="80" height="34" rx="4" fill="#131316" stroke="#F2EFE9" stroke-opacity="0.4"/><text x="310" y="111" fill="#C9C7C1">log-status</text>
+      </g>
+      <text x="320" y="24" fill="#7A7A80" font-family="monospace" font-size="11" text-anchor="middle">default format, left to right then wrapping (it is one line)</text>
+      <text x="440" y="112" fill="#7A7A80" font-family="monospace" font-size="10">green = the 5-tuple, red = the verdict</text>
+    </svg>
+    <figcaption>The 14 default fields. The green ones identify the flow; the red one is the answer you usually came for.</figcaption>
+  </figure>
+
+  <h3>3. What Flow Logs do not capture, and other gotchas</h3>
+  <p>The docs state flow logs do not capture all IP traffic. Not logged: traffic to the Amazon DNS server (if you use your own DNS server, that traffic is logged); Windows license activation; instance metadata (<code>169.254.169.254</code>); Amazon Time Sync (<code>169.254.169.123</code>); DHCP; traffic to the default VPC router's reserved address; ARP; traffic between an endpoint network interface and a Network Load Balancer network interface; mirrored <em>source</em> traffic (you see the mirrored <em>target</em> traffic only); and traffic on a short-lived regional NAT gateway.</p>
+  <p>Other limits worth knowing from the same page:</p>
+  <ul>
+    <li>You can't enable flow logs for a peered VPC unless the peer is in your own account.</li>
+    <li>If traffic goes to a secondary private IP on an interface, <code>dstaddr</code> shows the primary private IPv4 address. To see the original, add <code>pkt-dstaddr</code> to a custom format.</li>
+    <li>VPC Flow Logs supports a maximum of 250 subscriptions per resource per account.</li>
+    <li>Some records can be skipped (SKIPDATA), so a flow log is a good picture, not a guaranteed complete audit trail.</li>
+  </ul>
+
+  <h3>4. Diagnosing with Flow Logs</h3>
+  <p>The docs list diagnosing overly restrictive security group rules, monitoring what reaches an instance, and determining traffic direction as typical jobs. Here's the reasoning chain that ties back to the earlier security group and NACL topic. Security groups are stateful and NACLs are stateless, so a NACL that forgets the ephemeral return ports can produce REJECT records for the replies. Reading <code>action</code> together with <code>flow-direction</code> and the ports helps you tell which side refused. That last step is my own application of earlier material, not something the flow log page spells out; treat it as a starting hypothesis and confirm with the rules themselves.</p>
+  <p>To query at scale, the docs have a section on querying flow logs with Athena (not read in detail here).</p>
+
+  <h3>5. Traffic Mirroring: copies of the packets</h3>
+  <p><strong>The four pieces.</strong> A <em>source</em> (an ENI of type <code>interface</code>, such as an EC2 or RDS instance's), a <em>filter</em> (rules), a <em>target</em>, and a <em>session</em> binding source, filter and target. The docs benefits list: no packet-forwarding agents to manage on your instances, capture at the network interface (which "cannot be disabled or tampered with from a user space"), and the freedom to send the copies to any security device.</p>
+  <p><strong>Targets.</strong> A network interface of type <code>interface</code>, a Network Load Balancer with a UDP listener, or a Gateway Load Balancer endpoint. The docs recommend an NLB or GWLB endpoint for high availability, but warn you may see out-of-order delivery of mirrored packets with them; if your appliance can't cope, use a network interface as the target. A target can belong to a different account from the source.</p>
+  <p><strong>Filters.</strong> Inbound and outbound rules, evaluated lowest number first, first match wins, much like NACL ordering. Each rule has an action (accept or reject), protocol, optional port ranges, and source and destination CIDR blocks. Two traps stated in the docs: with no rules, nothing is mirrored; and with no <em>outbound</em> rules, no outbound traffic is mirrored.</p>
+  <p><strong>Encapsulation.</strong> Matching packets are wrapped in a VXLAN header and sent to the target. The destination port is 4789, the well-known VXLAN port. So the target's security group must allow UDP 4789 from the source, the source subnet's route table must be able to reach the target, and your monitoring software must be able to parse VXLAN. The docs also note the VNI is just a label you choose and shouldn't be treated as a trust boundary. Overhead: the Gateway Load Balancer example in the docs says the mirror adds 54 bytes of headers for IPv4 (74 for IPv6) to each packet, which matters against a maximum MTU of 8500 there.</p>
+  <p><strong>Sessions and interplay with security rules.</strong> Each packet is mirrored once, but you can use several sessions on one source, evaluated by ascending session number, to send different subsets to different tools. Per the docs, inbound traffic dropped at the source by security groups or NACLs isn't mirrored, and mirrored outbound traffic isn't subject to the source's outbound security group rules.</p>
+  <p><strong>Cost and support.</strong> You're billed hourly for each active session, even if the source was stopped or detached, until you delete the session, plus data transfer charges. Only certain instance families work as sources (the docs list them; Nitro v2 only for bare metal), so check the list before planning.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Traffic mirroring session">
+      <rect x="10" y="10" width="620" height="190" rx="10" fill="none" stroke="#7A7A80" stroke-dasharray="5 4"/>
+      <text x="22" y="30" fill="#7A7A80" font-family="monospace" font-size="11">VPC</text>
+      <rect x="30" y="70" width="120" height="70" rx="8" fill="#131316" stroke="#F2EFE9"/>
+      <text x="90" y="100" fill="#F2EFE9" font-family="monospace" font-size="11" text-anchor="middle">source ENI</text>
+      <text x="90" y="118" fill="#7A7A80" font-family="monospace" font-size="10" text-anchor="middle">web server</text>
+      <rect x="230" y="70" width="130" height="70" rx="8" fill="#0E0E10" stroke="#C8453A"/>
+      <text x="295" y="95" fill="#C8453A" font-family="monospace" font-size="11" text-anchor="middle">filter + session</text>
+      <text x="295" y="113" fill="#C9C7C1" font-family="monospace" font-size="10" text-anchor="middle">accept TCP 443</text>
+      <text x="295" y="127" fill="#C9C7C1" font-family="monospace" font-size="10" text-anchor="middle">wrap in VXLAN</text>
+      <rect x="460" y="70" width="150" height="70" rx="8" fill="#131316" stroke="#6FCF97"/>
+      <text x="535" y="95" fill="#6FCF97" font-family="monospace" font-size="11" text-anchor="middle">target</text>
+      <text x="535" y="113" fill="#C9C7C1" font-family="monospace" font-size="10" text-anchor="middle">UDP 4789 open in SG</text>
+      <text x="535" y="127" fill="#C9C7C1" font-family="monospace" font-size="10" text-anchor="middle">tool parses VXLAN</text>
+      <path d="M150 105 L230 105" stroke="#F2EFE9" fill="none"/>
+      <path d="M360 105 L460 105" stroke="#C8453A" fill="none"/>
+      <path d="M90 70 L90 50 L535 50 L535 70" stroke="#7A7A80" stroke-dasharray="4 3" fill="none"/>
+      <text x="312" y="44" fill="#7A7A80" font-family="monospace" font-size="10" text-anchor="middle">the original traffic keeps flowing normally</text>
+    </svg>
+    <figcaption>A copy is made and sent to the target; the real traffic carries on untouched. The filter contents here are an example I chose.</figcaption>
+  </figure>
+
+  <h3>Flow Logs versus Traffic Mirroring at a glance</h3>
+  <div class="card">
+    <ul>
+      <li><strong>Captures:</strong> Flow Logs = per-flow metadata. Mirroring = the packets (optionally truncated).</li>
+      <li><strong>Where it goes:</strong> Flow Logs = CloudWatch Logs, S3 or Firehose. Mirroring = an ENI, NLB or GWLB endpoint you run.</li>
+      <li><strong>Effort:</strong> Flow Logs = a configuration. Mirroring = you operate the appliance and handle VXLAN.</li>
+      <li><strong>Typical question:</strong> Flow Logs = "who tried to reach what, and was it rejected?" Mirroring = "what was actually inside that traffic?"</li>
+    </ul>
+  </div>
+
+  <h2>Why it matters</h2>
+  <p>Almost every networking incident eventually comes down to evidence. Flow Logs turn "I think the security group is blocking it" into a REJECT line you can point at. Traffic Mirroring is how security teams feed IDS tools without installing agents. Both also connect straight to CloudWatch (the next area in the rotation), since flow logs can land in CloudWatch Logs and mirroring has its own CloudWatch metrics.</p>
+
+  <div class="box">
+    <h2>Remember this</h2>
+    <ul>
+      <li>Flow Logs = metadata records per flow per window, not packets, not real time, and not every kind of traffic.</li>
+      <li>You pick the resource (VPC, subnet or ENI), the traffic type (ACCEPT, REJECT, ALL) and a destination. You can't edit one after creating it.</li>
+      <li>Default record: 14 version-2 fields; a custom format adds things like <code>pkt-dstaddr</code>, <code>flow-direction</code>, <code>traffic-path</code>.</li>
+      <li>Traffic Mirroring = source + filter + target + session, packets wrapped in VXLAN on UDP 4789.</li>
+      <li>Mirror filters need explicit rules in each direction; no rules means nothing is mirrored.</li>
+    </ul>
+  </div>
+
+  <div class="box green">
+    <h2>Try it yourself</h2>
+    <ol>
+      <li><strong>Create a flow log.</strong> In a test VPC create a REJECT-only flow log to an S3 bucket or CloudWatch Logs group. <em>Done when:</em> <code>aws ec2 describe-flow-logs</code> lists it and you've noted the destination.</li>
+      <li><strong>Cause a REJECT on purpose.</strong> From your laptop try to connect to a port your instance's security group does not allow, wait for delivery (several minutes), and find the record. <em>Done when:</em> you can match <code>srcaddr</code>, <code>dstport</code> and <code>action</code> to what you tried.</li>
+      <li><strong>Write a parser.</strong> In any language, split a default-format record into the 14 named fields and print a one-line sentence ("198.51.100.23 -> 10.0.1.15:22 TCP, REJECT"). <em>Done when:</em> it handles <code>-</code> values and NODATA lines without crashing.</li>
+      <li><strong>Custom format.</strong> Create a second flow log with a custom <code>--log-format</code> including <code>${pkt-srcaddr}</code>, <code>${flow-direction}</code> and <code>${traffic-path}</code>. <em>Done when:</em> you can explain what <code>traffic-path</code> says about a request leaving through your NAT gateway. (Remember: you can't edit the first flow log; make a new one.)</li>
+      <li><strong>Count top talkers.</strong> Extend the parser to sum <code>bytes</code> per source address and print the top five. <em>Done when:</em> the totals match a hand count on a five-line sample file you made up.</li>
+      <li><strong>Mirror a single interface.</strong> Create a traffic mirror target (a second instance's ENI), a filter that accepts inbound TCP 80, and a session. Allow UDP 4789 from the source in the target's security group, then run <code>tcpdump -nn udp port 4789</code> on the target. <em>Done when:</em> you see VXLAN-wrapped packets arriving. Needs a supported instance family and a live account; I haven't run it. Delete the session afterwards because sessions are billed hourly.</li>
+    </ol>
+  </div>
+
+  <h2>Go deeper</h2>
+  <p>Read the Athena section of the Flow Logs guide to query records with SQL, and the Traffic Mirroring pages on connectivity options and CloudWatch metrics. Then look at how transit gateway flow logs differ (the VPC page points to a separate guide).</p>
+
+  <h2>Sources &amp; verify</h2>
+  <p class="src-note">This digest is a teaching draft, not a substitute for the official documentation. Field lists, limits, supported instance families and prices change; verify anything you rely on against the live pages below.</p>
+  <ul class="src-list">
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs.html" target="_blank" rel="noopener">Logging IP traffic using VPC Flow Logs</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs-basics.html" target="_blank" rel="noopener">Flow logs basics</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/flow-log-records.html" target="_blank" rel="noopener">Flow log records</a> (aggregation interval, default format, fields)</li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs-limitations.html" target="_blank" rel="noopener">Flow log limitations</a></li>
+    <li><a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/create-flow-logs.html" target="_blank" rel="noopener">CLI reference: create-flow-logs</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/mirroring/what-is-traffic-mirroring.html" target="_blank" rel="noopener">What is Traffic Mirroring?</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/mirroring/traffic-mirroring-how-it-works.html" target="_blank" rel="noopener">How Traffic Mirroring works</a></li>
+    <li><a href="https://docs.aws.amazon.com/vpc/latest/mirroring/traffic-mirroring-targets.html" target="_blank" rel="noopener">Targets</a>, <a href="https://docs.aws.amazon.com/vpc/latest/mirroring/traffic-mirroring-filters.html" target="_blank" rel="noopener">filters</a>, <a href="https://docs.aws.amazon.com/vpc/latest/mirroring/traffic-mirroring-sessions.html" target="_blank" rel="noopener">sessions</a> and <a href="https://docs.aws.amazon.com/vpc/latest/mirroring/traffic-mirroring-packet-formats.html" target="_blank" rel="noopener">packet format</a></li>
+  </ul>
+  <p class="src-note">Flagged: commands checked against the CLI reference and docs text, not run in a live account. The sample flow log record is invented for teaching. The NACL-ephemeral-port diagnosis idea is my own inference. The Athena, Firehose and CloudWatch publishing pages, Traffic Mirroring quotas and the connectivity-options page were not read for this digest.</p>
+
+  <hr class="rule">
+  <footer>
+    <img src="../assets/brand/logo.png" alt="Mayowa">
+    <div class="footer-text">
+      <span class="name">Mayowa</span>
+      in/mayowa-bodunwa · LinkedIn<br>
+      @mayowa.bodunwa · Instagram
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>
