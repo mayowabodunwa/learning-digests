@@ -322,7 +322,7 @@
   <p>A typical modern pattern, as a mental model: a single-page app hosted from a static site (or CDN), whose JavaScript asks your backend for a presigned <code>PUT</code> URL and then uploads a file straight to a private bucket from the browser. For that browser upload to work, the bucket needs a CORS rule allowing your site's origin and the <code>PUT</code> method; the presigned URL supplies the permission; Block Public Access can stay fully on. This is a common pattern, not the only way to do uploads.</p>
 
   <h2>Why it matters</h2>
-  <p>Two of the most common S3 security incidents (accidentally public buckets, and leaked links) come from this territory. Knowing that a presigned URL is a bearer token that dies with its credentials, that CORS is not a permission, and that a website endpoint genuinely requires public data, gives you the vocabulary to pick the right tool: signed links for private sharing, CORS for browser access, and CloudFront or Amplify for public sites.</p>
+  <p>Accidentally public buckets and leaked links are two ways S3 data can end up exposed, and both live in this territory (a general observation, not a figure from the docs). Knowing that a presigned URL is a bearer token that dies with its credentials, that CORS is not a permission, and that a website endpoint genuinely requires public data, gives you the vocabulary to pick the right tool: signed links for private sharing, CORS for browser access, and CloudFront or Amplify for public sites.</p>
 
   <div class="box">
     <h2>Remember this</h2>
